@@ -9,6 +9,7 @@
     <title>COVID-19 | Messages & themes</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-analytics.js"></script>
@@ -23,7 +24,36 @@
     </div>
   </nav>
   <div class="container content">
-    <div id="summary-metrics-wrapper">
+    <div>
+      <label id="date"></label>
+    </div>
+    <div>
+      <div class="row">
+        <div class="col-lg-4 col-md-6 col-6">
+          <div class="card">
+            <div class="card-body">
+              <label>Metric 1</label>
+              <h2 id="top_metric_1"></h2>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4 col-md-6 col-6">
+          <div class="card">
+            <div class="card-body">
+              <label>Metric 2</label>
+              <h2 id="top_metric_2"></h2>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <hr />
+    <h4>Individuals interacted</h4>
+    <h5>By gender</h5>
+    <div class="card">
+      <div class="card-body">
+        <canvas id="gender-chart"></canvas>
+      </div>
     </div>
   </div>
 </body>
