@@ -22,3 +22,5 @@ String get storageBucket => _constants['storageBucket'];
 String get messagingSenderId => _constants['messagingSenderId'];
 String get appId => _constants['appId'];
 String get measurementId => _constants['measurementId'];
+
+String get summaryMetrics => _constants['metrics'];

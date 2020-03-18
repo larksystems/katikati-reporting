@@ -1,8 +1,12 @@
-import 'package:covid/logger.dart';
 import 'package:firebase/firebase.dart' as firebase;
+import 'package:firebase/firestore.dart' as firestore;
 import 'firebase_constants.dart' as fb_constants;
+import 'logger.dart';
+import 'model.dart' as model;
 
 Logger logger = Logger('firebase.dart');
+
+firestore.CollectionReference _summaryMetricsRef;
 
 void init() async {
   await fb_constants.init();
@@ -20,4 +24,21 @@ void init() async {
   logger.log('Firebase initialised');
 
   var _store = firebase.firestore();
+  _summaryMetricsRef = _store.collection(fb_constants.summaryMetrics);
+}
+
+// Read data
+Future<List<model.DaySummary>> readSummaryMetrics() async {
+  var snapshot = await _summaryMetricsRef.get();
+
+  var daySummaryMetricsList = [];
+  snapshot.forEach((doc) {
+    Map<String, dynamic> obj = doc.data();
+    obj['date'] = doc.id;
+    daySummaryMetricsList.add(obj);
+  });
+
+  return daySummaryMetricsList
+      .map((s) => model.DaySummary.fromFirebaseMap(s))
+      .toList();
 }
