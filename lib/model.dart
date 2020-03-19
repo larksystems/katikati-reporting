@@ -35,20 +35,22 @@ class ThemeData {
   int escalation = 0;
   int how_to_prevent = 0;
   int how_to_treat = 0;
+  int knowledge = 0;
   int question = 0;
   int symptoms = 0;
 
   ThemeData(this.answer, this.attitude, this.behaviour, this.escalation,
-      this.how_to_prevent, this.how_to_treat, this.question, this.symptoms);
+      this.how_to_prevent, this.how_to_treat, this.knowledge, this.question, this.symptoms);
 
   factory ThemeData.fromFirebaseMap(Map<String, dynamic> obj) {
     return ThemeData(
         obj['answer'],
         obj['attitude'],
         obj['behaviour'],
-        obj['escalation'],
+        obj['escalate'],
         obj['how_to_prevent'],
         obj['how_to_treat'],
+        obj['knowledge'],
         obj['question'],
         obj['symptoms']);
   }
@@ -56,23 +58,18 @@ class ThemeData {
 
 class DaySummary {
   DateTime date;
-  int top_metric_1 = 0;
-  int top_metric_2 = 0;
   AgeData age;
   GenderData gender;
   ThemeData theme;
 
-  DaySummary(this.date, this.top_metric_1, this.top_metric_2, this.age,
-      this.gender, this.theme);
+  DaySummary(this.date, this.age, this.gender, this.theme);
 
   factory DaySummary.fromFirebaseMap(Map<String, dynamic> obj) {
     var date = DateTime.parse(obj['date']);
-    var top_metric_1 = obj['top_metric_1'];
-    var top_metric_2 = obj['top_metric_2'];
     var age = AgeData.fromFirebaseMap(obj['age']);
     var gender = GenderData.fromFirebaseMap(obj['gender']);
-    var theme = ThemeData.fromFirebaseMap(obj['themes']);
+    var theme = ThemeData.fromFirebaseMap(obj['response_themes']);
 
-    return DaySummary(date, top_metric_1, top_metric_2, age, gender, theme);
+    return DaySummary(date, age, gender, theme);
   }
 }
