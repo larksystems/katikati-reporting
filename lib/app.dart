@@ -17,10 +17,13 @@ html.DivElement get responseThemesChartWrapper =>
 
 html.CheckboxInputElement get normaliseChartCheckbox =>
     html.querySelector('#normalise-chart');
+html.CheckboxInputElement get stackTrendCheckbox =>
+    html.querySelector('#stack-trend');
 
 class App {
   List<model.DaySummary> _summaryMetrics;
   bool _isNormalised = false;
+  bool _isTrendStacked = false;
 
   App() {
     _init();
@@ -35,10 +38,16 @@ class App {
 
     _renderCharts();
     normaliseChartCheckbox.onChange.listen(_handleNormaliseCharts);
+    stackTrendCheckbox.onChange.listen(_handleStackCharts);
   }
 
   void _handleNormaliseCharts(_) {
     _isNormalised = normaliseChartCheckbox.checked;
+    _renderCharts();
+  }
+
+  void _handleStackCharts(_) {
+    _isTrendStacked = stackTrendCheckbox.checked;
     _renderCharts();
   }
 
@@ -60,7 +69,7 @@ class App {
             position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
         scales: ChartScales(display: true, yAxes: [
           ChartYAxe(
-              stacked: true,
+              stacked: _isTrendStacked,
               scaleLabel:
                   ScaleTitleOptions(labelString: labelString, display: true))
         ]));
