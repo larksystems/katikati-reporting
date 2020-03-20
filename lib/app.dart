@@ -19,11 +19,13 @@ html.CheckboxInputElement get normaliseChartCheckbox =>
     html.querySelector('#normalise-chart');
 html.CheckboxInputElement get stackTrendCheckbox =>
     html.querySelector('#stack-trend');
+html.SelectElement get chartType => html.querySelector('#chart-type');
 
 class App {
   List<model.DaySummary> _summaryMetrics;
   bool _isNormalised = false;
   bool _isTrendStacked = false;
+  String _chartType = 'line';
 
   App() {
     _init();
@@ -39,10 +41,22 @@ class App {
     _renderCharts();
     normaliseChartCheckbox.onChange.listen(_handleNormaliseCharts);
     stackTrendCheckbox.onChange.listen(_handleStackCharts);
+    chartType.onChange.listen(_handleChartType);
   }
 
   void _handleNormaliseCharts(_) {
     _isNormalised = normaliseChartCheckbox.checked;
+    _chartType = 'line';
+    _isTrendStacked = true;
+
+    if (_isNormalised) {
+      stackTrendCheckbox.disabled = true;
+      chartType.disabled = true;
+    } else {
+      stackTrendCheckbox.disabled = false;
+      chartType.disabled = false;
+    }
+
     _renderCharts();
   }
 
@@ -51,7 +65,33 @@ class App {
     _renderCharts();
   }
 
+  void _handleChartType(_) {
+    _chartType = chartType.value;
+    if (_chartType == 'bar') {
+      _isTrendStacked = true;
+      stackTrendCheckbox.disabled = true;
+    } else {
+      stackTrendCheckbox.disabled = false;
+    }
+
+    _renderCharts();
+  }
+
   void _renderCharts() {
+    chartType.value = _chartType;
+
+    if (_isTrendStacked) {
+      stackTrendCheckbox.setAttribute('checked', '');
+    } else {
+      stackTrendCheckbox.removeAttribute('checked');
+    }
+
+    if (_isNormalised) {
+      normaliseChartCheckbox.setAttribute('checked', '');
+    } else {
+      normaliseChartCheckbox.removeAttribute('checked');
+    }
+
     _renderGenderChart();
     _renderAgeBucketChart();
     _renderResponseTypeChart();
@@ -67,7 +107,9 @@ class App {
         tooltips: ChartTooltipOptions(mode: 'index'),
         legend: ChartLegendOptions(
             position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
-        scales: ChartScales(display: true, yAxes: [
+        scales: ChartScales(display: true, xAxes: [
+          ChartXAxe(stacked: _chartType == 'bar' ? true : null)
+        ], yAxes: [
           ChartYAxe(
               stacked: _isTrendStacked,
               scaleLabel:
@@ -118,7 +160,7 @@ class App {
     ]);
 
     var config = ChartConfiguration(
-        type: 'line', data: chartData, options: _generateChartOptions());
+        type: _chartType, data: chartData, options: _generateChartOptions());
 
     genderChartWrapper.children.clear();
     var canvas = html.CanvasElement();
@@ -197,7 +239,7 @@ class App {
     ]);
 
     var config = ChartConfiguration(
-        type: 'line', data: chartData, options: _generateChartOptions());
+        type: _chartType, data: chartData, options: _generateChartOptions());
 
     ageChartWrapper.children.clear();
     var canvas = html.CanvasElement();
@@ -248,7 +290,7 @@ class App {
     ]);
 
     var config = ChartConfiguration(
-        type: 'line', data: chartData, options: _generateChartOptions());
+        type: _chartType, data: chartData, options: _generateChartOptions());
 
     responseTypeChartWrapper.children.clear();
     var canvas = html.CanvasElement();
@@ -299,7 +341,7 @@ class App {
     ]);
 
     var config = ChartConfiguration(
-        type: 'line', data: chartData, options: _generateChartOptions());
+        type: _chartType, data: chartData, options: _generateChartOptions());
 
     responseClassChartWrapper.children.clear();
     var canvas = html.CanvasElement();
@@ -455,7 +497,7 @@ class App {
     ]);
 
     var config = ChartConfiguration(
-        type: 'line', data: chartData, options: _generateChartOptions());
+        type: _chartType, data: chartData, options: _generateChartOptions());
 
     responseThemesChartWrapper.children.clear();
     var canvas = html.CanvasElement();
