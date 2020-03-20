@@ -67,13 +67,6 @@ class App {
 
   void _handleChartType(_) {
     _chartType = chartType.value;
-    if (_chartType == 'bar') {
-      _isTrendStacked = true;
-      stackTrendCheckbox.disabled = true;
-    } else {
-      stackTrendCheckbox.disabled = false;
-    }
-
     _renderCharts();
   }
 
@@ -108,7 +101,7 @@ class App {
         legend: ChartLegendOptions(
             position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
         scales: ChartScales(display: true, xAxes: [
-          ChartXAxe(stacked: _chartType == 'bar' ? true : null)
+          ChartXAxe(stacked: _isTrendStacked)
         ], yAxes: [
           ChartYAxe(
               stacked: _isTrendStacked,
