@@ -30,29 +30,69 @@ class AgeData {
 
 class ThemeData {
   int answer = 0;
+  int question = 0;
+  int escalation = 0;
+
   int attitude = 0;
   int behaviour = 0;
-  int escalation = 0;
+  int knowledge = 0;
+
+  int about_coronavirus = 0;
+  int anxiety_panic = 0;
+  int collective_hope = 0;
+  int gratitude = 0;
+  int how_spread_transmitted = 0;
   int how_to_prevent = 0;
   int how_to_treat = 0;
-  int knowledge = 0;
-  int question = 0;
+  int opinion_on_govt_policy = 0;
+  int other_theme = 0;
+  int rumour_stigma_misinfo = 0;
   int symptoms = 0;
+  int what_is_govt_policy = 0;
 
-  ThemeData(this.answer, this.attitude, this.behaviour, this.escalation,
-      this.how_to_prevent, this.how_to_treat, this.knowledge, this.question, this.symptoms);
+  ThemeData(
+      this.answer,
+      this.question,
+      this.escalation,
+      // --
+      this.attitude,
+      this.behaviour,
+      this.knowledge,
+      // --
+      this.about_coronavirus,
+      this.anxiety_panic,
+      this.collective_hope,
+      this.gratitude,
+      this.how_spread_transmitted,
+      this.how_to_prevent,
+      this.how_to_treat,
+      this.opinion_on_govt_policy,
+      this.other_theme,
+      this.rumour_stigma_misinfo,
+      this.symptoms,
+      this.what_is_govt_policy);
 
   factory ThemeData.fromFirebaseMap(Map<String, dynamic> obj) {
     return ThemeData(
-        obj['answer'],
-        obj['attitude'],
-        obj['behaviour'],
-        obj['escalate'],
-        obj['how_to_prevent'],
-        obj['how_to_treat'],
-        obj['knowledge'],
-        obj['question'],
-        obj['symptoms']);
+      obj['answer'],
+      obj['question'],
+      obj['escalate'],
+      obj['attitude'],
+      obj['behaviour'],
+      obj['knowledge'],
+      obj['about_coronavirus'],
+      obj['anxiety_panic'],
+      obj['collective_hope'],
+      obj['gratitude'],
+      obj['how_spread_transmitted'],
+      obj['how_to_prevent'],
+      obj['how_to_treat'],
+      obj['opinion_on_govt_policy'],
+      obj['other_theme'],
+      obj['rumour_stigma_misinfo'],
+      obj['symptoms'],
+      obj['what_is_govt_policy'],
+    );
   }
 }
 
