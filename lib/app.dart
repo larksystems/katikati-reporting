@@ -6,11 +6,11 @@ import 'package:chartjs/chartjs.dart';
 
 DateTime _STARTDATE = DateTime(2020, 3, 13);
 
-html.CanvasElement get genderChartCanvas => html.querySelector('#gender-chart');
-html.CanvasElement get ageChartCanvas => html.querySelector('#age-chart');
-html.CanvasElement get responseTypeChartCanvas =>
+html.DivElement get genderChartWrapper => html.querySelector('#gender-chart');
+html.DivElement get ageChartWrapper => html.querySelector('#age-chart');
+html.DivElement get responseTypeChartWrapper =>
     html.querySelector('#response-type-chart');
-html.CanvasElement get responseClassChartCanvas =>
+html.DivElement get responseClassChartWrapper =>
     html.querySelector('#response-class-chart');
 
 html.CheckboxInputElement get normaliseChartCheckbox =>
@@ -108,7 +108,10 @@ class App {
     var config = ChartConfiguration(
         type: 'line', data: chartData, options: _generateChartOptions());
 
-    Chart(genderChartCanvas, config);
+    genderChartWrapper.children.clear();
+    var canvas = html.CanvasElement();
+    genderChartWrapper.append(canvas);
+    Chart(canvas, config);
   }
 
   void _renderAgeBucketChart() {
@@ -184,7 +187,10 @@ class App {
     var config = ChartConfiguration(
         type: 'line', data: chartData, options: _generateChartOptions());
 
-    Chart(ageChartCanvas, config);
+    ageChartWrapper.children.clear();
+    var canvas = html.CanvasElement();
+    ageChartWrapper.append(canvas);
+    Chart(canvas, config);
   }
 
   void _renderResponseTypeChart() {
@@ -232,7 +238,10 @@ class App {
     var config = ChartConfiguration(
         type: 'line', data: chartData, options: _generateChartOptions());
 
-    Chart(responseTypeChartCanvas, config);
+    responseTypeChartWrapper.children.clear();
+    var canvas = html.CanvasElement();
+    responseTypeChartWrapper.append(canvas);
+    Chart(canvas, config);
   }
 
   void _renderClassificationChart() {
@@ -280,6 +289,9 @@ class App {
     var config = ChartConfiguration(
         type: 'line', data: chartData, options: _generateChartOptions());
 
-    Chart(responseClassChartCanvas, config);
+    responseClassChartWrapper.children.clear();
+    var canvas = html.CanvasElement();
+    responseClassChartWrapper.append(canvas);
+    Chart(canvas, config);
   }
 }
