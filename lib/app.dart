@@ -26,6 +26,7 @@ class App {
   bool _isNormalised = false;
   bool _isTrendStacked = false;
   String _chartType = 'line';
+  bool _isFilled = false;
 
   App() {
     _init();
@@ -85,6 +86,8 @@ class App {
       normaliseChartCheckbox.removeAttribute('checked');
     }
 
+    _isFilled = _chartType != 'line' || _isTrendStacked;
+
     _renderGenderChart();
     _renderAgeBucketChart();
     _renderResponseTypeChart();
@@ -98,6 +101,7 @@ class App {
     return ChartOptions(
         responsive: true,
         tooltips: ChartTooltipOptions(mode: 'index'),
+        elements: ChartElementsOptions(line: ChartLineOptions(fill: -1)),
         legend: ChartLegendOptions(
             position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
         scales: ChartScales(display: true, xAxes: [
@@ -108,6 +112,20 @@ class App {
               scaleLabel:
                   ScaleTitleOptions(labelString: labelString, display: true))
         ]));
+  }
+
+  ChartDataSets getDataset(String key, bool isFirst, List data) {
+    return ChartDataSets(
+        label: utils.metadata[key].label,
+        lineTension: 0,
+        fill: _isFilled ? (isFirst ? 'origin' : '-1') : false,
+        backgroundColor: utils.metadata[key].background,
+        borderColor: utils.metadata[key].color,
+        hoverBackgroundColor: utils.metadata[key].color,
+        hoverBorderColor: utils.metadata[key].color,
+        pointBackgroundColor: utils.metadata[key].color,
+        pointRadius: 2,
+        data: data);
   }
 
   void _renderGenderChart() {
@@ -129,27 +147,9 @@ class App {
     }
 
     var chartData = LinearChartData(labels: dates, datasets: <ChartDataSets>[
-      ChartDataSets(
-          label: 'Male',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#b56348',
-          borderColor: '#b56348',
-          data: males),
-      ChartDataSets(
-          label: 'Female',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#3a96a1',
-          borderColor: '#3a96a1',
-          data: females),
-      ChartDataSets(
-          label: 'Unknown',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: 'silver',
-          borderColor: 'silver',
-          data: unknown)
+      getDataset('male', true, males),
+      getDataset('female', false, females),
+      getDataset('unknown', false, unknown)
     ]);
 
     var config = ChartConfiguration(
@@ -194,41 +194,11 @@ class App {
     }
 
     var chartData = LinearChartData(labels: dates, datasets: <ChartDataSets>[
-      ChartDataSets(
-          label: '0-18 Yrs',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#8e3436',
-          borderColor: '#8e3436',
-          data: bucket_0_18),
-      ChartDataSets(
-          label: '18-35 Yrs',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#f7ad1e',
-          borderColor: '#f7ad1e',
-          data: bucket_18_35),
-      ChartDataSets(
-          label: '35-50 Yrs',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#baa544',
-          borderColor: '#baa544',
-          data: bucket_35_50),
-      ChartDataSets(
-          label: '50+ Yrs',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#e5c898',
-          borderColor: '#e5c898',
-          data: bucket_50_),
-      ChartDataSets(
-          label: 'Unknown',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: 'silver',
-          borderColor: 'silver',
-          data: unknown),
+      getDataset('0_18', true, bucket_0_18),
+      getDataset('18_35', false, bucket_18_35),
+      getDataset('35_50', false, bucket_35_50),
+      getDataset('50_', false, bucket_50_),
+      getDataset('unknown', false, unknown)
     ]);
 
     var config = ChartConfiguration(
@@ -259,27 +229,9 @@ class App {
     }
 
     var chartData = LinearChartData(labels: dates, datasets: <ChartDataSets>[
-      ChartDataSets(
-          label: 'Escalate',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#ed3c40',
-          borderColor: '#ed3c40',
-          data: escalate),
-      ChartDataSets(
-          label: 'Answer',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#3a96a1',
-          borderColor: '#3a96a1',
-          data: answer),
-      ChartDataSets(
-          label: 'Question',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#e5c898',
-          borderColor: '#e5c898',
-          data: question)
+      getDataset('escalate', true, escalate),
+      getDataset('answer', false, answer),
+      getDataset('question', false, question)
     ]);
 
     var config = ChartConfiguration(
@@ -292,45 +244,34 @@ class App {
   }
 
   void _renderClassificationChart() {
-    var dates = [], attitude = [], behaviour = [], knowledge = [];
+    var dates = [],
+        attitude = [],
+        behaviour = [],
+        knowledge = [],
+        gratitude = [];
     for (var metric in _summaryMetrics) {
       dates.add(utils.chartDateLabelFormat(metric.date));
       var t = metric.theme;
 
       if (_isNormalised) {
-        var total = t.attitude + t.behaviour + t.knowledge;
+        var total = t.attitude + t.behaviour + t.knowledge + t.gratitude;
         attitude.add(t.attitude / total * 100);
         behaviour.add(t.behaviour / total * 100);
         knowledge.add(t.knowledge / total * 100);
+        gratitude.add(t.gratitude / total * 100);
       } else {
         attitude.add(t.attitude);
         behaviour.add(t.behaviour);
         knowledge.add(t.knowledge);
+        gratitude.add(t.gratitude);
       }
     }
 
     var chartData = LinearChartData(labels: dates, datasets: <ChartDataSets>[
-      ChartDataSets(
-          label: 'Attitude',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#b56348',
-          borderColor: '#b56348',
-          data: attitude),
-      ChartDataSets(
-          label: 'Behaviour',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#baa544',
-          borderColor: '#baa544',
-          data: behaviour),
-      ChartDataSets(
-          label: 'Knowledge',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#3a96a1',
-          borderColor: '#3a96a1',
-          data: knowledge)
+      getDataset('attitude', true, attitude),
+      getDataset('behaviour', false, behaviour),
+      getDataset('knowledge', false, knowledge),
+      getDataset('gratitude', false, gratitude)
     ]);
 
     var config = ChartConfiguration(
@@ -347,7 +288,6 @@ class App {
         about_coronavirus = [],
         anxiety_panic = [],
         collective_hope = [],
-        gratitude = [],
         how_spread_transmitted = [],
         how_to_prevent = [],
         how_to_treat = [],
@@ -365,7 +305,6 @@ class App {
         var total = t.about_coronavirus +
             t.anxiety_panic +
             t.collective_hope +
-            t.gratitude +
             t.how_spread_transmitted +
             t.how_to_prevent +
             t.how_to_treat +
@@ -377,7 +316,6 @@ class App {
         about_coronavirus.add(t.about_coronavirus / total * 100);
         anxiety_panic.add(t.anxiety_panic / total * 100);
         collective_hope.add(t.collective_hope / total * 100);
-        gratitude.add(t.gratitude / total * 100);
         how_spread_transmitted.add(t.how_spread_transmitted / total * 100);
         how_to_prevent.add(t.how_to_prevent / total * 100);
         how_to_treat.add(t.how_to_treat / total * 100);
@@ -390,7 +328,6 @@ class App {
         about_coronavirus.add(t.about_coronavirus);
         anxiety_panic.add(t.anxiety_panic);
         collective_hope.add(t.collective_hope);
-        gratitude.add(t.gratitude);
         how_spread_transmitted.add(t.how_spread_transmitted);
         how_to_prevent.add(t.how_to_prevent);
         how_to_treat.add(t.how_to_treat);
@@ -403,90 +340,17 @@ class App {
     }
 
     var chartData = LinearChartData(labels: dates, datasets: <ChartDataSets>[
-      ChartDataSets(
-          label: 'About corona virus',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#78909c',
-          borderColor: '#78909c',
-          data: about_coronavirus),
-      ChartDataSets(
-          label: 'Anxiety or panic',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#ff7043',
-          borderColor: '#ff7043',
-          data: anxiety_panic),
-      ChartDataSets(
-          label: 'Collective hope',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#9ccc65',
-          borderColor: '#9ccc65',
-          data: collective_hope),
-      ChartDataSets(
-          label: 'gratitude',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#66bb6a',
-          borderColor: '#66bb6a',
-          data: gratitude),
-      ChartDataSets(
-          label: 'How virus spreads / transmitted',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#26c6da',
-          borderColor: '#26c6da',
-          data: how_spread_transmitted),
-      ChartDataSets(
-          label: 'How to prevent',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#29b6f6',
-          borderColor: '#29b6f6',
-          data: how_to_prevent),
-      ChartDataSets(
-          label: 'How to treat',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#26a69a',
-          borderColor: '#26a69a',
-          data: how_to_treat),
-      ChartDataSets(
-          label: 'Opinion on govt. policy',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#5c6bc0',
-          borderColor: '#5c6bc0',
-          data: opinion_on_govt_policy),
-      ChartDataSets(
-          label: 'Other themes',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#bdbdbd',
-          borderColor: '#bdbdbd',
-          data: other_theme),
-      ChartDataSets(
-          label: 'Rumour, stigma, or misinfo',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#d32f2f',
-          borderColor: '#d32f2f',
-          data: rumour_stigma_misinfo),
-      ChartDataSets(
-          label: 'Symptoms',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#f06292',
-          borderColor: '#f06292',
-          data: symptoms),
-      ChartDataSets(
-          label: 'What is govt. policy',
-          lineTension: 0,
-          fill: _isNormalised,
-          backgroundColor: '#ab47bc',
-          borderColor: '#ab47bc',
-          data: what_is_govt_policy),
+      getDataset('about_coronavirus', true, about_coronavirus),
+      getDataset('anxiety_panic', false, anxiety_panic),
+      getDataset('collective_hope', false, collective_hope),
+      getDataset('how_spread_transmitted', false, how_spread_transmitted),
+      getDataset('how_to_prevent', false, how_to_prevent),
+      getDataset('how_to_treat', false, how_to_treat),
+      getDataset('opinion_on_govt_policy', false, opinion_on_govt_policy),
+      getDataset('rumour_stigma_misinfo', false, rumour_stigma_misinfo),
+      getDataset('symptoms', false, symptoms),
+      getDataset('what_is_govt_policy', false, what_is_govt_policy),
+      getDataset('other_theme', false, other_theme)
     ]);
 
     var config = ChartConfiguration(
