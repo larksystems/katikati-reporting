@@ -19,6 +19,32 @@ nav {
   padding-bottom: 96px;
 }
 
+h3 {
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+label {
+  opacity: 0.8;
+}
+
+.small-text {
+  font-size: 12px;
+}
+
 .card {
   margin-bottom: 2rem;
+  height: calc(100% - 2rem);
+}
+
+.chart-options {
+  background-color: #eeeeee;
+  padding-top: 15px;
+  padding-bottom: 15px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+.chart-options .form-check {
+  margin-top: 6px;
 }
