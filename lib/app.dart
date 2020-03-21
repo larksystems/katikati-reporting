@@ -19,10 +19,22 @@ html.CheckboxInputElement get normaliseChartCheckbox =>
     html.querySelector('#normalise-chart');
 html.CheckboxInputElement get stackTrendCheckbox =>
     html.querySelector('#stack-trend');
-html.SelectElement get chartType => html.querySelector('#chart-type');
+html.SelectElement get chartTypeSelect => html.querySelector('#chart-type');
+
+html.SpanElement get conversationCountWrapper =>
+    html.querySelector('#messages-conversation');
+html.SpanElement get messagesOutgoingWrapper =>
+    html.querySelector('#messages-outgoing');
+html.SpanElement get messagesIncomingNonDemogWrapper =>
+    html.querySelector('#messages-incoming-non-demog');
+html.SpanElement get messagesIncomingDemogWrapper =>
+    html.querySelector('#messages-incoming-demog');
+html.SpanElement get messagesTotalWrapper =>
+    html.querySelector('#messages-total');
 
 class App {
   List<model.DaySummary> _summaryMetrics;
+  model.TopMetric _topMetric;
   bool _isNormalised = false;
   bool _isTrendStacked = false;
   String _chartType = 'line';
@@ -36,13 +48,25 @@ class App {
     await fb.init();
 
     _summaryMetrics = await fb.readSummaryMetrics();
+    _topMetric = await fb.readTopMetrics();
     _summaryMetrics
         .removeWhere((daySummary) => daySummary.date.isBefore(_STARTDATE));
 
+    _renderTopMetrics();
     _renderCharts();
     normaliseChartCheckbox.onChange.listen(_handleNormaliseCharts);
     stackTrendCheckbox.onChange.listen(_handleStackCharts);
-    chartType.onChange.listen(_handleChartType);
+    chartTypeSelect.onChange.listen(_handleChartType);
+  }
+
+  void _renderTopMetrics() {
+    conversationCountWrapper.text = _topMetric.conversations.toString();
+    messagesOutgoingWrapper.text = _topMetric.messages_outgoing.toString();
+    messagesIncomingDemogWrapper.text =
+        _topMetric.messages_incoming_demog.toString();
+    messagesIncomingNonDemogWrapper.text =
+        _topMetric.messages_incoming_non_demog.toString();
+    messagesTotalWrapper.text = _topMetric.messages.toString();
   }
 
   void _handleNormaliseCharts(_) {
@@ -52,10 +76,10 @@ class App {
 
     if (_isNormalised) {
       stackTrendCheckbox.disabled = true;
-      chartType.disabled = true;
+      chartTypeSelect.disabled = true;
     } else {
       stackTrendCheckbox.disabled = false;
-      chartType.disabled = false;
+      chartTypeSelect.disabled = false;
     }
 
     _renderCharts();
@@ -67,12 +91,12 @@ class App {
   }
 
   void _handleChartType(_) {
-    _chartType = chartType.value;
+    _chartType = chartTypeSelect.value;
     _renderCharts();
   }
 
   void _renderCharts() {
-    chartType.value = _chartType;
+    chartTypeSelect.value = _chartType;
 
     if (_isTrendStacked) {
       stackTrendCheckbox.setAttribute('checked', '');

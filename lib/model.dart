@@ -1,5 +1,31 @@
 import 'dart:core';
 
+class TopMetric {
+  int conversations = 0;
+  int messages_outgoing = 0;
+  int messages_incoming_non_demog = 0;
+  int messages_incoming_demog = 0;
+  int messages = 0;
+
+  TopMetric(
+      this.conversations,
+      this.messages_outgoing,
+      this.messages_incoming_non_demog,
+      this.messages_incoming_demog,
+      this.messages);
+
+  factory TopMetric.fromFirebaseMap(Map<String, dynamic> obj) {
+    var incoming_demog = obj['incoming_messages_count'] -
+        obj['incoming_non_demogs_messages_count'];
+    return TopMetric(
+        obj['conversations_count'],
+        obj['outgoing_messages_count'],
+        obj['incoming_non_demogs_messages_count'],
+        incoming_demog,
+        obj['messages_count']);
+  }
+}
+
 class GenderData {
   int female = 0;
   int male = 0;
