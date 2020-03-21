@@ -60,13 +60,14 @@ class App {
   }
 
   void _renderTopMetrics() {
-    conversationCountWrapper.text = _topMetric.conversations.toString();
-    messagesOutgoingWrapper.text = _topMetric.messages_outgoing.toString();
+    conversationCountWrapper.text = utils.NumFormat(_topMetric.conversations);
+    messagesOutgoingWrapper.text =
+        utils.NumFormat(_topMetric.messages_outgoing);
     messagesIncomingDemogWrapper.text =
-        _topMetric.messages_incoming_demog.toString();
+        utils.NumFormat(_topMetric.messages_incoming_demog);
     messagesIncomingNonDemogWrapper.text =
-        _topMetric.messages_incoming_non_demog.toString();
-    messagesTotalWrapper.text = _topMetric.messages.toString();
+        utils.NumFormat(_topMetric.messages_incoming_non_demog);
+    messagesTotalWrapper.text = utils.NumFormat(_topMetric.messages);
   }
 
   void _handleNormaliseCharts(_) {
