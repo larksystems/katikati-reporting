@@ -8,6 +8,7 @@ Logger logger = Logger('firebase.dart');
 
 firestore.CollectionReference _summaryMetricsRef;
 firestore.DocumentReference _topMetricRef;
+firestore.CollectionReference _eventsRef;
 
 void init() async {
   await fb_constants.init();
@@ -28,16 +29,37 @@ void init() async {
   _summaryMetricsRef = _store.collection(fb_constants.summaryMetrics);
   _topMetricRef =
       _store.collection('total_counts_metrics').doc('total_counts_metrics');
+  _eventsRef = _store.collection('events');
 }
 
 // Read data
 Future<List<model.DaySummary>> readSummaryMetrics() async {
-  var snapshot = await _summaryMetricsRef.get();
+  var eventSnap = await _eventsRef.get();
+  var summarySnap = await _summaryMetricsRef.get();
 
+  var eventsList = [];
   var daySummaryMetricsList = [];
-  snapshot.forEach((doc) {
+
+  eventSnap.forEach((doc) {
     Map<String, dynamic> obj = doc.data();
     obj['date'] = doc.id;
+    eventsList.add(obj);
+  });
+
+  summarySnap.forEach((doc) {
+    Map<String, dynamic> obj = doc.data();
+    obj['date'] = doc.id;
+
+    var eventForDay = eventsList.firstWhere((event) {
+      return event['date'] == doc.id;
+    }, orElse: () => null);
+
+    if (eventForDay != null) {
+      obj['radio_show'] = eventForDay['radio_show'];
+    } else {
+      obj['radio_show'] = false;
+    }
+
     daySummaryMetricsList.add(obj);
   });
 

@@ -42,4 +42,5 @@ Map<String, MetaData> metadata = {
   'symptoms': MetaData('#00c2ef', 'Symptoms'),
   'what_is_govt_policy': MetaData('#805fce', 'What is govt. policy'),
   'other_theme': MetaData('#dddddd', 'Other themes'),
+  'radio_show': MetaData('#e80000', 'Radio show')
 };

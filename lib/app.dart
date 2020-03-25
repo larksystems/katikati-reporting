@@ -140,6 +140,22 @@ class App {
   }
 
   ChartDataSets getDataset(String key, bool isFirst, List data) {
+    if (key == 'radio_show') {
+      var onAirIcon = html.ImageElement(src: '/assets/onair.png', height: 16, width: 42);
+      return ChartDataSets(
+          label: utils.metadata[key].label,
+          type: 'line',
+          showLine: false,
+          fill: '-1',
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          pointBorderWidth: 0,
+          pointStyle: data.map((d) => d ? onAirIcon : null).toList(),
+          data: data.map((d) => d ? 1 : 0).toList(),
+          hideInLegendAndTooltip: true,
+          backgroundColor: utils.metadata[key].color);
+    }
+
     return ChartDataSets(
         label: utils.metadata[key].label,
         lineTension: 0,
@@ -154,10 +170,11 @@ class App {
   }
 
   void _renderGenderChart() {
-    var dates = [], males = [], females = [], unknown = [];
+    var dates = [], males = [], females = [], unknown = [], radioShow = [];
     for (var metric in _summaryMetrics) {
       var g = metric.gender;
       dates.add(utils.chartDateLabelFormat(metric.date));
+      radioShow.add(metric.radioShow);
 
       if (_isNormalised) {
         var total = g.male + g.female + g.unknown;
@@ -172,6 +189,7 @@ class App {
     }
 
     var chartData = LinearChartData(labels: dates, datasets: <ChartDataSets>[
+      getDataset('radio_show', false, radioShow),
       getDataset('male', true, males),
       getDataset('female', false, females),
       getDataset('unknown', false, unknown)
@@ -192,9 +210,11 @@ class App {
         bucket_18_35 = [],
         bucket_35_50 = [],
         bucket_50_ = [],
-        unknown = [];
+        unknown = [],
+        radioShow = [];
     for (var metric in _summaryMetrics) {
       dates.add(utils.chartDateLabelFormat(metric.date));
+      radioShow.add(metric.radioShow);
 
       var a = metric.age;
       if (_isNormalised) {
@@ -219,6 +239,7 @@ class App {
     }
 
     var chartData = LinearChartData(labels: dates, datasets: <ChartDataSets>[
+      getDataset('radio_show', false, radioShow),
       getDataset('0_18', true, bucket_0_18),
       getDataset('18_35', false, bucket_18_35),
       getDataset('35_50', false, bucket_35_50),
@@ -236,11 +257,12 @@ class App {
   }
 
   void _renderResponseTypeChart() {
-    var dates = [], escalate = [], answer = [], question = [];
+    var dates = [], escalate = [], answer = [], question = [], radioShow = [];
     for (var metric in _summaryMetrics) {
       dates.add(utils.chartDateLabelFormat(metric.date));
-      var t = metric.theme;
+      radioShow.add(metric.radioShow);
 
+      var t = metric.theme;
       if (_isNormalised) {
         var total = t.escalation + t.answer + t.question;
         escalate.add(t.escalation / total * 100);
@@ -254,6 +276,7 @@ class App {
     }
 
     var chartData = LinearChartData(labels: dates, datasets: <ChartDataSets>[
+      getDataset('radio_show', false, radioShow),
       getDataset('escalate', true, escalate),
       getDataset('answer', false, answer),
       getDataset('question', false, question)
@@ -273,9 +296,12 @@ class App {
         attitude = [],
         behaviour = [],
         knowledge = [],
-        gratitude = [];
+        gratitude = [],
+        radioShow = [];
     for (var metric in _summaryMetrics) {
       dates.add(utils.chartDateLabelFormat(metric.date));
+      radioShow.add(metric.radioShow);
+
       var t = metric.theme;
 
       if (_isNormalised) {
@@ -293,6 +319,7 @@ class App {
     }
 
     var chartData = LinearChartData(labels: dates, datasets: <ChartDataSets>[
+      getDataset('radio_show', false, radioShow),
       getDataset('attitude', true, attitude),
       getDataset('behaviour', false, behaviour),
       getDataset('knowledge', false, knowledge),
@@ -320,10 +347,12 @@ class App {
         other_theme = [],
         rumour_stigma_misinfo = [],
         symptoms = [],
-        what_is_govt_policy = [];
+        what_is_govt_policy = [],
+        radioShow = [];
 
     for (var metric in _summaryMetrics) {
       dates.add(utils.chartDateLabelFormat(metric.date));
+      radioShow.add(metric.radioShow);
       var t = metric.theme;
 
       if (_isNormalised) {
@@ -365,6 +394,7 @@ class App {
     }
 
     var chartData = LinearChartData(labels: dates, datasets: <ChartDataSets>[
+      getDataset('radio_show', false, radioShow),
       getDataset('about_coronavirus', true, about_coronavirus),
       getDataset('anxiety_panic', false, anxiety_panic),
       getDataset('collective_hope', false, collective_hope),

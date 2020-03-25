@@ -127,15 +127,17 @@ class DaySummary {
   AgeData age;
   GenderData gender;
   ThemeData theme;
+  bool radioShow;
 
-  DaySummary(this.date, this.age, this.gender, this.theme);
+  DaySummary(this.date, this.age, this.gender, this.theme, this.radioShow);
 
   factory DaySummary.fromFirebaseMap(Map<String, dynamic> obj) {
     var date = DateTime.parse(obj['date']);
     var age = AgeData.fromFirebaseMap(obj['age']);
     var gender = GenderData.fromFirebaseMap(obj['gender']);
     var theme = ThemeData.fromFirebaseMap(obj['response_themes']);
+    var radioShow = obj['radio_show'];
 
-    return DaySummary(date, age, gender, theme);
+    return DaySummary(date, age, gender, theme, radioShow);
   }
 }
