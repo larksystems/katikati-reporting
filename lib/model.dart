@@ -1,11 +1,11 @@
 import 'dart:core';
 
 class TopMetric {
-  int conversations = 0;
-  int messages_outgoing = 0;
-  int messages_incoming_non_demog = 0;
-  int messages_incoming_demog = 0;
-  int messages = 0;
+  num conversations = 0;
+  num messages_outgoing = 0;
+  num messages_incoming_non_demog = 0;
+  num messages_incoming_demog = 0;
+  num messages = 0;
 
   TopMetric(
       this.conversations,
@@ -27,9 +27,9 @@ class TopMetric {
 }
 
 class GenderData {
-  int female = 0;
-  int male = 0;
-  int unknown = 0;
+  num female = 0;
+  num male = 0;
+  num unknown = 0;
 
   GenderData(this.female, this.male, this.unknown);
 
@@ -39,11 +39,11 @@ class GenderData {
 }
 
 class AgeData {
-  int bucket_0_18 = 0;
-  int bucket_18_35 = 0;
-  int bucket_35_50 = 0;
-  int bucket_50_ = 0;
-  int unknown = 0;
+  num bucket_0_18 = 0;
+  num bucket_18_35 = 0;
+  num bucket_35_50 = 0;
+  num bucket_50_ = 0;
+  num unknown = 0;
 
   AgeData(this.bucket_0_18, this.bucket_18_35, this.bucket_35_50,
       this.bucket_50_, this.unknown);
@@ -55,26 +55,26 @@ class AgeData {
 }
 
 class ThemeData {
-  int answer = 0;
-  int question = 0;
-  int escalation = 0;
+  num answer = 0;
+  num question = 0;
+  num escalation = 0;
 
-  int attitude = 0;
-  int behaviour = 0;
-  int knowledge = 0;
+  num attitude = 0;
+  num behaviour = 0;
+  num knowledge = 0;
 
-  int about_coronavirus = 0;
-  int anxiety_panic = 0;
-  int collective_hope = 0;
-  int gratitude = 0;
-  int how_spread_transmitted = 0;
-  int how_to_prevent = 0;
-  int how_to_treat = 0;
-  int opinion_on_govt_policy = 0;
-  int other_theme = 0;
-  int rumour_stigma_misinfo = 0;
-  int symptoms = 0;
-  int what_is_govt_policy = 0;
+  num about_coronavirus = 0;
+  num anxiety_panic = 0;
+  num collective_hope = 0;
+  num gratitude = 0;
+  num how_spread_transmitted = 0;
+  num how_to_prevent = 0;
+  num how_to_treat = 0;
+  num opinion_on_govt_policy = 0;
+  num other_theme = 0;
+  num rumour_stigma_misinfo = 0;
+  num symptoms = 0;
+  num what_is_govt_policy = 0;
 
   ThemeData(
       this.answer,
@@ -128,6 +128,64 @@ class DaySummary {
   GenderData gender;
   ThemeData theme;
   bool radioShow;
+
+  DaySummary operator *(num scale) {
+    var newAge = AgeData(age.bucket_0_18 * scale, age.bucket_18_35 * scale,
+        age.bucket_35_50 * scale, age.bucket_50_ * scale, age.unknown * scale);
+    var newGender = GenderData(
+        gender.female * scale, gender.male * scale, gender.unknown * scale);
+    var newTheme = ThemeData(
+        theme.answer * scale,
+        theme.question * scale,
+        theme.escalation * scale,
+        theme.attitude * scale,
+        theme.behaviour * scale,
+        theme.knowledge * scale,
+        theme.about_coronavirus * scale,
+        theme.anxiety_panic * scale,
+        theme.collective_hope * scale,
+        theme.gratitude * scale,
+        theme.how_spread_transmitted * scale,
+        theme.how_to_prevent * scale,
+        theme.how_to_treat * scale,
+        theme.opinion_on_govt_policy * scale,
+        theme.other_theme * scale,
+        theme.rumour_stigma_misinfo * scale,
+        theme.symptoms * scale,
+        theme.what_is_govt_policy * scale);
+    return DaySummary(date, newAge, newGender, newTheme, radioShow);
+  }
+
+  DaySummary operator +(DaySummary other) {
+    var newAge = AgeData(
+        age.bucket_0_18 + other.age.bucket_0_18,
+        age.bucket_18_35 + other.age.bucket_18_35,
+        age.bucket_35_50 + other.age.bucket_35_50,
+        age.bucket_50_ + other.age.bucket_50_,
+        age.unknown + other.age.unknown);
+    var newGender = GenderData(gender.female + other.gender.female,
+        gender.male + other.gender.male, gender.unknown + other.gender.unknown);
+    var newTheme = ThemeData(
+        theme.answer + other.theme.answer,
+        theme.question + other.theme.question,
+        theme.escalation + other.theme.escalation,
+        theme.attitude + other.theme.attitude,
+        theme.behaviour + other.theme.behaviour,
+        theme.knowledge + other.theme.knowledge,
+        theme.about_coronavirus + other.theme.about_coronavirus,
+        theme.anxiety_panic + other.theme.anxiety_panic,
+        theme.collective_hope + other.theme.collective_hope,
+        theme.gratitude + other.theme.gratitude,
+        theme.how_spread_transmitted + other.theme.how_spread_transmitted,
+        theme.how_to_prevent + other.theme.how_to_prevent,
+        theme.how_to_treat + other.theme.how_to_treat,
+        theme.opinion_on_govt_policy + other.theme.opinion_on_govt_policy,
+        theme.other_theme + other.theme.other_theme,
+        theme.rumour_stigma_misinfo + other.theme.rumour_stigma_misinfo,
+        theme.symptoms + other.theme.symptoms,
+        theme.what_is_govt_policy + other.theme.what_is_govt_policy);
+    return DaySummary(date, newAge, newGender, newTheme, radioShow);
+  }
 
   DaySummary(this.date, this.age, this.gender, this.theme, this.radioShow);
 

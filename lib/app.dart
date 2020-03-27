@@ -19,6 +19,8 @@ html.CheckboxInputElement get normaliseChartCheckbox =>
     html.querySelector('#normalise-chart');
 html.CheckboxInputElement get stackTrendCheckbox =>
     html.querySelector('#stack-trend');
+html.CheckboxInputElement get weightedChartCheckbox =>
+    html.querySelector('#weighted-chart');
 html.SelectElement get chartTypeSelect => html.querySelector('#chart-type');
 
 html.SpanElement get conversationCountWrapper =>
@@ -34,8 +36,11 @@ html.SpanElement get messagesTotalWrapper =>
 
 class App {
   List<model.DaySummary> _summaryMetrics;
+  List<model.DaySummary> _weightedMetrics;
+  List<model.DaySummary> _currentMetrics;
   model.TopMetric _topMetric;
   bool _isNormalised = false;
+  bool _isWeighted = false;
   bool _isTrendStacked = false;
   String _chartType = 'line';
   bool _isFilled = false;
@@ -49,14 +54,31 @@ class App {
 
     _summaryMetrics = await fb.readSummaryMetrics();
     _topMetric = await fb.readTopMetrics();
+
     _summaryMetrics
         .removeWhere((daySummary) => daySummary.date.isBefore(_STARTDATE));
+    _weightedMetrics = _calculatedWeigthed();
+    _currentMetrics = List<model.DaySummary>.from(_summaryMetrics);
 
     _renderTopMetrics();
     _renderCharts();
     normaliseChartCheckbox.onChange.listen(_handleNormaliseCharts);
     stackTrendCheckbox.onChange.listen(_handleStackCharts);
     chartTypeSelect.onChange.listen(_handleChartType);
+    weightedChartCheckbox.onChange.listen(_handleWeightedCharts);
+  }
+
+  List<model.DaySummary> _calculatedWeigthed() {
+    var weighted = List<model.DaySummary>.from(_summaryMetrics);
+    const weights = [0.25, 0.50, 0.25];
+
+    for (var i = 1; i < _summaryMetrics.length - 1; ++i) {
+      weighted[i] = (_summaryMetrics[i] * weights[1]) +
+          (_summaryMetrics[i - 1] * weights[0]) +
+          (_summaryMetrics[i + 1] * weights[2]);
+    }
+
+    return weighted;
   }
 
   void _renderTopMetrics() {
@@ -86,6 +108,17 @@ class App {
     _renderCharts();
   }
 
+  void _handleWeightedCharts(_) {
+    _isWeighted = weightedChartCheckbox.checked;
+    if (_isWeighted) {
+      _currentMetrics = List<model.DaySummary>.from(_weightedMetrics);
+    } else {
+      _currentMetrics = List<model.DaySummary>.from(_summaryMetrics);
+    }
+
+    _renderCharts();
+  }
+
   void _handleStackCharts(_) {
     _isTrendStacked = stackTrendCheckbox.checked;
     _renderCharts();
@@ -103,6 +136,12 @@ class App {
       stackTrendCheckbox.setAttribute('checked', '');
     } else {
       stackTrendCheckbox.removeAttribute('checked');
+    }
+
+    if (_isWeighted) {
+      weightedChartCheckbox.setAttribute('checked', '');
+    } else {
+      weightedChartCheckbox.removeAttribute('checked');
     }
 
     if (_isNormalised) {
@@ -132,6 +171,7 @@ class App {
     }
     return ChartOptions(
         responsive: true,
+        animation: ChartAnimationOptions(duration: 0),
         tooltips: ChartTooltipOptions(
             mode: 'index', filter: (i) => i.datasetIndex > 0),
         elements: ChartElementsOptions(line: ChartLineOptions(fill: -1)),
@@ -176,7 +216,7 @@ class App {
 
   void _renderGenderChart() {
     var dates = [], males = [], females = [], unknown = [], radioShow = [];
-    for (var metric in _summaryMetrics) {
+    for (var metric in _currentMetrics) {
       var g = metric.gender;
       dates.add(utils.chartDateLabelFormat(metric.date));
       radioShow.add(metric.radioShow);
@@ -263,7 +303,7 @@ class App {
 
   void _renderResponseTypeChart() {
     var dates = [], escalate = [], answer = [], question = [], radioShow = [];
-    for (var metric in _summaryMetrics) {
+    for (var metric in _currentMetrics) {
       dates.add(utils.chartDateLabelFormat(metric.date));
       radioShow.add(metric.radioShow);
 
@@ -303,7 +343,7 @@ class App {
         knowledge = [],
         gratitude = [],
         radioShow = [];
-    for (var metric in _summaryMetrics) {
+    for (var metric in _currentMetrics) {
       dates.add(utils.chartDateLabelFormat(metric.date));
       radioShow.add(metric.radioShow);
 
@@ -355,7 +395,7 @@ class App {
         what_is_govt_policy = [],
         radioShow = [];
 
-    for (var metric in _summaryMetrics) {
+    for (var metric in _currentMetrics) {
       dates.add(utils.chartDateLabelFormat(metric.date));
       radioShow.add(metric.radioShow);
       var t = metric.theme;
