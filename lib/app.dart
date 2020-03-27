@@ -121,27 +121,32 @@ class App {
   }
 
   ChartOptions _generateChartOptions() {
-    var labelString =
-        _isNormalised ? 'Percentage of individuals' : 'Number of individuals';
+    var labelString = _isNormalised
+        ? 'Percentage of new individuals interacted'
+        : 'Number of new individuals interacted';
+    var chartY = ChartYAxe(
+        stacked: _isTrendStacked,
+        scaleLabel: ScaleTitleOptions(labelString: labelString, display: true));
+    if (_isNormalised) {
+      chartY.ticks = TickOptions(max: 100);
+    }
     return ChartOptions(
         responsive: true,
-        tooltips: ChartTooltipOptions(mode: 'index'),
+        tooltips: ChartTooltipOptions(
+            mode: 'index', filter: (i) => i.datasetIndex > 0),
         elements: ChartElementsOptions(line: ChartLineOptions(fill: -1)),
         legend: ChartLegendOptions(
             position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
-        scales: ChartScales(display: true, xAxes: [
-          ChartXAxe(stacked: _isTrendStacked)
-        ], yAxes: [
-          ChartYAxe(
-              stacked: _isTrendStacked,
-              scaleLabel:
-                  ScaleTitleOptions(labelString: labelString, display: true))
-        ]));
+        scales: ChartScales(
+            display: true,
+            xAxes: [ChartXAxe(stacked: _isTrendStacked)],
+            yAxes: [chartY]));
   }
 
   ChartDataSets getDataset(String key, bool isFirst, List data) {
     if (key == 'radio_show') {
-      var onAirIcon = html.ImageElement(src: '/assets/onair.png', height: 16, width: 42);
+      var onAirIcon =
+          html.ImageElement(src: '/assets/onair.png', height: 16, width: 42);
       return ChartDataSets(
           label: utils.metadata[key].label,
           type: 'line',
@@ -151,8 +156,7 @@ class App {
           pointHoverRadius: 0,
           pointBorderWidth: 0,
           pointStyle: data.map((d) => d ? onAirIcon : null).toList(),
-          data: data.map((d) => d ? 1 : 0).toList(),
-          hideInLegendAndTooltip: true,
+          data: data.map((d) => 0).toList(),
           backgroundColor: utils.metadata[key].color);
     }
 
@@ -166,6 +170,7 @@ class App {
         hoverBorderColor: utils.metadata[key].color,
         pointBackgroundColor: utils.metadata[key].color,
         pointRadius: 2,
+        borderWidth: _isFilled ? 1 : 3,
         data: data);
   }
 
