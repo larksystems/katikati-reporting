@@ -257,7 +257,7 @@ class App {
         bucket_50_ = [],
         unknown = [],
         radioShow = [];
-    for (var metric in _summaryMetrics) {
+    for (var metric in _currentMetrics) {
       dates.add(utils.chartDateLabelFormat(metric.date));
       radioShow.add(metric.radioShow);
 
@@ -393,6 +393,7 @@ class App {
         rumour_stigma_misinfo = [],
         symptoms = [],
         what_is_govt_policy = [],
+        kenya_update = [],
         radioShow = [];
 
     for (var metric in _currentMetrics) {
@@ -411,7 +412,8 @@ class App {
             t.other_theme +
             t.rumour_stigma_misinfo +
             t.symptoms +
-            t.what_is_govt_policy;
+            t.what_is_govt_policy +
+            t.kenya_update;
         about_coronavirus.add(t.about_coronavirus / total * 100);
         anxiety_panic.add(t.anxiety_panic / total * 100);
         collective_hope.add(t.collective_hope / total * 100);
@@ -423,6 +425,7 @@ class App {
         rumour_stigma_misinfo.add(t.rumour_stigma_misinfo / total * 100);
         symptoms.add(t.symptoms / total * 100);
         what_is_govt_policy.add(t.what_is_govt_policy / total * 100);
+        kenya_update.add(t.kenya_update / total * 100);
       } else {
         about_coronavirus.add(t.about_coronavirus);
         anxiety_panic.add(t.anxiety_panic);
@@ -435,6 +438,7 @@ class App {
         rumour_stigma_misinfo.add(t.rumour_stigma_misinfo);
         symptoms.add(t.symptoms);
         what_is_govt_policy.add(t.what_is_govt_policy);
+        kenya_update.add(t.kenya_update);
       }
     }
 
@@ -450,6 +454,7 @@ class App {
       getDataset('rumour_stigma_misinfo', false, rumour_stigma_misinfo),
       getDataset('symptoms', false, symptoms),
       getDataset('what_is_govt_policy', false, what_is_govt_policy),
+      getDataset('kenya_update', false, kenya_update),
       getDataset('other_theme', false, other_theme)
     ]);
 

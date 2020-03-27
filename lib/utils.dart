@@ -31,7 +31,7 @@ Map<String, MetaData> metadata = {
   'behaviour': MetaData('#28a5a6', 'Behaviour'),
   'knowledge': MetaData('#85c765', 'Knowledge'),
   'gratitude': MetaData('#fcd919', 'Gratitude'),
-  'about_coronavirus': MetaData('#aaaaaa', 'About coronavirus'),
+  'about_coronavirus': MetaData('#90a4ae', 'About coronavirus'),
   'anxiety_panic': MetaData('#ff6464', 'Anxiety or panic'),
   'collective_hope': MetaData('#4888f9', 'Collective hope'),
   'how_spread_transmitted': MetaData('#ffdc2e', 'How virus spread'),
@@ -40,7 +40,8 @@ Map<String, MetaData> metadata = {
   'opinion_on_govt_policy': MetaData('#318c3c', 'Opinion of govt. policy'),
   'rumour_stigma_misinfo': MetaData('#ff9827', 'Rumour, stigma, or misinfo'),
   'symptoms': MetaData('#00c2ef', 'Symptoms'),
-  'what_is_govt_policy': MetaData('#805fce', 'Kenya update'),
+  'what_is_govt_policy': MetaData('#805fce', 'What is govt. policy'),
+  'kenya_update': MetaData('#8d6e63', 'Kenya update'),
   'other_theme': MetaData('#dddddd', 'Other themes'),
   'radio_show': MetaData('#e80000', 'Radio show')
 };

@@ -75,6 +75,7 @@ class ThemeData {
   num rumour_stigma_misinfo = 0;
   num symptoms = 0;
   num what_is_govt_policy = 0;
+  num kenya_update = 0;
 
   ThemeData(
       this.answer,
@@ -96,29 +97,30 @@ class ThemeData {
       this.other_theme,
       this.rumour_stigma_misinfo,
       this.symptoms,
-      this.what_is_govt_policy);
+      this.what_is_govt_policy,
+      this.kenya_update);
 
   factory ThemeData.fromFirebaseMap(Map<String, dynamic> obj) {
     return ThemeData(
-      obj['answer'],
-      obj['question'],
-      obj['escalate'],
-      obj['attitude'],
-      obj['behaviour'],
-      obj['knowledge'],
-      obj['about_coronavirus'],
-      obj['anxiety_panic'],
-      obj['collective_hope'],
-      obj['gratitude'],
-      obj['how_spread_transmitted'],
-      obj['how_to_prevent'],
-      obj['how_to_treat'],
-      obj['opinion_on_govt_policy'],
-      obj['other_theme'],
-      obj['rumour_stigma_misinfo'],
-      obj['symptoms'],
-      obj['what_is_govt_policy'],
-    );
+        obj['answer'],
+        obj['question'],
+        obj['escalate'],
+        obj['attitude'],
+        obj['behaviour'],
+        obj['knowledge'],
+        obj['about_coronavirus'],
+        obj['anxiety_panic'],
+        obj['collective_hope'],
+        obj['gratitude'],
+        obj['how_spread_transmitted'],
+        obj['how_to_prevent'],
+        obj['how_to_treat'],
+        obj['opinion_on_govt_policy'],
+        obj['other_theme'],
+        obj['rumour_stigma_misinfo'],
+        obj['symptoms'],
+        obj['what_is_govt_policy'],
+        obj['kenya_update']);
   }
 }
 
@@ -152,7 +154,8 @@ class DaySummary {
         theme.other_theme * scale,
         theme.rumour_stigma_misinfo * scale,
         theme.symptoms * scale,
-        theme.what_is_govt_policy * scale);
+        theme.what_is_govt_policy * scale,
+        theme.kenya_update * scale);
     return DaySummary(date, newAge, newGender, newTheme, radioShow);
   }
 
@@ -183,7 +186,8 @@ class DaySummary {
         theme.other_theme + other.theme.other_theme,
         theme.rumour_stigma_misinfo + other.theme.rumour_stigma_misinfo,
         theme.symptoms + other.theme.symptoms,
-        theme.what_is_govt_policy + other.theme.what_is_govt_policy);
+        theme.what_is_govt_policy + other.theme.what_is_govt_policy,
+        theme.kenya_update + other.theme.kenya_update);
     return DaySummary(date, newAge, newGender, newTheme, radioShow);
   }
 
