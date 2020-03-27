@@ -57,7 +57,7 @@ class App {
 
     _summaryMetrics
         .removeWhere((daySummary) => daySummary.date.isBefore(_STARTDATE));
-    _weightedMetrics = _calculatedWeigthed();
+    _weightedMetrics = _calculateWeigthedMetrics();
     _currentMetrics = List<model.DaySummary>.from(_summaryMetrics);
 
     _renderTopMetrics();
@@ -68,7 +68,7 @@ class App {
     weightedChartCheckbox.onChange.listen(_handleWeightedCharts);
   }
 
-  List<model.DaySummary> _calculatedWeigthed() {
+  List<model.DaySummary> _calculateWeigthedMetrics() {
     var weighted = List<model.DaySummary>.from(_summaryMetrics);
     const weights = [0.25, 0.50, 0.25];
 
