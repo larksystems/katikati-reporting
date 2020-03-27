@@ -40,7 +40,7 @@ Map<String, MetaData> metadata = {
   'opinion_on_govt_policy': MetaData('#318c3c', 'Opinion of govt. policy'),
   'rumour_stigma_misinfo': MetaData('#ff9827', 'Rumour, stigma, or misinfo'),
   'symptoms': MetaData('#00c2ef', 'Symptoms'),
-  'what_is_govt_policy': MetaData('#805fce', 'What is govt. policy'),
+  'what_is_govt_policy': MetaData('#805fce', 'Kenya update'),
   'other_theme': MetaData('#dddddd', 'Other themes'),
   'radio_show': MetaData('#e80000', 'Radio show')
 };
