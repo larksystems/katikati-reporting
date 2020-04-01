@@ -4,6 +4,10 @@ String chartDateLabelFormat(DateTime time) {
   return DateFormat.MMMd().format(time);
 }
 
+String messageTimeFormat(DateTime time) {
+  return '${DateFormat.Hms().format(time)} ${DateFormat.MMMEd().format(time)}';
+}
+
 String NumFormat(int num) {
   return NumberFormat().format(num);
 }

@@ -9,6 +9,7 @@ Logger logger = Logger('firebase.dart');
 firestore.CollectionReference _summaryMetricsRef;
 firestore.DocumentReference _topMetricRef;
 firestore.CollectionReference _eventsRef;
+firestore.CollectionReference _messagesRef;
 
 void init() async {
   await fb_constants.init();
@@ -30,6 +31,7 @@ void init() async {
   _topMetricRef =
       _store.collection('total_counts_metrics').doc('total_counts_metrics');
   _eventsRef = _store.collection('events');
+  _messagesRef = _store.collection('messages-test');
 }
 
 // Read data
@@ -72,4 +74,17 @@ Future<model.TopMetric> readTopMetrics() async {
   var snapshot = await _topMetricRef.get();
 
   return model.TopMetric.fromFirebaseMap(snapshot.data());
+}
+
+Future<List<model.Message>> readMessages() async {
+  var messagesSnap = await _messagesRef.get();
+  var messagesList = List<model.Message>();
+
+  messagesSnap.forEach((doc) {
+    var obj = doc.data();
+    var message = model.Message.fromFirebaseMap(obj);
+    messagesList.add(message);
+  });
+
+  return messagesList;
 }

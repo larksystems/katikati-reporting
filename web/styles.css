@@ -15,8 +15,8 @@ nav {
 }
 
 .content {
-  padding-top: 96px;
-  padding-bottom: 96px;
+  padding-top: 64px;
+  padding-bottom: 64px;
 }
 
 h3 {
@@ -47,4 +47,60 @@ label {
 
 .chart-options .form-check {
   margin-top: 6px;
+}
+
+.message-box {
+  padding: 12px 18px;
+  border-radius: 6px;
+  margin-left: -3px;
+  display: inline-block;
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #aaa;
+  margin-bottom: 24px;
+  max-width: 420px;
+}
+
+.message-box:after,
+.message-box:before {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+
+.message-box:after {
+  border-color: rgba(255, 255, 255, 0);
+  border-right-color: #ffffff;
+  border-width: 8px;
+  margin-top: -8px;
+}
+.message-box:before {
+  border-color: rgba(170, 170, 170, 0);
+  border-right-color: #888;
+  border-width: 9px;
+  margin-top: -9px;
+}
+
+.message-time {
+  font-size: 0.7rem;
+  opacity: 0.5;
+  padding: 12px 0;
+  text-align: right;
+}
+
+.message-translated {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #ddd;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.timeline-col {
+  border-right: 2px dashed #888;
 }

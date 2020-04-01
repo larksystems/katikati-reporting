@@ -203,3 +203,22 @@ class DaySummary {
     return DaySummary(date, age, gender, theme, radioShow);
   }
 }
+
+class Message {
+  String text;
+  String translated_text;
+  List<String> tags;
+  DateTime received_at;
+
+  Message(this.text, this.translated_text, this.tags, this.received_at);
+
+  factory Message.fromFirebaseMap(Map<String, dynamic> obj) {
+    var text = obj['text'];
+    var translated_text = obj['translated_text'];
+    var tags = List<String>();
+    obj['tags'].forEach((a) => tags.add(a.toString()));
+    var received_at = obj['received_at'];
+
+    return Message(text, translated_text, tags, received_at);
+  }
+}
