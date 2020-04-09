@@ -1,22 +1,16 @@
 <!DOCTYPE html>
-
-<html>
-
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="scaffolded-by" content="https://github.com/dart-lang/stagehand">
-  <title>COVID-19 | Messages</title>
+  <title>COVID-19 | Interactions</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.js"></script>
   <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-firestore.js"></script>
   <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-analytics.js"></script>
-  <script defer src="messages.dart.js"></script>
 </head>
-
 <body>
   <nav class="navbar navbar-expand-md navbar-dark bg-dark">
     <div class="container">
@@ -26,10 +20,10 @@
           <li class="nav-item">
             <a class="nav-link" href="/">Dashboard</a>
           </li>
-          <li class="nav-item active">
+          <li class="nav-item">
             <a class="nav-link" href="/messages.html">Messages</a>
           </li>
-          <li class="nav-item">
+          <li class="nav-item active">
             <a class="nav-link" href="/interactions.html">Interactions</a>
           </li>
         </ul>
@@ -38,26 +32,16 @@
   </nav>
   <div class="container content">
     <div class="row">
-      <div class="col-lg-2 col-md-4 col-6 form-group">
-        <label for="theme-select">Theme</label>
-        <select class="form-control" id="theme-select">
-          <option value="all">All</option>
-        </select>
+      <div class="col-lg-1 col-md-2 col-12">
+        <label>Analyse</label>
       </div>
-      <div class="col-lg-2 col-md-4 col-6 form-group">
-        <label for="sort-select">Sort by</label>
-        <select class="form-control" id="sort-select">
-          <option value="dsc">Last to first</option>
-          <option value="asc">First to last</option>
-        </select>
+      <div class="col-lg-2 col-md-2 col-6">
+        1
       </div>
-    </div>
-    <div>
-      <div class="card-body" id="messages-timeline">
-        Loading ...
+      <div class="col-lg-2 col-md-2 col-6">
+        1
       </div>
     </div>
   </div>
 </body>
-
 </html>

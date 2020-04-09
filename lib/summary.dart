@@ -50,7 +50,7 @@ class App {
   }
 
   void _init() async {
-    await fb.init();
+    await fb.init('firebase/eb-test-katikati-reporting.json');
 
     _summaryMetrics = await fb.readSummaryMetrics();
     _topMetric = await fb.readTopMetrics();

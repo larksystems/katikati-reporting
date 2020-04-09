@@ -14,6 +14,10 @@ nav {
   color: white;
 }
 
+nav .nav-link {
+  cursor: pointer;
+}
+
 .content {
   padding-top: 64px;
   padding-bottom: 64px;
@@ -103,4 +107,41 @@ label {
 
 .timeline-col {
   border-right: 2px dashed #888;
+}
+
+/* Login modal */
+.modal-wrapper {
+  background-color: var(--maroon-90);
+  height: 100%;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 100;
+  backdrop-filter: blur(4px) saturate(50%);
+}
+
+#loading-modal {
+  text-align: center;
+  padding-top: 25%;
+  background-color: var(--black-10);
+  backdrop-filter: blur(4px) saturate(50%);
+}
+
+#loading-modal span {
+  animation: blink 1s linear infinite;
+  background-color: white;
+  border-radius: 6px;
+  padding: 12px 18px;
+}
+
+.modal-content {
+  background-color: white;
+  box-shadow: var(--shadow);
+  border-radius: 6px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 120px;
+  max-width: 320px;
+  padding: 24px;
+  text-align: center;
 }

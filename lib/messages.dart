@@ -22,7 +22,7 @@ class App {
   }
 
   void _init() async {
-    await fb.init();
+    await fb.init('firebase/nook-emergency-0-reporting.json');
     _sortBy = sortOrder.dsc;
     _messages = await fb.readMessages();
     _messages.removeWhere((m) => m.received_at.isBefore(_STARTDATE));
@@ -92,10 +92,10 @@ class App {
     var messageText = html.DivElement()..innerText = message.text;
     messageBox.append(messageText);
 
-    if (message.translated_text != null) {
+    if (message.translation != null) {
       var translatedText = html.DivElement()
         ..classes = ['message-translated']
-        ..innerText = message.translated_text;
+        ..innerText = message.translation;
       messageBox.append(translatedText);
     }
 

@@ -13,7 +13,8 @@
     <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-analytics.js"></script>
-    <script defer src="summary.dart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-auth.js"></script>
+    <script defer src="script.dart.js"></script>
 </head>
 
 <body>
@@ -22,104 +23,57 @@
       <a class="navbar-brand" href="#">COVID-19</a>
       <div>
         <ul class="navbar-nav ml-auto">
-          <li class="nav-item active">
-            <a class="nav-link" href="/">Dashboard</a>
+          <li class="nav-item nav-link active" id="show-individuals">
+            Dashboard
           </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/messages.html">Messages</a>
+          <li class="nav-item nav-link" id="show-misinfo">
+            Misinfo
+          </li>
+          <li class="nav-item nav-link" id="show-interactions">
+            Interactions
           </li>
         </ul>
       </div>
     </div>
   </nav>
-  <div class="container content">
-    <h3>Messages & conversations</h3>
-    <div class="row">
-      <div class="col-lg-3 col-md-4 col-sm-12 col-12">
-        <div class="card">
-          <div class="card-body">
-            <label>Conversations</label>
-            <h4><span id="messages-conversation">...</span></h4>
-          </div>
+  <div class="container">
+    <div class="content" data-tab="show-individuals" data-title="Individuals interacted">
+      Summary
+    </div>
+    <div class="content" hidden data-tab="show-misinfo" data-title="Misinfo">
+      <div class="row">
+        <div class="col-lg-2 col-md-4 col-6 form-group">
+        </div>
+        <div class="col-lg-2 col-md-4 col-6 form-group">
+          <label for="sort-select">Sort by</label>
+          <select class="form-control" id="messages-sort-select">
+            <option value="desc">Last to first</option>
+            <option value="asc">First to last</option>
+          </select>
         </div>
       </div>
-      <div class="col-lg-3 col-md-4 col-sm-12 col-12">
-        <div class="card">
-          <div class="card-body">
-            <label>Outgoing messages</label>
-            <h4><span id="messages-outgoing">...</span></h4>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-4 col-sm-12 col-12">
-        <div class="card">
-          <div class="card-body">
-            <label>Incoming messages</label>
-            <h4><span id="messages-incoming-non-demog">...</span> + <span id="messages-incoming-demog">...</span><sup>*</sup></h4>
-            <span class="small-text">*Demogrphic data collection</span>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-4 col-sm-12 col-12">
-        <div class="card">
-          <div class="card-body">
-            <label>Total messages</label>
-            <h4><span id="messages-total">...</span></h4>
-          </div>
+      <div>
+        <div class="card-body" id="messages-timeline">
         </div>
       </div>
     </div>
-    <hr/>
-    <h3>Individuals interacted</h3>
-    <div class="row chart-options">
-      <div class="col-lg-3 col-md-4 col-sm-12 col-12">
-        <select class="form-control" id="chart-type">
-          <option value="line">Line chart</option>
-          <option value="bar">Bar chart</option>
-        </select>
-      </div>
-      <div class="col-lg-3 col-md-4 col-sm-12 col-12">
-        <div class="form-check">
-          <input type="checkbox" class="form-check-input" id="stack-trend">
-          <label class="form-check-label" for="stack-trend">Stack trendlines</label>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-4 col-sm-12 col-12">
-        <div class="form-check">
-          <input type="checkbox" class="form-check-input" id="normalise-chart">
-          <label class="form-check-label" for="normalise-chart">Normalise charts</label>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-4 col-sm-12 col-12">
-        <div class="form-check">
-          <input type="checkbox" class="form-check-input" id="weighted-chart">
-          <label class="form-check-label" for="weighted-chart">3-day wt. moving avg.</label>
-        </div>
-      </div>
+    <div class="content" hidden data-tab="show-interactions" data-title="Interactions">
+      Interactions
     </div>
-    <h5>By gender</h5>
-    <div class="card">
-      <div class="card-body" id="gender-chart"></div>
-    </div>
-    <h5>By age buckets</h5>
-    <div class="card">
-      <div class="card-body" id="age-chart">
-      </div>
-    </div>
-    <h5>By response type</h5>
-    <div class="card">
-      <div class="card-body" id="response-type-chart">
-      </div>
-    </div>
-    <h5>By response classification</h5>
-    <div class="card">
-      <div class="card-body" id="response-class-chart">
-      </div>
-    </div>
-    <h5>By response themes</h5>
-    <div class="card">
-      <div class="card-body" id="response-themes-chart">
-      </div>
+  </div>
+
+  <!-- Loading modal -->
+  <div class="modal-wrapper" id="loading-modal" hidden>
+    <span>Loading data...</span>
+  </div>
+
+  <!-- Login modal -->
+  <div class="modal-wrapper" id="login-modal">
+    <div class="modal-content">
+      <h5>This demo is only accessible to Africa's Voices.</h5>
+      <p>Please reach out if you'd like to see a demo.</p>
+      <button class="btn btn-danger" id="login-button">Sign in with Google</button>
+      <div class="alert alert-primary" id="login-error" hidden="true"></div>
     </div>
   </div>
 </body>

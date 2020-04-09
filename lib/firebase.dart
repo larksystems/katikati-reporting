@@ -11,8 +11,12 @@ firestore.DocumentReference _topMetricRef;
 firestore.CollectionReference _eventsRef;
 firestore.CollectionReference _messagesRef;
 
-void init() async {
-  await fb_constants.init();
+firestore.CollectionReference _misinfoRef;
+
+firebase.Auth get firebaseAuth => firebase.auth();
+
+void init(String constantsFilePath) async {
+  await fb_constants.init(constantsFilePath);
 
   firebase.initializeApp(
       apiKey: fb_constants.apiKey,
@@ -32,6 +36,23 @@ void init() async {
       _store.collection('total_counts_metrics').doc('total_counts_metrics');
   _eventsRef = _store.collection('events');
   _messagesRef = _store.collection('messages-test');
+  _misinfoRef =
+      _store.collection('datasets').doc('misinfo').collection('messages');
+}
+
+// Auth login and logout
+Future<firebase.UserCredential> signInWithGoogle() async {
+  var provider = firebase.GoogleAuthProvider();
+  return firebaseAuth.signInWithPopup(provider);
+}
+
+void signOut() {
+  firebaseAuth.signOut();
+}
+
+void deleteUser() async {
+  await firebaseAuth.currentUser.delete();
+  logger.log('User deleted and signed out');
 }
 
 // Read data
@@ -78,6 +99,19 @@ Future<model.TopMetric> readTopMetrics() async {
 
 Future<List<model.Message>> readMessages() async {
   var messagesSnap = await _messagesRef.get();
+  var messagesList = List<model.Message>();
+
+  messagesSnap.forEach((doc) {
+    var obj = doc.data();
+    var message = model.Message.fromFirebaseMap(obj);
+    messagesList.add(message);
+  });
+
+  return messagesList;
+}
+
+Future<List<model.Message>> readMisinfoMessages() async {
+  var messagesSnap = await _misinfoRef.get();
   var messagesList = List<model.Message>();
 
   messagesSnap.forEach((doc) {

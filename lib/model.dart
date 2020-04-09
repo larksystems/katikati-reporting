@@ -206,19 +206,70 @@ class DaySummary {
 
 class Message {
   String text;
-  String translated_text;
+  String translation;
   List<String> tags;
   DateTime received_at;
 
-  Message(this.text, this.translated_text, this.tags, this.received_at);
+  Message(this.text, this.translation, this.tags, this.received_at);
 
   factory Message.fromFirebaseMap(Map<String, dynamic> obj) {
     var text = obj['text'];
-    var translated_text = obj['translated_text'];
+    var translated_text = obj['translation'];
     var tags = List<String>();
     obj['tags'].forEach((a) => tags.add(a.toString()));
-    var received_at = obj['received_at'];
+    var received_at = DateTime.parse(obj['received_at']);
 
     return Message(text, translated_text, tags, received_at);
   }
+}
+
+class InteractionMessage {
+  int id;
+  String text;
+  String translated_text;
+  bool is_sent;
+  DateTime recorded_at;
+
+  InteractionMessage(this.id, this.text, this.recorded_at);
+}
+
+class Option {
+  String label;
+  String value;
+}
+
+class InteractionOptions {
+  Map<String, Option> age_buckets;
+  Map<String, Option> gender;
+  Map<String, Option> location_region;
+  Map<String, Option> language;
+  Map<String, Option> ipd_status;
+
+  InteractionOptions(this.age_buckets, this.gender, this.location_region,
+      this.language, this.ipd_status);
+}
+
+class Interaction {
+  int id;
+  List<InteractionMessage> messages;
+  List<String> themes;
+  String age_bucket;
+  String gender;
+  String location_region;
+  String location;
+  String language;
+  String idp_status;
+  DateTime recorded_at;
+
+  Interaction(
+      this.id,
+      this.messages,
+      this.themes,
+      this.age_bucket,
+      this.gender,
+      this.location_region,
+      this.location,
+      this.language,
+      this.idp_status,
+      this.recorded_at);
 }

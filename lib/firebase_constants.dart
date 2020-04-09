@@ -3,7 +3,7 @@ library firebase.constants;
 import 'dart:convert' as convert;
 import 'dart:html' as html;
 
-void init() async {
+void init(String _constantsFilePath) async {
   if (_constants != null) return;
 
   var constantsJson = await html.HttpRequest.getString(_constantsFilePath);
@@ -11,7 +11,6 @@ void init() async {
       (key, value) => MapEntry(key.toString(), value.toString()));
 }
 
-String _constantsFilePath = 'firebase/constants.json';
 Map<String, String> _constants;
 
 String get apiKey => _constants['apiKey'];
@@ -22,5 +21,7 @@ String get storageBucket => _constants['storageBucket'];
 String get messagingSenderId => _constants['messagingSenderId'];
 String get appId => _constants['appId'];
 String get measurementId => _constants['measurementId'];
+List<String> get allowedEmailDomains =>
+    _constants['allowedEmailDomains'].split('|');
 
 String get summaryMetrics => _constants['metrics'];
