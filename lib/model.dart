@@ -240,14 +240,14 @@ class Option {
   Option(this.value, this.label);
 }
 
-class InteractionThemeFilter {
+class InteractionFilter {
   String value;
   String label;
   List<Option> options;
 
-  InteractionThemeFilter(this.value, this.label, this.options);
+  InteractionFilter(this.value, this.label, this.options);
 
-  factory InteractionThemeFilter.fromFirebaseMap(Map<String, dynamic> obj) {
+  factory InteractionFilter.fromFirebaseMap(Map<String, dynamic> obj) {
     var value = obj['value'];
     var label = obj['label'];
     var options = List<Option>();
@@ -255,7 +255,7 @@ class InteractionThemeFilter {
       options.add(Option(o['value'], o['label']));
     });
 
-    return InteractionThemeFilter(value, label, options);
+    return InteractionFilter(value, label, options);
   }
 }
 

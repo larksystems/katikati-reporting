@@ -13,11 +13,15 @@ class Controller {
 
   List<model.Message> _messages;
 
-  bool _enableCompare = true;
-  List<model.InteractionThemeFilter> _themeFilters;
-  List<String> _activeThemeFilters = [];
-  Map<String, String> _themeFilterValues = {};
-  Map<String, String> _themeCompareFilterValues = {};
+  bool _isCompareEnabled = true;
+  bool _isThemesVisible = true;
+  String _demogTheme;
+  String _demogCompareTheme;
+  List<model.Option> _allThemes;
+  List<model.InteractionFilter> _themeFilters;
+  List<String> _activeFilters = [];
+  Map<String, String> _filterValues = {};
+  Map<String, String> _compareFilterValues = {};
 
   Controller(this._visibleTabID, this.view) {
     initFirebase();
@@ -86,6 +90,7 @@ class Controller {
       case 'show-interactions':
         logger.log('Loading interactions');
         _themeFilters ??= await fb.readThemeFilters();
+        _allThemes ??= await fb.readAllThemes();
         chooseInteractionThemes();
         break;
       default:
@@ -103,45 +108,90 @@ class Controller {
   }
 
   void enableCompare(bool isSelected) {
-    _enableCompare = isSelected;
+    _isCompareEnabled = isSelected;
     _renderThemeFilters();
   }
 
   void _renderThemeFilters() {
-    view.renderInteractionThemeFilters(_themeFilters, _themeFilterValues,
-        _themeCompareFilterValues, _activeThemeFilters, _enableCompare);
+    view.renderInteractionThemeFilters(_themeFilters, _filterValues,
+        _compareFilterValues, _activeFilters, _isCompareEnabled);
+  }
+
+  void _renderDemogFilters() {
+    view.renderInteractionDemogFilters(
+        _themeFilters, _filterValues, _activeFilters);
   }
 
   void chooseInteractionThemes() {
+    _isThemesVisible = true;
     view.showInteractionAnalyseTheme();
+    _activeFilters = [];
+    _filterValues = {};
+    _compareFilterValues = {};
     _renderThemeFilters();
   }
 
   void chooseInteractionDemographics() {
+    _isThemesVisible = false;
     view.showInteractionAnalyseDemographics();
+    _activeFilters = [];
+    _filterValues = {};
+    _compareFilterValues = {};
+    print(_allThemes);
+    _renderDemogThemes();
+    _renderDemogFilters();
+  }
+
+  void _renderDemogThemes() {
+    view.renderInteractionDemogThemes(
+        _allThemes, _isCompareEnabled, _demogTheme, _demogCompareTheme);
+  }
+
+  void chooseDemogTheme(String theme) {
+    _demogTheme = theme;
+    _renderDemogThemes();
+  }
+
+  void chooseDemogCompareTheme(String theme) {
+    _demogCompareTheme = theme;
+    _renderDemogThemes();
   }
 
   void addToActiveThemeFilters(String theme) {
-    if (_activeThemeFilters.contains(theme)) return;
-    _activeThemeFilters.add(theme);
-    chooseInteractionThemeFilter(theme, _themeFilterValues[theme] ?? 'all');
+    if (_activeFilters.contains(theme)) return;
+    _activeFilters.add(theme);
+    chooseInteractionThemeFilter(theme, _filterValues[theme] ?? 'all');
     chooseInteractionCompareThemeFilter(
-        theme, _themeCompareFilterValues[theme] ?? 'all');
+        theme, _compareFilterValues[theme] ?? 'all');
   }
 
   void removeFromActiveFilters(String theme) {
-    if (!_activeThemeFilters.contains(theme)) return;
-    _activeThemeFilters.removeWhere((t) => t == theme);
-    _renderThemeFilters();
+    if (!_activeFilters.contains(theme)) return;
+    _activeFilters.removeWhere((t) => t == theme);
+
+    if (_isThemesVisible) {
+      _renderThemeFilters();
+    } else {
+      _renderDemogFilters();
+    }
   }
 
   void chooseInteractionThemeFilter(String theme, String value) {
-    _themeFilterValues[theme] = value;
-    _renderThemeFilters();
+    _filterValues[theme] = value;
+    if (_isThemesVisible) {
+      _renderThemeFilters();
+    } else {
+      _renderDemogFilters();
+    }
   }
 
   void chooseInteractionCompareThemeFilter(String theme, String value) {
-    _themeCompareFilterValues[theme] = value;
-    _renderThemeFilters();
+    _compareFilterValues[theme] = value;
+    if (_isThemesVisible) {
+      _renderThemeFilters();
+    } else {
+      _renderDemogFilters();
+      _renderDemogThemes();
+    }
   }
 }

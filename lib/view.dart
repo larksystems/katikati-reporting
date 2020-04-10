@@ -26,6 +26,10 @@ html.DivElement get analyseDemographicsContent =>
     html.querySelector('#analyse-demographics-content');
 html.DivElement get analyseThemesFilterWrapper =>
     html.querySelector('#analyse-themes-filter-wrapper');
+html.DivElement get analyseDemogFilterWrapper =>
+    html.querySelector('#analyse-demographics-filter-wrapper');
+html.DivElement get analyseDemogCompareWrapper =>
+    html.querySelector('#analyse-demographics-compare-wrapper');
 
 class View {
   Controller controller;
@@ -188,8 +192,8 @@ class View {
     analyseThemesContent.setAttribute('hidden', 'true');
   }
 
-  html.DivElement _getFilterRow(
-      model.InteractionThemeFilter filter,
+  html.DivElement _getThemeFilterRow(
+      model.InteractionFilter filter,
       Map<String, String> themeFilterValues,
       Map<String, String> compareThemeFilterValues,
       List<String> activeFilters,
@@ -261,12 +265,11 @@ class View {
     }
 
     row..append(checkboxCol)..append(dropdownCol)..append(compareCol);
-
     return row;
   }
 
   void renderInteractionThemeFilters(
-      List<model.InteractionThemeFilter> filters,
+      List<model.InteractionFilter> filters,
       Map<String, String> themeFilterValues,
       Map<String, String> compareThemeFilterValues,
       List<String> activeFilters,
@@ -274,12 +277,120 @@ class View {
     analyseThemesFilterWrapper.children.clear();
 
     filters.forEach((f) {
-      analyseThemesFilterWrapper.append(_getFilterRow(f, themeFilterValues,
+      analyseThemesFilterWrapper.append(_getThemeFilterRow(f, themeFilterValues,
           compareThemeFilterValues, activeFilters, isCompareEnabled));
     });
   }
 
-  void chooseInteractionThemes() {}
+  html.DivElement _getDemogFilterRow(model.InteractionFilter filter,
+      Map<String, String> themeFilterValues, List<String> activeFilters) {
+    var row = html.DivElement()..classes = ['row'];
+    var checkboxCol = html.DivElement()..classes = ['col-2'];
+    var dropdownCol = html.DivElement()..classes = ['col-2'];
+
+    var label = html.LabelElement()
+      ..text = filter.label
+      ..htmlFor = 'demog_' + filter.value;
+    var checkbox = html.CheckboxInputElement()
+      ..setAttribute('id', 'demog_' + filter.value)
+      ..onChange.listen((e) {
+        if ((e.target as html.CheckboxInputElement).checked) {
+          controller.addToActiveThemeFilters(filter.value);
+        } else {
+          controller.removeFromActiveFilters(filter.value);
+        }
+      });
+    checkboxCol..append(checkbox)..append(label);
+
+    var dropdown = html.SelectElement()
+      ..setAttribute('disabled', 'true')
+      ..onChange.listen((e) {
+        var value = (e.target as html.SelectElement).value;
+        controller.chooseInteractionThemeFilter(filter.value, value);
+      });
+
+    filter.options.forEach((o) {
+      var option = html.OptionElement()
+        ..setAttribute('value', o.value)
+        ..appendText(o.label);
+      if (o.value == themeFilterValues[filter.value]) {
+        option.setAttribute('selected', 'true');
+      }
+      dropdown.append(option);
+    });
+    dropdownCol.append(dropdown);
+
+    if (activeFilters.contains(filter.value)) {
+      dropdown.removeAttribute('disabled');
+      checkbox.setAttribute('checked', 'true');
+    }
+
+    row..append(checkboxCol)..append(dropdownCol);
+    return row;
+  }
+
+  void renderInteractionDemogFilters(List<model.InteractionFilter> filters,
+      Map<String, String> themeFilterValues, List<String> activeFilters) {
+    analyseDemogFilterWrapper.children.clear();
+
+    filters.forEach((f) {
+      analyseDemogFilterWrapper
+          .append(_getDemogFilterRow(f, themeFilterValues, activeFilters));
+    });
+  }
+
+  void renderInteractionDemogThemes(List<model.Option> themes,
+      bool isCompareEnabled, String theme, String compareTheme) {
+    analyseDemogCompareWrapper.children.clear();
+
+    var row = html.DivElement()..classes = ['row'];
+    var dropdownCol = html.DivElement()..classes = ['col-2'];
+    var compareCol = html.DivElement()..classes = ['col-2'];
+
+    var dropdown = html.SelectElement()
+      ..onChange.listen((e) {
+        var value = (e.target as html.SelectElement).value;
+        controller.chooseDemogTheme(value);
+      });
+
+    themes.forEach((o) {
+      var option = html.OptionElement()
+        ..setAttribute('value', o.value)
+        ..appendText(o.label);
+      if (theme == o.value) {
+        option.setAttribute('selected', 'true');
+      }
+      dropdown.append(option);
+    });
+
+    var compare = html.SelectElement()
+      ..setAttribute('disabled', 'true')
+      ..onChange.listen((e) {
+        var value = (e.target as html.SelectElement).value;
+        controller.chooseDemogCompareTheme(value);
+      });
+
+    themes.forEach((o) {
+      var option = html.OptionElement()
+        ..setAttribute('value', o.value)
+        ..appendText(o.label);
+      if (o.value == compareTheme) {
+        option.setAttribute('selected', 'true');
+      }
+      compare.append(option);
+    });
+
+    if (isCompareEnabled) {
+      compare.removeAttribute('disabled');
+    }
+
+    dropdownCol.append(dropdown);
+    compareCol.append(compare);
+
+    row..append(dropdownCol)..append(compareCol);
+
+    analyseDemogCompareWrapper.append(row);
+  }
 
   void render() {
     _updateNavbar();

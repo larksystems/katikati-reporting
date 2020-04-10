@@ -123,7 +123,7 @@ Future<List<model.Message>> readMisinfoMessages() async {
   return messagesList;
 }
 
-Future<List<model.InteractionThemeFilter>> readThemeFilters() async {
+Future<List<model.InteractionFilter>> readThemeFilters() async {
   const filters = [
     {
       'value': 'gender',
@@ -176,11 +176,27 @@ Future<List<model.InteractionThemeFilter>> readThemeFilters() async {
     }
   ];
 
-  var filtersList = List<model.InteractionThemeFilter>();
+  var filtersList = List<model.InteractionFilter>();
   filters.forEach((f) {
-    var filter = model.InteractionThemeFilter.fromFirebaseMap(f);
+    var filter = model.InteractionFilter.fromFirebaseMap(f);
     filtersList.add(filter);
   });
 
   return Future.delayed(Duration(seconds: 1), () => filtersList);
+}
+
+Future<List<model.Option>> readAllThemes() async {
+  const themes = [
+    {'value': 'all', 'label': 'All themes'},
+    {'value': 'misinfo', 'label': 'Misinfo'},
+    {'value': 'question', 'label': 'Question'}
+  ];
+
+  var themesList = List<model.Option>();
+  themes.forEach((t) {
+    var option = model.Option(t['value'], t['label']);
+    themesList.add(option);
+  });
+
+  return Future.delayed(Duration(seconds: 1), () => themesList);
 }
