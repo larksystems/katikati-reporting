@@ -13,6 +13,12 @@ class Controller {
 
   List<model.Message> _messages;
 
+  bool _enableCompare = true;
+  List<model.InteractionThemeFilter> _themeFilters;
+  List<String> _activeThemeFilters = [];
+  Map<String, String> _themeFilterValues = {};
+  Map<String, String> _themeCompareFilterValues = {};
+
   Controller(this._visibleTabID, this.view) {
     initFirebase();
   }
@@ -79,6 +85,7 @@ class Controller {
         break;
       case 'show-interactions':
         logger.log('Loading interactions');
+        _themeFilters ??= await fb.readThemeFilters();
         chooseInteractionThemes();
         break;
       default:
@@ -95,11 +102,46 @@ class Controller {
     view.render();
   }
 
+  void enableCompare(bool isSelected) {
+    _enableCompare = isSelected;
+    _renderThemeFilters();
+  }
+
+  void _renderThemeFilters() {
+    view.renderInteractionThemeFilters(_themeFilters, _themeFilterValues,
+        _themeCompareFilterValues, _activeThemeFilters, _enableCompare);
+  }
+
   void chooseInteractionThemes() {
     view.showInteractionAnalyseTheme();
+    _renderThemeFilters();
   }
 
   void chooseInteractionDemographics() {
     view.showInteractionAnalyseDemographics();
+  }
+
+  void addToActiveThemeFilters(String theme) {
+    if (_activeThemeFilters.contains(theme)) return;
+    _activeThemeFilters.add(theme);
+    chooseInteractionThemeFilter(theme, _themeFilterValues[theme] ?? 'all');
+    chooseInteractionCompareThemeFilter(
+        theme, _themeCompareFilterValues[theme] ?? 'all');
+  }
+
+  void removeFromActiveFilters(String theme) {
+    if (!_activeThemeFilters.contains(theme)) return;
+    _activeThemeFilters.removeWhere((t) => t == theme);
+    _renderThemeFilters();
+  }
+
+  void chooseInteractionThemeFilter(String theme, String value) {
+    _themeFilterValues[theme] = value;
+    _renderThemeFilters();
+  }
+
+  void chooseInteractionCompareThemeFilter(String theme, String value) {
+    _themeCompareFilterValues[theme] = value;
+    _renderThemeFilters();
   }
 }

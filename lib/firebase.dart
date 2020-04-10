@@ -122,3 +122,65 @@ Future<List<model.Message>> readMisinfoMessages() async {
 
   return messagesList;
 }
+
+Future<List<model.InteractionThemeFilter>> readThemeFilters() async {
+  const filters = [
+    {
+      'value': 'gender',
+      'label': 'Gender',
+      'options': [
+        {'value': 'all', 'label': 'All genders'},
+        {'value': 'male', 'label': 'Male'},
+        {'value': 'female', 'label': 'Female'},
+        {'value': 'unknown', 'label': 'Unknown'}
+      ]
+    },
+    {
+      'value': 'age',
+      'label': 'Age',
+      'options': [
+        {'value': 'all', 'label': 'All age buckets'},
+        {'value': '0_18', 'label': '< 18 yrs'},
+        {'value': '18_35', 'label': '18 to 35 yrs'},
+        {'value': '35_50', 'label': '35 to 50 yrs'},
+        {'value': '50_', 'label': '> 50 yrs'}
+      ]
+    },
+    {
+      'value': 'idp_status',
+      'label': 'IDP Status',
+      'options': [
+        {'value': 'all', 'label': 'All status'},
+        {'value': 'displaced', 'label': 'Displaced'},
+        {'value': 'not_displaced', 'label': 'Not displaced'},
+        {'value': 'unknown', 'label': 'Unknown'}
+      ]
+    },
+    {
+      'value': 'language',
+      'label': 'Language',
+      'options': [
+        {'value': 'all', 'label': 'All languages'},
+        {'value': 'english', 'label': 'English'},
+        {'value': 'swahili', 'label': 'Swahili'}
+      ]
+    },
+    {
+      'value': 'location',
+      'label': 'County',
+      'options': [
+        {'value': 'all', 'label': 'All counties'},
+        {'value': 'county_1', 'label': 'County 1'},
+        {'value': 'county_1', 'label': 'County 2'}
+      ]
+    }
+  ];
+
+  var filtersList = List<model.InteractionThemeFilter>();
+  filters.forEach((f) {
+    var filter = model.InteractionThemeFilter.fromFirebaseMap(f);
+    filtersList.add(filter);
+  });
+
+  return Future.delayed(Duration(seconds: 1), () => filtersList);
+}

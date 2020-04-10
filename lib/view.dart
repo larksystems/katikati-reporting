@@ -1,6 +1,7 @@
 import 'dart:html' as html;
 import 'model.dart' as model;
 import 'utils.dart' as util;
+import 'model.dart' as model;
 import 'package:covid/controller.dart';
 
 List<html.Element> get _navLinks => html.querySelectorAll('.nav-item');
@@ -17,10 +18,14 @@ html.SelectElement get messagesSort =>
 
 List<html.RadioButtonInputElement> get analyseChooser =>
     html.querySelectorAll('.analyse-radio');
+html.CheckboxInputElement get enableCompare =>
+    html.querySelector('#interactions-compare');
 html.DivElement get analyseThemesContent =>
     html.querySelector('#analyse-themes-content');
 html.DivElement get analyseDemographicsContent =>
     html.querySelector('#analyse-demographics-content');
+html.DivElement get analyseThemesFilterWrapper =>
+    html.querySelector('#analyse-themes-filter-wrapper');
 
 class View {
   Controller controller;
@@ -29,6 +34,7 @@ class View {
     _listenToNavbarChanges();
     _listenToMessagesSort();
 
+    _listenToEnableCompare();
     _listenToAnalyseChooser();
   }
 
@@ -54,6 +60,13 @@ class View {
           logger.error('No such sort option');
       }
       controller.renderMessages();
+    });
+  }
+
+  void _listenToEnableCompare() {
+    enableCompare.onChange.listen((e) {
+      var enabled = (e.target as html.CheckboxInputElement).checked;
+      controller.enableCompare(enabled);
     });
   }
 
@@ -173,6 +186,97 @@ class View {
   void showInteractionAnalyseDemographics() {
     analyseDemographicsContent.removeAttribute('hidden');
     analyseThemesContent.setAttribute('hidden', 'true');
+  }
+
+  html.DivElement _getFilterRow(
+      model.InteractionThemeFilter filter,
+      Map<String, String> themeFilterValues,
+      Map<String, String> compareThemeFilterValues,
+      List<String> activeFilters,
+      bool isCompareEnabled) {
+    var row = html.DivElement()..classes = ['row'];
+    var checkboxCol = html.DivElement()..classes = ['col-2'];
+    var dropdownCol = html.DivElement()..classes = ['col-2'];
+    var compareCol = html.DivElement()..classes = ['col-2'];
+
+    var label = html.LabelElement()
+      ..text = filter.label
+      ..htmlFor = filter.value;
+    var checkbox = html.CheckboxInputElement()
+      ..setAttribute('id', filter.value)
+      ..onChange.listen((e) {
+        if ((e.target as html.CheckboxInputElement).checked) {
+          controller.addToActiveThemeFilters(filter.value);
+        } else {
+          controller.removeFromActiveFilters(filter.value);
+        }
+      });
+    checkboxCol..append(checkbox)..append(label);
+
+    var dropdown = html.SelectElement()
+      ..setAttribute('disabled', 'true')
+      ..onChange.listen((e) {
+        var value = (e.target as html.SelectElement).value;
+        controller.chooseInteractionThemeFilter(filter.value, value);
+      });
+
+    var compare = html.SelectElement()
+      ..setAttribute('value', 'all')
+      ..setAttribute('disabled', 'true')
+      ..onChange.listen((e) {
+        var value = (e.target as html.SelectElement).value;
+        controller.chooseInteractionCompareThemeFilter(filter.value, value);
+      });
+
+    filter.options.forEach((o) {
+      var option = html.OptionElement()
+        ..setAttribute('value', o.value)
+        ..appendText(o.label);
+      if (o.value == themeFilterValues[filter.value]) {
+        option.setAttribute('selected', 'true');
+      }
+      dropdown.append(option);
+    });
+
+    filter.options.forEach((o) {
+      var option = html.OptionElement()
+        ..setAttribute('value', o.value)
+        ..appendText(o.label);
+      if (o.value == compareThemeFilterValues[filter.value]) {
+        option.setAttribute('selected', 'true');
+      }
+      compare.append(option);
+    });
+
+    dropdownCol.append(dropdown);
+    compareCol.append(compare);
+
+    if (activeFilters.contains(filter.value)) {
+      checkbox.setAttribute('checked', 'true');
+      dropdown.removeAttribute('disabled');
+
+      if (isCompareEnabled) {
+        compare.removeAttribute('disabled');
+      }
+    }
+
+    row..append(checkboxCol)..append(dropdownCol)..append(compareCol);
+
+    return row;
+  }
+
+  void renderInteractionThemeFilters(
+      List<model.InteractionThemeFilter> filters,
+      Map<String, String> themeFilterValues,
+      Map<String, String> compareThemeFilterValues,
+      List<String> activeFilters,
+      bool isCompareEnabled) {
+    analyseThemesFilterWrapper.children.clear();
+
+    filters.forEach((f) {
+      analyseThemesFilterWrapper.append(_getFilterRow(f, themeFilterValues,
+          compareThemeFilterValues, activeFilters, isCompareEnabled));
+    });
   }
 
   void chooseInteractionThemes() {}

@@ -18,6 +18,10 @@ nav .nav-link {
   cursor: pointer;
 }
 
+input[type="checkbox"] {
+  margin-right: 6px;
+}
+
 .content {
   padding-top: 64px;
   padding-bottom: 64px;

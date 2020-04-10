@@ -236,17 +236,27 @@ class InteractionMessage {
 class Option {
   String label;
   String value;
+
+  Option(this.value, this.label);
 }
 
-class InteractionOptions {
-  Map<String, Option> age_buckets;
-  Map<String, Option> gender;
-  Map<String, Option> location_region;
-  Map<String, Option> language;
-  Map<String, Option> ipd_status;
+class InteractionThemeFilter {
+  String value;
+  String label;
+  List<Option> options;
 
-  InteractionOptions(this.age_buckets, this.gender, this.location_region,
-      this.language, this.ipd_status);
+  InteractionThemeFilter(this.value, this.label, this.options);
+
+  factory InteractionThemeFilter.fromFirebaseMap(Map<String, dynamic> obj) {
+    var value = obj['value'];
+    var label = obj['label'];
+    var options = List<Option>();
+    obj['options'].forEach((o) {
+      options.add(Option(o['value'], o['label']));
+    });
+
+    return InteractionThemeFilter(value, label, options);
+  }
 }
 
 class Interaction {
