@@ -15,12 +15,21 @@ html.DivElement get timelineWrapper => html.querySelector('#messages-timeline');
 html.SelectElement get messagesSort =>
     html.querySelector('#messages-sort-select');
 
+List<html.RadioButtonInputElement> get analyseChooser =>
+    html.querySelectorAll('.analyse-radio');
+html.DivElement get analyseThemesContent =>
+    html.querySelector('#analyse-themes-content');
+html.DivElement get analyseDemographicsContent =>
+    html.querySelector('#analyse-demographics-content');
+
 class View {
   Controller controller;
 
   View() {
     _listenToNavbarChanges();
     _listenToMessagesSort();
+
+    _listenToAnalyseChooser();
   }
 
   void _listenToNavbarChanges() {
@@ -45,6 +54,24 @@ class View {
           logger.error('No such sort option');
       }
       controller.renderMessages();
+    });
+  }
+
+  void _listenToAnalyseChooser() {
+    analyseChooser.forEach((chooser) {
+      chooser.onChange.listen((e) {
+        var value = (e.currentTarget as html.RadioButtonInputElement).value;
+        switch (value) {
+          case 'themes':
+            controller.chooseInteractionThemes();
+            break;
+          case 'demographics':
+            controller.chooseInteractionDemographics();
+            break;
+          default:
+            logger.error('No such analyse option');
+        }
+      });
     });
   }
 
@@ -96,6 +123,7 @@ class View {
     loadingModal.setAttribute('hidden', 'true');
   }
 
+  // Messages sort & timeline
   html.DivElement _getMessageRow(model.Message message) {
     var row = html.DivElement()..classes = ['row'];
     var colLeft = html.DivElement()
@@ -125,13 +153,29 @@ class View {
     return row..append(colLeft)..append(colRight);
   }
 
+  void updateMessagesSort(bool desc) {
+    messagesSort.value = desc ? 'desc' : 'asc';
+  }
+
   void renderMessagesTimeline(List<model.Message> messages) {
     timelineWrapper.children.clear();
 
     var displayMessages = List<model.Message>.from(messages);
-    print(displayMessages);
     displayMessages.forEach((m) => {timelineWrapper.append(_getMessageRow(m))});
   }
+
+  // Interaction methods
+  void showInteractionAnalyseTheme() {
+    analyseThemesContent.removeAttribute('hidden');
+    analyseDemographicsContent.setAttribute('hidden', 'true');
+  }
+
+  void showInteractionAnalyseDemographics() {
+    analyseDemographicsContent.removeAttribute('hidden');
+    analyseThemesContent.setAttribute('hidden', 'true');
+  }
+
+  void chooseInteractionThemes() {}
 
   void render() {
     _updateNavbar();

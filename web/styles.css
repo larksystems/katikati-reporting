@@ -36,6 +36,11 @@ label {
   font-size: 12px;
 }
 
+.uppercase {
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+}
+
 .card {
   margin-bottom: 2rem;
   height: calc(100% - 2rem);

@@ -65,24 +65,26 @@ class Controller {
   }
 
   void _loadTab() async {
+    view.showLoading();
     switch (_visibleTabID) {
       case 'show-individuals':
         logger.log('Loading individuals');
         break;
       case 'show-misinfo':
-        view.showLoading();
-        _messages = await fb.readMisinfoMessages();
+        _messages ??= await fb.readMisinfoMessages();
         sortMessages(desc: true);
+        view.updateMessagesSort(true);
         logger.log('Received ${_messages.length} messages');
         renderMessages();
-        view.hideLoading();
         break;
       case 'show-interactions':
         logger.log('Loading interactions');
+        chooseInteractionThemes();
         break;
       default:
         logger.error('No such tab');
     }
+    view.hideLoading();
   }
 
   void renderMessages() {
@@ -91,5 +93,13 @@ class Controller {
 
   void renderView() {
     view.render();
+  }
+
+  void chooseInteractionThemes() {
+    view.showInteractionAnalyseTheme();
+  }
+
+  void chooseInteractionDemographics() {
+    view.showInteractionAnalyseDemographics();
   }
 }

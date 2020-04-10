@@ -10,7 +10,7 @@ class App {
 
   App() {
     view = View();
-    controller = Controller('show-individuals', view);
+    controller = Controller('show-interactions', view);
     view.controller = controller;
   }
 }
