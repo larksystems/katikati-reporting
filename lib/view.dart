@@ -20,9 +20,9 @@ List<html.RadioButtonInputElement> get analyseChooser =>
     html.querySelectorAll('.analyse-radio');
 html.CheckboxInputElement get enableCompare =>
     html.querySelector('#interactions-compare');
-html.DivElement get analyseThemesContent =>
+html.DivElement get analyseThemeContent =>
     html.querySelector('#analyse-themes-content');
-html.DivElement get analyseDemographicsContent =>
+html.DivElement get analyseDemogContent =>
     html.querySelector('#analyse-demographics-content');
 html.DivElement get analyseThemesFilterWrapper =>
     html.querySelector('#analyse-themes-filter-wrapper');
@@ -45,7 +45,7 @@ class View {
   void _listenToNavbarChanges() {
     _navLinks.forEach((link) {
       link.onClick.listen((_) {
-        controller.chooseTab(link.getAttribute('id'));
+        controller.chooseNavTab(link.getAttribute('id'));
       });
     });
   }
@@ -55,15 +55,15 @@ class View {
       var value = (e.currentTarget as html.SelectElement).value;
       switch (value) {
         case 'desc':
-          controller.sortMessages();
+          controller.sortMisinfoMessages();
           break;
         case 'asc':
-          controller.sortMessages(desc: false);
+          controller.sortMisinfoMessages(desc: false);
           break;
         default:
           logger.error('No such sort option');
       }
-      controller.renderMessages();
+      controller.renderMisinfoMessages();
     });
   }
 
@@ -80,10 +80,10 @@ class View {
         var value = (e.currentTarget as html.RadioButtonInputElement).value;
         switch (value) {
           case 'themes':
-            controller.chooseInteractionThemes();
+            controller.setInteractionTab('theme');
             break;
           case 'demographics':
-            controller.chooseInteractionDemographics();
+            controller.setInteractionTab('demog');
             break;
           default:
             logger.error('No such analyse option');
@@ -170,7 +170,7 @@ class View {
     return row..append(colLeft)..append(colRight);
   }
 
-  void updateMessagesSort(bool desc) {
+  void setMessagesSortSelect(bool desc) {
     messagesSort.value = desc ? 'desc' : 'asc';
   }
 
@@ -182,20 +182,25 @@ class View {
   }
 
   // Interaction methods
-  void showInteractionAnalyseTheme() {
-    analyseThemesContent.removeAttribute('hidden');
-    analyseDemographicsContent.setAttribute('hidden', 'true');
-  }
-
-  void showInteractionAnalyseDemographics() {
-    analyseDemographicsContent.removeAttribute('hidden');
-    analyseThemesContent.setAttribute('hidden', 'true');
+  void toggleInteractionTab(String tabID) {
+    switch (tabID) {
+      case 'theme':
+        analyseThemeContent.removeAttribute('hidden');
+        analyseDemogContent.setAttribute('hidden', 'true');
+        break;
+      case 'demog':
+        analyseDemogContent.removeAttribute('hidden');
+        analyseThemeContent.setAttribute('hidden', 'true');
+        break;
+      default:
+        logger.error('No such interaction tab to show');
+    }
   }
 
   html.DivElement _getThemeFilterRow(
       model.InteractionFilter filter,
-      Map<String, String> themeFilterValues,
-      Map<String, String> compareThemeFilterValues,
+      Map<String, String> filterValues,
+      Map<String, String> filterCompareValues,
       List<String> activeFilters,
       bool isCompareEnabled) {
     var row = html.DivElement()..classes = ['row'];
@@ -210,7 +215,7 @@ class View {
       ..setAttribute('id', filter.value)
       ..onChange.listen((e) {
         if ((e.target as html.CheckboxInputElement).checked) {
-          controller.addToActiveThemeFilters(filter.value);
+          controller.addToActiveFilters(filter.value);
         } else {
           controller.removeFromActiveFilters(filter.value);
         }
@@ -221,7 +226,7 @@ class View {
       ..setAttribute('disabled', 'true')
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
-        controller.chooseInteractionThemeFilter(filter.value, value);
+        controller.setFilterValue(filter.value, value);
       });
 
     var compare = html.SelectElement()
@@ -229,14 +234,14 @@ class View {
       ..setAttribute('disabled', 'true')
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
-        controller.chooseInteractionCompareThemeFilter(filter.value, value);
+        controller.setFilterCompareValue(filter.value, value);
       });
 
     filter.options.forEach((o) {
       var option = html.OptionElement()
         ..setAttribute('value', o.value)
         ..appendText(o.label);
-      if (o.value == themeFilterValues[filter.value]) {
+      if (o.value == filterValues[filter.value]) {
         option.setAttribute('selected', 'true');
       }
       dropdown.append(option);
@@ -246,7 +251,7 @@ class View {
       var option = html.OptionElement()
         ..setAttribute('value', o.value)
         ..appendText(o.label);
-      if (o.value == compareThemeFilterValues[filter.value]) {
+      if (o.value == filterCompareValues[filter.value]) {
         option.setAttribute('selected', 'true');
       }
       compare.append(option);
@@ -270,20 +275,20 @@ class View {
 
   void renderInteractionThemeFilters(
       List<model.InteractionFilter> filters,
-      Map<String, String> themeFilterValues,
-      Map<String, String> compareThemeFilterValues,
+      Map<String, String> filterValues,
+      Map<String, String> filterCompareValues,
       List<String> activeFilters,
       bool isCompareEnabled) {
     analyseThemesFilterWrapper.children.clear();
 
     filters.forEach((f) {
-      analyseThemesFilterWrapper.append(_getThemeFilterRow(f, themeFilterValues,
-          compareThemeFilterValues, activeFilters, isCompareEnabled));
+      analyseThemesFilterWrapper.append(_getThemeFilterRow(f, filterValues,
+          filterCompareValues, activeFilters, isCompareEnabled));
     });
   }
 
   html.DivElement _getDemogFilterRow(model.InteractionFilter filter,
-      Map<String, String> themeFilterValues, List<String> activeFilters) {
+      Map<String, String> filterValues, List<String> activeFilters) {
     var row = html.DivElement()..classes = ['row'];
     var checkboxCol = html.DivElement()..classes = ['col-2'];
     var dropdownCol = html.DivElement()..classes = ['col-2'];
@@ -295,7 +300,7 @@ class View {
       ..setAttribute('id', 'demog_' + filter.value)
       ..onChange.listen((e) {
         if ((e.target as html.CheckboxInputElement).checked) {
-          controller.addToActiveThemeFilters(filter.value);
+          controller.addToActiveFilters(filter.value);
         } else {
           controller.removeFromActiveFilters(filter.value);
         }
@@ -306,14 +311,14 @@ class View {
       ..setAttribute('disabled', 'true')
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
-        controller.chooseInteractionThemeFilter(filter.value, value);
+        controller.setFilterValue(filter.value, value);
       });
 
     filter.options.forEach((o) {
       var option = html.OptionElement()
         ..setAttribute('value', o.value)
         ..appendText(o.label);
-      if (o.value == themeFilterValues[filter.value]) {
+      if (o.value == filterValues[filter.value]) {
         option.setAttribute('selected', 'true');
       }
       dropdown.append(option);
@@ -330,12 +335,12 @@ class View {
   }
 
   void renderInteractionDemogFilters(List<model.InteractionFilter> filters,
-      Map<String, String> themeFilterValues, List<String> activeFilters) {
+      Map<String, String> filterValues, List<String> activeFilters) {
     analyseDemogFilterWrapper.children.clear();
 
     filters.forEach((f) {
       analyseDemogFilterWrapper
-          .append(_getDemogFilterRow(f, themeFilterValues, activeFilters));
+          .append(_getDemogFilterRow(f, filterValues, activeFilters));
     });
   }
 
@@ -350,7 +355,7 @@ class View {
     var dropdown = html.SelectElement()
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
-        controller.chooseDemogTheme(value);
+        controller.setThemeValue(value);
       });
 
     themes.forEach((o) {
@@ -367,7 +372,7 @@ class View {
       ..setAttribute('disabled', 'true')
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
-        controller.chooseDemogCompareTheme(value);
+        controller.setThemeCompareValue(value);
       });
 
     themes.forEach((o) {

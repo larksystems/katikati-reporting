@@ -9,25 +9,31 @@ Logger logger = Logger('app.dart');
 
 class Controller {
   View view;
-  String _visibleTabID;
+  String _activeNavTabID;
 
-  List<model.Message> _messages;
+  // Misinfo messages
+  List<model.Message> _misinfoMessages;
 
+  // Interactions
+  List<model.Interaction> _interactions;
   bool _isCompareEnabled = true;
-  bool _isThemesVisible = true;
-  String _demogTheme;
-  String _demogCompareTheme;
-  List<model.Option> _allThemes;
-  List<model.InteractionFilter> _themeFilters;
+  String _activeInteractionTabID;
+
+  List<model.InteractionFilter> _filters;
+  List<model.Option> _themes;
+
   List<String> _activeFilters = [];
   Map<String, String> _filterValues = {};
-  Map<String, String> _compareFilterValues = {};
+  Map<String, String> _filterCompareValues = {};
 
-  Controller(this._visibleTabID, this.view) {
+  String _themeValue;
+  String _themeCompareValue;
+
+  Controller(this._activeNavTabID, this.view) {
     initFirebase();
   }
 
-  String get visibleTabID => _visibleTabID;
+  String get visibleTabID => _activeNavTabID;
 
   void initFirebase() async {
     await fb.init('firebase/constants.json');
@@ -63,35 +69,33 @@ class Controller {
     _loadTab();
   }
 
-  void chooseTab(String tabID) {
-    _visibleTabID = tabID;
+  // Navigation tab
+  void chooseNavTab(String tabID) {
+    _activeNavTabID = tabID;
     _loadTab();
     renderView();
   }
 
-  void sortMessages({bool desc = true}) {
-    _messages.sort(
-        (a, b) => (desc ? -1 : 1) * a.received_at.compareTo(b.received_at));
-  }
-
   void _loadTab() async {
     view.showLoading();
-    switch (_visibleTabID) {
+    switch (_activeNavTabID) {
       case 'show-individuals':
         logger.log('Loading individuals');
         break;
       case 'show-misinfo':
-        _messages ??= await fb.readMisinfoMessages();
-        sortMessages(desc: true);
-        view.updateMessagesSort(true);
-        logger.log('Received ${_messages.length} messages');
-        renderMessages();
+        _misinfoMessages ??= await fb.readMisinfoMessages();
+        sortMisinfoMessages(desc: true);
+        view.setMessagesSortSelect(true);
+        logger.log('Received ${_misinfoMessages.length} messages');
+        renderMisinfoMessages();
         break;
       case 'show-interactions':
         logger.log('Loading interactions');
-        _themeFilters ??= await fb.readThemeFilters();
-        _allThemes ??= await fb.readAllThemes();
-        chooseInteractionThemes();
+        _filters ??= await fb.readThemeFilters();
+        _themes ??= await fb.readAllThemes();
+        _interactions ??= await fb.readAllInteractions();
+        logger.log('Received ${_interactions.length} interactions');
+        setInteractionTab('theme');
         break;
       default:
         logger.error('No such tab');
@@ -99,99 +103,93 @@ class Controller {
     view.hideLoading();
   }
 
-  void renderMessages() {
-    view.renderMessagesTimeline(_messages);
+  // Misinfo messages
+  void sortMisinfoMessages({bool desc = true}) {
+    _misinfoMessages.sort(
+        (a, b) => (desc ? -1 : 1) * a.received_at.compareTo(b.received_at));
+  }
+
+  void renderMisinfoMessages() {
+    view.renderMessagesTimeline(_misinfoMessages);
   }
 
   void renderView() {
     view.render();
   }
 
+  // Interactions
   void enableCompare(bool isSelected) {
     _isCompareEnabled = isSelected;
-    _renderThemeFilters();
+    _renderInteractionFilters();
   }
 
   void _renderThemeFilters() {
-    view.renderInteractionThemeFilters(_themeFilters, _filterValues,
-        _compareFilterValues, _activeFilters, _isCompareEnabled);
+    view.renderInteractionThemeFilters(_filters, _filterValues,
+        _filterCompareValues, _activeFilters, _isCompareEnabled);
   }
 
   void _renderDemogFilters() {
-    view.renderInteractionDemogFilters(
-        _themeFilters, _filterValues, _activeFilters);
+    view.renderInteractionDemogThemes(
+        _themes, _isCompareEnabled, _themeValue, _themeCompareValue);
+    view.renderInteractionDemogFilters(_filters, _filterValues, _activeFilters);
   }
 
-  void chooseInteractionThemes() {
-    _isThemesVisible = true;
-    view.showInteractionAnalyseTheme();
+  void setInteractionTab(String tabID) {
     _activeFilters = [];
     _filterValues = {};
-    _compareFilterValues = {};
-    _renderThemeFilters();
+    _filterCompareValues = {};
+    _themeValue = null;
+    _themeCompareValue = null;
+    _activeInteractionTabID = tabID;
+    _renderInteractionFilters();
+
+    view.toggleInteractionTab(_activeInteractionTabID);
   }
 
-  void chooseInteractionDemographics() {
-    _isThemesVisible = false;
-    view.showInteractionAnalyseDemographics();
-    _activeFilters = [];
-    _filterValues = {};
-    _compareFilterValues = {};
-    print(_allThemes);
-    _renderDemogThemes();
+  void _renderInteractionFilters() {
+    switch (_activeInteractionTabID) {
+      case 'theme':
+        _renderThemeFilters();
+        break;
+      case 'demog':
+        _renderDemogFilters();
+        break;
+      default:
+        logger.error('No such tab to render filter');
+    }
+  }
+
+  void setThemeValue(String theme) {
+    _themeValue = theme;
     _renderDemogFilters();
   }
 
-  void _renderDemogThemes() {
-    view.renderInteractionDemogThemes(
-        _allThemes, _isCompareEnabled, _demogTheme, _demogCompareTheme);
+  void setThemeCompareValue(String theme) {
+    _themeCompareValue = theme;
+    _renderDemogFilters();
   }
 
-  void chooseDemogTheme(String theme) {
-    _demogTheme = theme;
-    _renderDemogThemes();
-  }
-
-  void chooseDemogCompareTheme(String theme) {
-    _demogCompareTheme = theme;
-    _renderDemogThemes();
-  }
-
-  void addToActiveThemeFilters(String theme) {
+  void addToActiveFilters(String theme) {
     if (_activeFilters.contains(theme)) return;
     _activeFilters.add(theme);
-    chooseInteractionThemeFilter(theme, _filterValues[theme] ?? 'all');
-    chooseInteractionCompareThemeFilter(
-        theme, _compareFilterValues[theme] ?? 'all');
+    setFilterValue(theme, _filterValues[theme] ?? 'all');
+    setFilterCompareValue(theme, _filterCompareValues[theme] ?? 'all');
+    _renderInteractionFilters();
   }
 
   void removeFromActiveFilters(String theme) {
     if (!_activeFilters.contains(theme)) return;
     _activeFilters.removeWhere((t) => t == theme);
-
-    if (_isThemesVisible) {
-      _renderThemeFilters();
-    } else {
-      _renderDemogFilters();
-    }
+    _renderInteractionFilters();
   }
 
-  void chooseInteractionThemeFilter(String theme, String value) {
+  void setFilterValue(String theme, String value) {
     _filterValues[theme] = value;
-    if (_isThemesVisible) {
-      _renderThemeFilters();
-    } else {
-      _renderDemogFilters();
-    }
+    _renderInteractionFilters();
   }
 
-  void chooseInteractionCompareThemeFilter(String theme, String value) {
-    _compareFilterValues[theme] = value;
-    if (_isThemesVisible) {
-      _renderThemeFilters();
-    } else {
-      _renderDemogFilters();
-      _renderDemogThemes();
-    }
+  void setFilterCompareValue(String theme, String value) {
+    _filterCompareValues[theme] = value;
+    _renderInteractionFilters();
   }
 }

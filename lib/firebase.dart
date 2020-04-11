@@ -12,6 +12,7 @@ firestore.CollectionReference _eventsRef;
 firestore.CollectionReference _messagesRef;
 
 firestore.CollectionReference _misinfoRef;
+firestore.CollectionReference _interactionsRef;
 
 firebase.Auth get firebaseAuth => firebase.auth();
 
@@ -38,6 +39,10 @@ void init(String constantsFilePath) async {
   _messagesRef = _store.collection('messages-test');
   _misinfoRef =
       _store.collection('datasets').doc('misinfo').collection('messages');
+  _interactionsRef = _store
+      .collection('datasets')
+      .doc('covid19-som')
+      .collection('interactions');
 }
 
 // Auth login and logout
@@ -130,9 +135,9 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
       'label': 'Gender',
       'options': [
         {'value': 'all', 'label': 'All genders'},
-        {'value': 'male', 'label': 'Male'},
-        {'value': 'female', 'label': 'Female'},
-        {'value': 'unknown', 'label': 'Unknown'}
+        {'value': 'MALE', 'label': 'Male'},
+        {'value': 'FEMALE', 'label': 'Female'},
+        {'value': 'UNKNOWN', 'label': 'Unknown'}
       ]
     },
     {
@@ -140,10 +145,12 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
       'label': 'Age',
       'options': [
         {'value': 'all', 'label': 'All age buckets'},
-        {'value': '0_18', 'label': '< 18 yrs'},
-        {'value': '18_35', 'label': '18 to 35 yrs'},
-        {'value': '35_50', 'label': '35 to 50 yrs'},
-        {'value': '50_', 'label': '> 50 yrs'}
+        {'value': '10_to_14', 'label': '10 - 14 yrs'},
+        {'value': '15_to_17', 'label': '15 - 17 yrs'},
+        {'value': '18_to_35', 'label': '18 - 35 yrs'},
+        {'value': '36_to_54', 'label': '36 - 54 yrs'},
+        {'value': '55_to_99', 'label': '> 55 yrs'},
+        {'value': 'UNKNOWN', 'label': 'Unknown'}
       ]
     },
     {
@@ -151,9 +158,9 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
       'label': 'IDP Status',
       'options': [
         {'value': 'all', 'label': 'All status'},
-        {'value': 'displaced', 'label': 'Displaced'},
-        {'value': 'not_displaced', 'label': 'Not displaced'},
-        {'value': 'unknown', 'label': 'Unknown'}
+        {'value': 'DISPLACED', 'label': 'Displaced'},
+        {'value': 'NOT_DISPLACED', 'label': 'Not displaced'},
+        {'value': 'UNKNOWN', 'label': 'Unknown'}
       ]
     },
     {
@@ -161,8 +168,16 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
       'label': 'Language',
       'options': [
         {'value': 'all', 'label': 'All languages'},
+        {'value': 'arabic', 'label': 'Arabic'},
+        {'value': 'barawe', 'label': 'Barawe'},
         {'value': 'english', 'label': 'English'},
-        {'value': 'swahili', 'label': 'Swahili'}
+        {'value': 'kiswahili', 'label': 'Kiswahili'},
+        {'value': 'maimai', 'label': 'Maimai'},
+        {'value': 'mother-tongue', 'label': 'Mother tongue'},
+        {'value': 'multiple_languages', 'label': 'Multiple languages'},
+        {'value': 'somali', 'label': 'Somali'},
+        {'value': 'other', 'label': 'Others'},
+        {'value': 'UNKNOWN', 'label': 'Unknown'}
       ]
     },
     {
@@ -188,8 +203,30 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
 Future<List<model.Option>> readAllThemes() async {
   const themes = [
     {'value': 'all', 'label': 'All themes'},
-    {'value': 'misinfo', 'label': 'Misinfo'},
-    {'value': 'question', 'label': 'Question'}
+    {'value': 'about_coronavirus', 'label': 'About coronavirus'},
+    {'value': 'anxiety_panic', 'label': 'Anxiety or panic'},
+    {'value': 'attitude', 'label': 'Attitude'},
+    {'value': 'chasing_reply', 'label': 'Chasing reply'},
+    {'value': 'call_for_right_practice', 'label': 'Call for right practice'},
+    {'value': 'religious_hope_practice', 'label': 'Religious hope or practice'},
+    {'value': 'statement', 'label': 'Statement'},
+    {'value': 'knowledge', 'label': 'Knowledge'},
+    {'value': 'rumour_stigma_misinfo', 'label': 'Rumour stigma misinfo'},
+    {'value': 'government_responce', 'label': 'Government response'},
+    {'value': 'behaviour', 'label': 'Behaviour'},
+    {'value': 'about_conversation', 'label': 'About conversation'},
+    {'value': 'gratitude', 'label': 'Gratitude'},
+    {'value': 'call_for_awareness_creation', 'label': 'Call for awareness'},
+    {'value': 'how_to_treat', 'label': 'How to treat'},
+    {'value': 'how_to_prevent', 'label': 'How to prevent'},
+    {'value': 'collective_hope', 'label': 'Collective hope'},
+    {'value': 'how_spread_transmitted', 'label': 'How virus spreads or transmitted'},
+    {'value': 'symptoms', 'label': 'Symptoms'},
+    {'value': 'humanitarian_aid', 'label': 'Humanitarian aid'},
+    {'value': 'denial', 'label': 'Denial'},
+    {'value': 'somalia_update', 'label': 'Somalia update'},
+    {'value': 'other', 'label': 'Others'},
+    {'value': 'other_theme', 'label': 'Other themes'},
   ];
 
   var themesList = List<model.Option>();
@@ -199,4 +236,19 @@ Future<List<model.Option>> readAllThemes() async {
   });
 
   return Future.delayed(Duration(seconds: 1), () => themesList);
+}
+
+Future<List<model.Interaction>> readAllInteractions() async {
+  var interactionsSnap = await _interactionsRef.get();
+  var interactionsList = List<model.Interaction>();
+
+  interactionsSnap.forEach((doc) {
+    var obj = doc.data();
+    var interaction = model.Interaction.fromFirebaseMap(obj);
+    interactionsList.add(interaction);
+  });
+
+  // todo: check if the set of the interactions and filters match
+
+  return interactionsList;
 }

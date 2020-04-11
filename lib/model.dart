@@ -224,13 +224,24 @@ class Message {
 }
 
 class InteractionMessage {
-  int id;
-  String text;
-  String translated_text;
+  String id;
   bool is_sent;
   DateTime recorded_at;
+  String text;
+  String translated_text;
 
-  InteractionMessage(this.id, this.text, this.recorded_at);
+  InteractionMessage(
+      this.id, this.is_sent, this.recorded_at, this.text, this.translated_text);
+
+  factory InteractionMessage.fromFirebaseMap(Map<String, dynamic> obj) {
+    var id = obj['id'];
+    var is_sent = obj['is_sent'];
+    var recorded_at = DateTime.tryParse(obj['recorded_at']);
+    var text = obj['text'];
+    var translated_text = obj['translated_text'];
+
+    return InteractionMessage(id, is_sent, recorded_at, text, translated_text);
+  }
 }
 
 class Option {
@@ -260,26 +271,43 @@ class InteractionFilter {
 }
 
 class Interaction {
-  int id;
-  List<InteractionMessage> messages;
-  List<String> themes;
   String age_bucket;
   String gender;
-  String location_region;
-  String location;
-  String language;
+  String household_language;
   String idp_status;
+  String location;
+  String location_region;
+  List<InteractionMessage> messages;
   DateTime recorded_at;
+  List<String> themes;
 
   Interaction(
-      this.id,
-      this.messages,
-      this.themes,
       this.age_bucket,
       this.gender,
-      this.location_region,
-      this.location,
-      this.language,
+      this.household_language,
       this.idp_status,
-      this.recorded_at);
+      this.location,
+      this.location_region,
+      this.messages,
+      this.recorded_at,
+      this.themes);
+
+  factory Interaction.fromFirebaseMap(Map<String, dynamic> obj) {
+    var age_bucket = obj['age_bucket'];
+    var gender = obj['gender'];
+    var household_language = obj['household_language'];
+    var idp_status = obj['idp_status'];
+    var location = obj['location'];
+    var location_region = obj['location_region'];
+    var messages = List<InteractionMessage>();
+    obj['messages'].forEach((m) {
+      messages.add(InteractionMessage.fromFirebaseMap(m));
+    });
+    var recorded_at = DateTime.tryParse(obj['recorded_at']);
+    var themes = List<String>();
+    obj['themes'].forEach((t) => themes.add(t));
+
+    return Interaction(age_bucket, gender, household_language, idp_status,
+        location, location_region, messages, recorded_at, themes);
+  }
 }
