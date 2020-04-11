@@ -164,8 +164,8 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
       ]
     },
     {
-      'value': 'language',
-      'label': 'Language',
+      'value': 'household_language',
+      'label': '🏠 Language',
       'options': [
         {'value': 'all', 'label': 'All languages'},
         {'value': 'arabic', 'label': 'Arabic'},
@@ -179,15 +179,6 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
         {'value': 'other', 'label': 'Others'},
         {'value': 'UNKNOWN', 'label': 'Unknown'}
       ]
-    },
-    {
-      'value': 'location',
-      'label': 'County',
-      'options': [
-        {'value': 'all', 'label': 'All counties'},
-        {'value': 'county_1', 'label': 'County 1'},
-        {'value': 'county_1', 'label': 'County 2'}
-      ]
     }
   ];
 
@@ -197,7 +188,7 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
     filtersList.add(filter);
   });
 
-  return Future.delayed(Duration(seconds: 1), () => filtersList);
+  return Future.delayed(Duration(seconds: 0), () => filtersList);
 }
 
 Future<List<model.Option>> readAllThemes() async {
@@ -220,7 +211,10 @@ Future<List<model.Option>> readAllThemes() async {
     {'value': 'how_to_treat', 'label': 'How to treat'},
     {'value': 'how_to_prevent', 'label': 'How to prevent'},
     {'value': 'collective_hope', 'label': 'Collective hope'},
-    {'value': 'how_spread_transmitted', 'label': 'How virus spreads or transmitted'},
+    {
+      'value': 'how_spread_transmitted',
+      'label': 'How virus spreads or transmitted'
+    },
     {'value': 'symptoms', 'label': 'Symptoms'},
     {'value': 'humanitarian_aid', 'label': 'Humanitarian aid'},
     {'value': 'denial', 'label': 'Denial'},
@@ -235,7 +229,7 @@ Future<List<model.Option>> readAllThemes() async {
     themesList.add(option);
   });
 
-  return Future.delayed(Duration(seconds: 1), () => themesList);
+  return Future.delayed(Duration(seconds: 0), () => themesList);
 }
 
 Future<List<model.Interaction>> readAllInteractions() async {

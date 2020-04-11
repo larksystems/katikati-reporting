@@ -312,6 +312,7 @@ class View {
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
         controller.setFilterValue(filter.value, value);
+        controller.setFilterCompareValue(filter.value, value);
       });
 
     filter.options.forEach((o) {
@@ -355,7 +356,7 @@ class View {
     var dropdown = html.SelectElement()
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
-        controller.setThemeValue(value);
+        controller.setFilterValue('theme', value);
       });
 
     themes.forEach((o) {
@@ -372,7 +373,7 @@ class View {
       ..setAttribute('disabled', 'true')
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
-        controller.setThemeCompareValue(value);
+        controller.setFilterCompareValue('theme', value);
       });
 
     themes.forEach((o) {

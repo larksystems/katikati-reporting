@@ -16,6 +16,9 @@ class Controller {
 
   // Interactions
   List<model.Interaction> _interactions;
+  List<model.Interaction> _filteredInteractions;
+  List<model.Interaction> _filteredCompareInteractions;
+
   bool _isCompareEnabled = true;
   String _activeInteractionTabID;
 
@@ -25,9 +28,6 @@ class Controller {
   List<String> _activeFilters = [];
   Map<String, String> _filterValues = {};
   Map<String, String> _filterCompareValues = {};
-
-  String _themeValue;
-  String _themeCompareValue;
 
   Controller(this._activeNavTabID, this.view) {
     initFirebase();
@@ -129,17 +129,15 @@ class Controller {
   }
 
   void _renderDemogFilters() {
-    view.renderInteractionDemogThemes(
-        _themes, _isCompareEnabled, _themeValue, _themeCompareValue);
+    view.renderInteractionDemogThemes(_themes, _isCompareEnabled,
+        _filterValues['theme'], _filterCompareValues['theme']);
     view.renderInteractionDemogFilters(_filters, _filterValues, _activeFilters);
   }
 
   void setInteractionTab(String tabID) {
     _activeFilters = [];
-    _filterValues = {};
-    _filterCompareValues = {};
-    _themeValue = null;
-    _themeCompareValue = null;
+    _filterValues = {'theme': 'all'};
+    _filterCompareValues = {'theme': 'all'};
     _activeInteractionTabID = tabID;
     _renderInteractionFilters();
 
@@ -159,37 +157,81 @@ class Controller {
     }
   }
 
-  void setThemeValue(String theme) {
-    _themeValue = theme;
-    _renderDemogFilters();
-  }
-
-  void setThemeCompareValue(String theme) {
-    _themeCompareValue = theme;
-    _renderDemogFilters();
-  }
-
   void addToActiveFilters(String theme) {
+    logger.log('Add to active filter ${theme}');
     if (_activeFilters.contains(theme)) return;
     _activeFilters.add(theme);
     setFilterValue(theme, _filterValues[theme] ?? 'all');
     setFilterCompareValue(theme, _filterCompareValues[theme] ?? 'all');
     _renderInteractionFilters();
+
+    _updateFilteredInteractions();
   }
 
   void removeFromActiveFilters(String theme) {
+    logger.log('Remove from active filter ${theme}');
     if (!_activeFilters.contains(theme)) return;
     _activeFilters.removeWhere((t) => t == theme);
     _renderInteractionFilters();
+
+    _updateFilteredInteractions();
   }
 
   void setFilterValue(String theme, String value) {
     _filterValues[theme] = value;
+    logger.log('New filters are ${_filterValues}');
     _renderInteractionFilters();
+
+    _updateFilteredInteractions();
   }
 
   void setFilterCompareValue(String theme, String value) {
     _filterCompareValues[theme] = value;
+    logger.log('New filters compare are ${_filterValues}');
     _renderInteractionFilters();
+
+    _updateFilteredInteractions();
+  }
+
+  List<model.Interaction> _getFilteredInteractions(
+      Map<String, String> filterValues) {
+    var interactions = List<model.Interaction>.from(_interactions);
+
+    filterValues.forEach((key, value) {
+      if (value != 'all' && _activeFilters.contains(key)) {
+        switch (key) {
+          case 'gender':
+            interactions.removeWhere((i) => i.gender != value);
+            break;
+          case 'age':
+            interactions.removeWhere((i) => i.age_bucket != value);
+            break;
+          case 'idp_status':
+            interactions.removeWhere((i) => i.idp_status != value);
+            break;
+          case 'household_language':
+            interactions.removeWhere((i) => i.household_language != value);
+            break;
+          case 'theme':
+            interactions.removeWhere((i) => !i.themes.contains(value));
+            break;
+          default:
+            logger.error('No such interaction filter');
+        }
+      }
+    });
+
+    return interactions;
+  }
+
+  void _updateFilteredInteractions() {
+    logger.log(
+        'Updating filtered values ${_filterValues} ${_filterCompareValues}');
+    _filteredInteractions = _getFilteredInteractions(_filterValues);
+    _filteredCompareInteractions =
+        _getFilteredInteractions(_filterCompareValues);
+
+    logger.log(
+        'Filtered Interactions ${_filteredInteractions.length} & ${_filteredCompareInteractions.length}');
   }
 }
