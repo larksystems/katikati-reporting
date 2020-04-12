@@ -25,7 +25,7 @@ class Controller {
   List<model.InteractionFilter> _filters;
   List<model.Option> _themes;
 
-  List<String> _activeFilters = [];
+  List<String> _activeFilters = ['theme'];
   Map<String, String> _filterValues = {};
   Map<String, String> _filterCompareValues = {};
 
@@ -96,7 +96,7 @@ class Controller {
         _interactions ??= await fb.readAllInteractions();
         _updateFilteredInteractions();
         logger.log('Received ${_interactions.length} interactions');
-        setInteractionTab('theme');
+        setInteractionTab('demog');
         break;
       default:
         logger.error('No such tab');
@@ -137,7 +137,7 @@ class Controller {
   }
 
   void setInteractionTab(String tabID) {
-    _activeFilters = [];
+    _activeFilters = ['theme'];
     _filterValues = {'theme': 'all'};
     _filterCompareValues = {'theme': 'all'};
     _activeInteractionTabID = tabID;
@@ -204,6 +204,15 @@ class Controller {
             _isCompareEnabled,
             _themes.map((t) => t.value).toList());
         break;
+      case 'demog':
+        view.renderDemogGraphs(
+            _filteredInteractions,
+            _filteredCompareInteractions,
+            _isCompareEnabled,
+            _filters,
+            _filterValues,
+            _filterCompareValues);
+        break;
       default:
         logger.error('No such chart type to render');
     }
@@ -212,7 +221,6 @@ class Controller {
   List<model.Interaction> _getFilteredInteractions(
       Map<String, String> filterValues) {
     var interactions = List<model.Interaction>.from(_interactions);
-
     filterValues.forEach((key, value) {
       if (value != 'all' && _activeFilters.contains(key)) {
         switch (key) {
@@ -236,7 +244,6 @@ class Controller {
         }
       }
     });
-
     return interactions;
   }
 

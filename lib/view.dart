@@ -37,6 +37,15 @@ html.DivElement get responseClassificationGraphWrapper =>
 html.DivElement get responseThemeGraphWrapper =>
     html.querySelector('#analyse-themes-response-theme-graph');
 
+html.DivElement get demogGenderGraphWrapper =>
+    html.querySelector('#analyse-demographics-gender-graph');
+html.DivElement get demogAgeGraphWrapper =>
+    html.querySelector('#analyse-demographics-age-graph');
+html.DivElement get demogIDPWrapper =>
+    html.querySelector('#analyse-demographics-idp-graph');
+html.DivElement get demogLangWrapper =>
+    html.querySelector('#analyse-demographics-language-graph');
+
 class View {
   Controller controller;
 
@@ -379,17 +388,6 @@ class View {
       bool isCompareEnabled, String theme, String compareTheme) {
     analyseDemogCompareWrapper.children.clear();
 
-    var labelRow = html.DivElement();
-    labelRow
-      ..classes = ['row']
-      ..append(html.DivElement()
-        ..classes = ['col-2']
-        ..append(_getFilterABLabel('a')))
-      ..append(html.DivElement()
-        ..classes = ['col-2']
-        ..append(_getFilterABLabel('b')));
-    analyseDemogCompareWrapper.append(labelRow);
-
     var row = html.DivElement()..classes = ['row'];
     var dropdownCol = html.DivElement()..classes = ['col-2'];
     var compareCol = html.DivElement()..classes = ['col-2'];
@@ -459,16 +457,25 @@ class View {
             yAxes: [chartY]));
   }
 
-  ChartDataSets _getDataset(String key, List data) {
+  ChartDataSets _getDataset(String key, List data, {String forceColor}) {
+    var metadata = util.metadata[key];
+    if (!util.metadata.containsKey(key)) {
+      metadata = util.MetaData(forceColor ?? '#000000', key);
+    }
+
+    if (forceColor != null) {
+      metadata.color = forceColor;
+    }
+
     return ChartDataSets(
-        label: util.metadata[key].label,
+        label: metadata.label,
         lineTension: 0,
         fill: true,
-        backgroundColor: util.metadata[key].background,
-        borderColor: util.metadata[key].color,
-        hoverBackgroundColor: util.metadata[key].color,
-        hoverBorderColor: util.metadata[key].color,
-        pointBackgroundColor: util.metadata[key].color,
+        backgroundColor: metadata.background,
+        borderColor: metadata.color,
+        hoverBackgroundColor: metadata.color,
+        hoverBorderColor: metadata.color,
+        pointBackgroundColor: metadata.color,
         pointRadius: 2,
         borderWidth: 1,
         data: data);
@@ -528,7 +535,7 @@ class View {
       List<model.Interaction> compareInteractions,
       bool isCompareEnabled,
       List<String> themeIDs) {
-    logger.log('Rendering Graphs for themes');
+    logger.log('Rendering graphs for themes');
 
     var classThemesIDs = ['attitude', 'behaviour', 'knowledge', 'gratitude'];
     _renderThemeChart(classThemesIDs, interactions, compareInteractions,
@@ -540,9 +547,142 @@ class View {
     }
     filteredThemeIDs.remove('all');
 
-    print(filteredThemeIDs);
     _renderThemeChart(filteredThemeIDs, interactions, compareInteractions,
         responseThemeGraphWrapper, isCompareEnabled);
+  }
+
+  void _renderDemogGenderGraph(
+      String type,
+      List<model.Interaction> interactions,
+      List<model.Interaction> compareInteractions,
+      html.DivElement wrapper,
+      bool isCompareEnabled,
+      List<model.InteractionFilter> filters,
+      Map<String, String> filterValues,
+      Map<String, String> filterCompareValues) {
+    var filter = filters.firstWhere((f) => f.value == type);
+    var buckets = {};
+    for (var f in filter.options..sort((a, b) => a.label.compareTo(b.label))) {
+      if (f.value != 'all') {
+        buckets[f.value] = model.Bucket(0, 0);
+      }
+    }
+
+    for (var interaction in interactions) {
+      switch (type) {
+        case 'gender':
+          ++buckets[interaction.gender].count;
+          break;
+        case 'age':
+          ++buckets[interaction.age_bucket].count;
+          break;
+        case 'idp_status':
+          ++buckets[interaction.idp_status].count;
+          break;
+        case 'household_language':
+          ++buckets[interaction.household_language].count;
+          break;
+        default:
+          logger.error('No such interaction to count');
+      }
+    }
+
+    for (var interaction in compareInteractions) {
+      switch (type) {
+        case 'gender':
+          ++buckets[interaction.gender].compare;
+          break;
+        case 'age':
+          ++buckets[interaction.age_bucket].compare;
+          break;
+        case 'idp_status':
+          ++buckets[interaction.idp_status].compare;
+          break;
+        case 'household_language':
+          ++buckets[interaction.household_language].compare;
+          break;
+        default:
+          logger.error('No such interaction to count');
+      }
+    }
+
+    var aDataset = [];
+    var bDataset = [];
+
+    buckets.forEach((_, value) {
+      aDataset.add(value.count);
+      bDataset.add(value.compare);
+    });
+
+    var dataSets = <ChartDataSets>[
+      _getDataset(filterValues['theme'], aDataset,
+          forceColor: util.metadata['a'].color)
+    ];
+    if (isCompareEnabled) {
+      dataSets.add(_getDataset(filterCompareValues['theme'], bDataset,
+          forceColor: util.metadata['b'].color));
+    }
+
+    var chartData = LinearChartData(
+        labels: buckets.keys.map((k) {
+          return util.metadata[k] == null ? k : util.metadata[k].label;
+        }).toList(),
+        datasets: dataSets);
+
+    var config = ChartConfiguration(
+        type: 'bar', data: chartData, options: _generateChartOptions());
+
+    wrapper.children.clear();
+    var canvas = html.CanvasElement();
+    wrapper.append(canvas);
+    Chart(canvas, config);
+  }
+
+  void renderDemogGraphs(
+      List<model.Interaction> interactions,
+      List<model.Interaction> compareInteractions,
+      bool isCompareEnabled,
+      List<model.InteractionFilter> filters,
+      Map<String, String> filterValues,
+      Map<String, String> filterCompareValues) {
+    logger.log('Rendering graphs for demographics');
+
+    _renderDemogGenderGraph(
+        'gender',
+        interactions,
+        compareInteractions,
+        demogGenderGraphWrapper,
+        isCompareEnabled,
+        filters,
+        filterValues,
+        filterCompareValues);
+    _renderDemogGenderGraph(
+        'age',
+        interactions,
+        compareInteractions,
+        demogAgeGraphWrapper,
+        isCompareEnabled,
+        filters,
+        filterValues,
+        filterCompareValues);
+    _renderDemogGenderGraph(
+        'idp_status',
+        interactions,
+        compareInteractions,
+        demogIDPWrapper,
+        isCompareEnabled,
+        filters,
+        filterValues,
+        filterCompareValues);
+    _renderDemogGenderGraph(
+        'household_language',
+        interactions,
+        compareInteractions,
+        demogLangWrapper,
+        isCompareEnabled,
+        filters,
+        filterValues,
+        filterCompareValues);
   }
 
   void render() {
