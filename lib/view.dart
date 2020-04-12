@@ -1,7 +1,6 @@
 import 'dart:html' as html;
 import 'model.dart' as model;
 import 'utils.dart' as util;
-import 'model.dart' as model;
 import 'package:covid/controller.dart';
 import 'package:chartjs/chartjs.dart';
 

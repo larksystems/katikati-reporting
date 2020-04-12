@@ -3,8 +3,6 @@ import 'package:firebase/firestore.dart' as firestore;
 import 'firebase_constants.dart' as fb_constants;
 import 'logger.dart';
 import 'model.dart' as model;
-import 'dart:convert';
-import 'dart:html';
 
 Logger logger = Logger('firebase.dart');
 
@@ -235,31 +233,16 @@ Future<List<model.Option>> readAllThemes() async {
 }
 
 Future<List<model.Interaction>> readAllInteractions() async {
-  var str = await HttpRequest.getString('firebase/data.json');
-  var json = jsonDecode(str);
-
-  // var interactionsSnap = await _interactionsRef.get();
+  var interactionsSnap = await _interactionsRef.get();
   var interactionsList = List<model.Interaction>();
 
-  json['data'].forEach((obj) {
+  interactionsSnap.forEach((doc) {
+    var obj = doc.data();
     var interaction = model.Interaction.fromFirebaseMap(obj);
     interactionsList.add(interaction);
   });
 
+  // todo: check if the set of the interactions and filters match
+
   return interactionsList;
 }
-
-// Future<List<model.Interaction>> readAllInteractions() async {
-//   var interactionsSnap = await _interactionsRef.get();
-//   var interactionsList = List<model.Interaction>();
-
-//   interactionsSnap.forEach((doc) {
-//     var obj = doc.data();
-//     var interaction = model.Interaction.fromFirebaseMap(obj);
-//     interactionsList.add(interaction);
-//   });
-
-//   // todo: check if the set of the interactions and filters match
-
-//   return interactionsList;
-// }
