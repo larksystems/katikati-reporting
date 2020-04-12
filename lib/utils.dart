@@ -15,12 +15,14 @@ String NumFormat(int num) {
 class MetaData {
   String color;
   String label;
-  String get background => '${color}BB';
+  String get background => '${color}AA';
 
   MetaData(this.color, this.label);
 }
 
 Map<String, MetaData> metadata = {
+  'a': MetaData('#ef5350', 'Filter A'),
+  'b': MetaData('#00acc1', 'Filter B'),
   'male': MetaData('#FFC369', 'Male'),
   'female': MetaData('#E58B88', 'Female'),
   'unknown': MetaData('#dddddd', 'Unknown'),
@@ -28,6 +30,19 @@ Map<String, MetaData> metadata = {
   '18_35': MetaData('#8383BB', '18-35 yrs'),
   '35_50': MetaData('#cb7d8b', '35-50 yrs'),
   '50_': MetaData('#ffa2a2', '50+ yrs'),
+  'all': MetaData('#000000', 'All'),
+  'chasing_reply': MetaData('#000000', 'Chasing reply'),
+  'call_for_right_practice': MetaData('#000000', 'Call for right practice'),
+  'religious_hope_practice': MetaData('#000000', 'Religious hope or practice'),
+  'statement': MetaData('#000000', 'Statement'),
+  'government_responce': MetaData('#000000', 'Govt. response'),
+  'about_conversation': MetaData('#000000', 'About coversation'),
+  'call_for_awareness_creation':
+      MetaData('#000000', 'Call for awareness creation'),
+  'humanitarian_aid': MetaData('#000000', 'Humanitarian aid'),
+  'denial': MetaData('#000000', 'Denial'),
+  'somalia_update': MetaData('#000000', 'Somalia update'),
+  'other': MetaData('#000000', 'Other'),
   'escalate': MetaData('#f57774', 'Escalate'),
   'answer': MetaData('#5cb299', 'Answer'),
   'question': MetaData('#fcc64e', 'Question'),

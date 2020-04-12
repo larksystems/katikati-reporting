@@ -5,7 +5,7 @@ import 'package:firebase/firebase.dart' as firebase;
 import 'firebase_constants.dart' as fb_constants;
 import 'model.dart' as model;
 
-Logger logger = Logger('app.dart');
+Logger logger = Logger('controller.dart');
 
 class Controller {
   View view;
@@ -16,8 +16,8 @@ class Controller {
 
   // Interactions
   List<model.Interaction> _interactions;
-  List<model.Interaction> _filteredInteractions;
-  List<model.Interaction> _filteredCompareInteractions;
+  List<model.Interaction> _filteredInteractions = [];
+  List<model.Interaction> _filteredCompareInteractions = [];
 
   bool _isCompareEnabled = true;
   String _activeInteractionTabID;
@@ -94,6 +94,7 @@ class Controller {
         _filters ??= await fb.readThemeFilters();
         _themes ??= await fb.readAllThemes();
         _interactions ??= await fb.readAllInteractions();
+        _updateFilteredInteractions();
         logger.log('Received ${_interactions.length} interactions');
         setInteractionTab('theme');
         break;
@@ -121,6 +122,7 @@ class Controller {
   void enableCompare(bool isSelected) {
     _isCompareEnabled = isSelected;
     _renderInteractionFilters();
+    _renderInteractionCharts();
   }
 
   void _renderThemeFilters() {
@@ -140,7 +142,7 @@ class Controller {
     _filterCompareValues = {'theme': 'all'};
     _activeInteractionTabID = tabID;
     _renderInteractionFilters();
-
+    _renderInteractionCharts();
     view.toggleInteractionTab(_activeInteractionTabID);
   }
 
@@ -164,8 +166,6 @@ class Controller {
     setFilterValue(theme, _filterValues[theme] ?? 'all');
     setFilterCompareValue(theme, _filterCompareValues[theme] ?? 'all');
     _renderInteractionFilters();
-
-    _updateFilteredInteractions();
   }
 
   void removeFromActiveFilters(String theme) {
@@ -183,6 +183,7 @@ class Controller {
     _renderInteractionFilters();
 
     _updateFilteredInteractions();
+    _renderInteractionCharts();
   }
 
   void setFilterCompareValue(String theme, String value) {
@@ -191,6 +192,21 @@ class Controller {
     _renderInteractionFilters();
 
     _updateFilteredInteractions();
+    _renderInteractionCharts();
+  }
+
+  void _renderInteractionCharts() {
+    switch (_activeInteractionTabID) {
+      case 'theme':
+        view.renderThemeGraphs(
+            _filteredInteractions,
+            _filteredCompareInteractions,
+            _isCompareEnabled,
+            _themes.map((t) => t.value).toList());
+        break;
+      default:
+        logger.error('No such chart type to render');
+    }
   }
 
   List<model.Interaction> _getFilteredInteractions(

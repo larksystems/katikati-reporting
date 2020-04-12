@@ -141,6 +141,7 @@ label {
   background-color: white;
   border-radius: 6px;
   padding: 12px 18px;
+  box-shadow: 0 0 12px 0 rgba(0, 0, 0, 0.1);
 }
 
 .modal-content {
@@ -153,4 +154,6 @@ label {
   max-width: 320px;
   padding: 24px;
   text-align: center;
+  box-shadow: 0 0 12px 0 rgba(0, 0, 0, 0.1);
+  border: none;
 }

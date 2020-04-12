@@ -311,3 +311,10 @@ class Interaction {
         location, location_region, messages, recorded_at, themes);
   }
 }
+
+class Bucket {
+  int count = 0;
+  int compare = 0;
+
+  Bucket(this.count, this.compare);
+}

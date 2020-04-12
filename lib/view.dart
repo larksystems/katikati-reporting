@@ -3,6 +3,7 @@ import 'model.dart' as model;
 import 'utils.dart' as util;
 import 'model.dart' as model;
 import 'package:covid/controller.dart';
+import 'package:chartjs/chartjs.dart';
 
 List<html.Element> get _navLinks => html.querySelectorAll('.nav-item');
 List<html.DivElement> get _contents => html.querySelectorAll('.content');
@@ -30,6 +31,11 @@ html.DivElement get analyseDemogFilterWrapper =>
     html.querySelector('#analyse-demographics-filter-wrapper');
 html.DivElement get analyseDemogCompareWrapper =>
     html.querySelector('#analyse-demographics-compare-wrapper');
+
+html.DivElement get responseClassificationGraphWrapper =>
+    html.querySelector('#analyse-themes-response-classification-graph');
+html.DivElement get responseThemeGraphWrapper =>
+    html.querySelector('#analyse-themes-response-theme-graph');
 
 class View {
   Controller controller;
@@ -223,6 +229,7 @@ class View {
     checkboxCol..append(checkbox)..append(label);
 
     var dropdown = html.SelectElement()
+      ..classes = ['form-control']
       ..setAttribute('disabled', 'true')
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
@@ -230,6 +237,7 @@ class View {
       });
 
     var compare = html.SelectElement()
+      ..classes = ['form-control']
       ..setAttribute('value', 'all')
       ..setAttribute('disabled', 'true')
       ..onChange.listen((e) {
@@ -273,6 +281,15 @@ class View {
     return row;
   }
 
+  html.SpanElement _getFilterABLabel(String id) {
+    var wrapper = html.SpanElement();
+    var box = html.SpanElement()
+      ..innerText = '▣ '
+      ..style.color = util.metadata[id].color;
+    var label = html.SpanElement()..innerText = util.metadata[id].label;
+    return wrapper..append(box)..append(label);
+  }
+
   void renderInteractionThemeFilters(
       List<model.InteractionFilter> filters,
       Map<String, String> filterValues,
@@ -280,6 +297,18 @@ class View {
       List<String> activeFilters,
       bool isCompareEnabled) {
     analyseThemesFilterWrapper.children.clear();
+
+    var row = html.DivElement();
+    row
+      ..classes = ['row']
+      ..append(html.DivElement()..classes = ['col-2'])
+      ..append(html.DivElement()
+        ..classes = ['col-2']
+        ..append(_getFilterABLabel('a')))
+      ..append(html.DivElement()
+        ..classes = ['col-2']
+        ..append(_getFilterABLabel('b')));
+    analyseThemesFilterWrapper.append(row);
 
     filters.forEach((f) {
       analyseThemesFilterWrapper.append(_getThemeFilterRow(f, filterValues,
@@ -309,6 +338,7 @@ class View {
 
     var dropdown = html.SelectElement()
       ..setAttribute('disabled', 'true')
+      ..classes = ['form-control']
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
         controller.setFilterValue(filter.value, value);
@@ -349,11 +379,23 @@ class View {
       bool isCompareEnabled, String theme, String compareTheme) {
     analyseDemogCompareWrapper.children.clear();
 
+    var labelRow = html.DivElement();
+    labelRow
+      ..classes = ['row']
+      ..append(html.DivElement()
+        ..classes = ['col-2']
+        ..append(_getFilterABLabel('a')))
+      ..append(html.DivElement()
+        ..classes = ['col-2']
+        ..append(_getFilterABLabel('b')));
+    analyseDemogCompareWrapper.append(labelRow);
+
     var row = html.DivElement()..classes = ['row'];
     var dropdownCol = html.DivElement()..classes = ['col-2'];
     var compareCol = html.DivElement()..classes = ['col-2'];
 
     var dropdown = html.SelectElement()
+      ..classes = ['form-control']
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
         controller.setFilterValue('theme', value);
@@ -370,6 +412,7 @@ class View {
     });
 
     var compare = html.SelectElement()
+      ..classes = ['form-control']
       ..setAttribute('disabled', 'true')
       ..onChange.listen((e) {
         var value = (e.target as html.SelectElement).value;
@@ -396,6 +439,110 @@ class View {
     row..append(dropdownCol)..append(compareCol);
 
     analyseDemogCompareWrapper.append(row);
+  }
+
+  ChartOptions _generateChartOptions() {
+    var labelString = 'Number of interactions';
+    var chartY = ChartYAxe(
+        stacked: false,
+        scaleLabel: ScaleTitleOptions(labelString: labelString, display: true));
+    chartY.ticks = TickOptions(min: 0);
+    return ChartOptions(
+        responsive: true,
+        animation: ChartAnimationOptions(duration: 0),
+        tooltips: ChartTooltipOptions(mode: 'index'),
+        legend: ChartLegendOptions(
+            position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
+        scales: ChartScales(
+            display: true,
+            xAxes: [ChartXAxe(stacked: false)],
+            yAxes: [chartY]));
+  }
+
+  ChartDataSets _getDataset(String key, List data) {
+    return ChartDataSets(
+        label: util.metadata[key].label,
+        lineTension: 0,
+        fill: true,
+        backgroundColor: util.metadata[key].background,
+        borderColor: util.metadata[key].color,
+        hoverBackgroundColor: util.metadata[key].color,
+        hoverBorderColor: util.metadata[key].color,
+        pointBackgroundColor: util.metadata[key].color,
+        pointRadius: 2,
+        borderWidth: 1,
+        data: data);
+  }
+
+  void _renderThemeChart(
+      List<String> themeIDs,
+      List<model.Interaction> interactions,
+      List<model.Interaction> compareInteractions,
+      html.DivElement wrapper,
+      bool isCompareEnabled) {
+    var buckets = {
+      for (var t in themeIDs..sort((a, b) => a.compareTo(b)))
+        t: model.Bucket(0, 0)
+    };
+
+    for (var interaction in interactions) {
+      interaction.themes
+          .forEach((t) => buckets[t] != null ? ++buckets[t].count : null);
+    }
+
+    for (var interaction in compareInteractions) {
+      interaction.themes
+          .forEach((t) => buckets[t] != null ? ++buckets[t].compare : null);
+    }
+
+    var aDataset = [];
+    var bDataset = [];
+
+    buckets.forEach((_, value) {
+      aDataset.add(value.count);
+      bDataset.add(value.compare);
+    });
+
+    var dataSets = <ChartDataSets>[_getDataset('a', aDataset)];
+    if (isCompareEnabled) {
+      dataSets.add(_getDataset('b', bDataset));
+    }
+
+    var chartData = LinearChartData(
+        labels: buckets.keys.map((k) {
+          return util.metadata[k] == null ? k : util.metadata[k].label;
+        }).toList(),
+        datasets: dataSets);
+
+    var config = ChartConfiguration(
+        type: 'bar', data: chartData, options: _generateChartOptions());
+
+    wrapper.children.clear();
+    var canvas = html.CanvasElement();
+    wrapper.append(canvas);
+    Chart(canvas, config);
+  }
+
+  void renderThemeGraphs(
+      List<model.Interaction> interactions,
+      List<model.Interaction> compareInteractions,
+      bool isCompareEnabled,
+      List<String> themeIDs) {
+    logger.log('Rendering Graphs for themes');
+
+    var classThemesIDs = ['attitude', 'behaviour', 'knowledge', 'gratitude'];
+    _renderThemeChart(classThemesIDs, interactions, compareInteractions,
+        responseClassificationGraphWrapper, isCompareEnabled);
+
+    var filteredThemeIDs = List<String>.from(themeIDs);
+    for (var theme in classThemesIDs) {
+      filteredThemeIDs.remove(theme);
+    }
+    filteredThemeIDs.remove('all');
+
+    print(filteredThemeIDs);
+    _renderThemeChart(filteredThemeIDs, interactions, compareInteractions,
+        responseThemeGraphWrapper, isCompareEnabled);
   }
 
   void render() {
