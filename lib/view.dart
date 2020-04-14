@@ -1,6 +1,9 @@
 import 'dart:html' as html;
+import 'dart:math' as math;
+import 'dart:svg' as svg;
 import 'model.dart' as model;
 import 'utils.dart' as util;
+import 'package:covid/map.dart' as _map;
 import 'package:covid/controller.dart';
 import 'package:chartjs/chartjs.dart';
 
@@ -46,6 +49,11 @@ html.DivElement get demogIDPWrapper =>
     html.querySelector('#analyse-demographics-idp-graph');
 html.DivElement get demogLangWrapper =>
     html.querySelector('#analyse-demographics-language-graph');
+
+html.DivElement get demogMapWrapper =>
+    html.querySelector('#analyse-demographics-map');
+html.DivElement get demogMapCompareWrapper =>
+    html.querySelector('#analyse-demographics-map-compare');
 
 class View {
   Controller controller;
@@ -743,6 +751,82 @@ class View {
         filters,
         filterValues,
         filterCompareValues);
+    _renderDemogMap(interactions, compareInteractions, isCompareEnabled,
+        isNormaliseEnabled, filters, filterValues, filterCompareValues);
+  }
+
+  svg.SvgSvgElement _getSomaliaMap(
+      Map<String, int> buckets, int max, String color) {
+    var img = svg.SvgSvgElement()
+      ..setAttribute('viewBox', _map.somalia['viewbox'])
+      ..setAttribute('style', 'enable-background: ${_map.somalia["viewbox"]}');
+
+    var regionsGroup = svg.GElement()..setAttribute('id', 'regions');
+    var labelsGroup = svg.GElement()..setAttribute('id', 'labels');
+
+    (_map.somalia['regions'] as Map<String, dynamic>).forEach((k, region) {
+      var regionPath = svg.PathElement()
+        ..classes = ['map-region']
+        ..setAttribute('fill', color)
+        ..setAttribute('stroke', color)
+        ..setAttribute('d', region['path'])
+        ..setAttribute('fill-opacity', (buckets[k] / max).toString());
+      regionsGroup.append(regionPath);
+
+      var text = svg.TextElement()
+        ..classes = ['map-label']
+        ..setAttribute('transform', 'matrix(1 0 0 1 ${region["label-pos"]})')
+        ..appendText(region['name'] + '(' + buckets[k].toString() + ')');
+
+      if (region['line'] != null) {
+        var pts = region['line'].toString().split(',');
+        var line = svg.LineElement()
+          ..classes = ['map-line']
+          ..setAttribute('x1', pts[0])
+          ..setAttribute('y1', pts[1])
+          ..setAttribute('x2', pts[2])
+          ..setAttribute('y2', pts[3]);
+        labelsGroup.append(line);
+      }
+
+      labelsGroup.append(text);
+    });
+
+    return img..append(regionsGroup)..append(labelsGroup);
+  }
+
+  void _renderDemogMap(
+      List<model.Interaction> interactions,
+      List<model.Interaction> compareInteractions,
+      bool isCompareEnabled,
+      bool isNormalisedEnabled,
+      List<model.InteractionFilter> filters,
+      Map<String, String> filterValues,
+      Map<String, String> filterCompareValues) async {
+    demogMapWrapper.children.clear();
+    demogMapCompareWrapper.children.clear();
+    var filter = filters.firstWhere((f) => f.value == 'location_region');
+
+    var buckets = {for (var t in filter.options) t.value: model.Bucket(0, 0)};
+    for (var interaction in interactions) {
+      ++buckets[interaction.location_region].count;
+    }
+
+    var counts = buckets.map((k, v) => MapEntry(k, v.count));
+    var mapToShow = _getSomaliaMap(
+        counts, counts.values.reduce(math.max), util.metadata['a'].color);
+    demogMapWrapper.append(mapToShow);
+
+    if (!isCompareEnabled) return;
+
+    for (var interaction in compareInteractions) {
+      ++buckets[interaction.location_region].compare;
+    }
+
+    var compareCounts = buckets.map((k, v) => MapEntry(k, v.compare));
+    var compMapToShow = _getSomaliaMap(compareCounts,
+        compareCounts.values.reduce(math.max), util.metadata['b'].color);
+    demogMapCompareWrapper.append(compMapToShow);
   }
 
   List<num> _getNormalisedPercent(List<num> values, int count) {
