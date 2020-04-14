@@ -33,7 +33,7 @@ Map<String, MetaData> metadata = {
   '10_to_14': MetaData('#0000000', '10 to 14 yrs'),
   '15_to_17': MetaData('#0000000', '15 to 17 yrs'),
   '18_to_35': MetaData('#0000000', '18 to 35 yrs'),
-  '36_to_54': MetaData('#0000000', '55 to 54 yrs'),
+  '36_to_54': MetaData('#0000000', '36 to 54 yrs'),
   '55_to_99': MetaData('#0000000', '55 to 99 yrs'),
   'DISPLACED': MetaData('#0000000', 'Displaced'),
   'NOT_DISPLACED': MetaData('#0000000', 'Not displaced'),
