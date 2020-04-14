@@ -20,6 +20,7 @@ class Controller {
   List<model.Interaction> _filteredCompareInteractions = [];
 
   bool _isCompareEnabled = true;
+  bool _isNormaliseEnabled = false;
   String _activeInteractionTabID;
 
   List<model.InteractionFilter> _filters;
@@ -93,7 +94,7 @@ class Controller {
         logger.log('Loading interactions');
         _filters ??= await fb.readThemeFilters();
         _themes ??= await fb.readAllThemes();
-        _interactions ??= await fb.readAllInteractions();
+        _interactions ??= await fb.readAllInteractions(readFromLocal: true);
         _updateFilteredInteractions();
         logger.log('Received ${_interactions.length} interactions');
         setInteractionTab('theme');
@@ -122,6 +123,11 @@ class Controller {
   void enableCompare(bool isSelected) {
     _isCompareEnabled = isSelected;
     _renderInteractionFilters();
+    _renderInteractionCharts();
+  }
+
+  void enableNormalise(bool isNormalised) {
+    _isNormaliseEnabled = isNormalised;
     _renderInteractionCharts();
   }
 
@@ -205,6 +211,7 @@ class Controller {
             _filteredInteractions,
             _filteredCompareInteractions,
             _isCompareEnabled,
+            _isNormaliseEnabled,
             _themes.map((t) => t.value).toList());
         break;
       case 'demog':

@@ -20,6 +20,8 @@ List<html.RadioButtonInputElement> get analyseChooser =>
     html.querySelectorAll('.analyse-radio');
 html.CheckboxInputElement get enableCompare =>
     html.querySelector('#interactions-compare');
+html.CheckboxInputElement get enableNormalise =>
+    html.querySelector('#interactions-normalise');
 html.DivElement get analyseThemeContent =>
     html.querySelector('#analyse-themes-content');
 html.DivElement get analyseDemogContent =>
@@ -53,6 +55,7 @@ class View {
     _listenToMessagesSort();
 
     _listenToEnableCompare();
+    _listenToEnableNormalise();
     _listenToAnalyseChooser();
   }
 
@@ -85,6 +88,13 @@ class View {
     enableCompare.onChange.listen((e) {
       var enabled = (e.target as html.CheckboxInputElement).checked;
       controller.enableCompare(enabled);
+    });
+  }
+
+  void _listenToEnableNormalise() {
+    enableNormalise.onChange.listen((e) {
+      var enabled = (e.target as html.CheckboxInputElement).checked;
+      controller.enableNormalise(enabled);
     });
   }
 
@@ -438,12 +448,16 @@ class View {
     analyseDemogCompareWrapper.append(row);
   }
 
-  ChartOptions _generateChartOptions() {
+  ChartOptions _generateChartOptions({bool isNormaliseEnabled = false}) {
     var labelString = 'Number of interactions';
     var chartY = ChartYAxe(
-        stacked: false,
+        stacked: isNormaliseEnabled,
         scaleLabel: ScaleTitleOptions(labelString: labelString, display: true));
     chartY.ticks = TickOptions(min: 0);
+    if (isNormaliseEnabled) {
+      chartY.ticks = TickOptions(max: 100, min: 0);
+    }
+
     return ChartOptions(
         responsive: true,
         animation: ChartAnimationOptions(duration: 0),
@@ -452,7 +466,7 @@ class View {
             position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
         scales: ChartScales(
             display: true,
-            xAxes: [ChartXAxe(stacked: false)],
+            xAxes: [ChartXAxe(stacked: isNormaliseEnabled)],
             yAxes: [chartY]));
   }
 
@@ -485,7 +499,8 @@ class View {
       List<model.Interaction> interactions,
       List<model.Interaction> compareInteractions,
       html.DivElement wrapper,
-      bool isCompareEnabled) {
+      bool isCompareEnabled,
+      bool isNormaliseEnabled) {
     var buckets = {
       for (var t in themeIDs..sort((a, b) => a.compareTo(b)))
         t: model.Bucket(0, 0)
@@ -509,6 +524,23 @@ class View {
       bDataset.add(value.compare);
     });
 
+    if (isNormaliseEnabled) {
+      for (var i = 0; i < aDataset.length; ++i) {
+        var a = aDataset[i];
+        var b = bDataset[i];
+        var sum = a + b;
+        var aPercent = a / sum * 100;
+        var bPercent = b / sum * 100;
+        aDataset[i] = aPercent;
+        bDataset[i] = bPercent;
+      }
+      // aDataset =
+      //     aDataset.map((value) => value / interactions.length * 100).toList();
+      // bDataset = bDataset
+      //     .map((value) => value / compareInteractions.length * 100)
+      //     .toList();
+    }
+
     var dataSets = <ChartDataSets>[_getDataset('a', aDataset)];
     if (isCompareEnabled) {
       dataSets.add(_getDataset('b', bDataset));
@@ -521,7 +553,9 @@ class View {
         datasets: dataSets);
 
     var config = ChartConfiguration(
-        type: 'bar', data: chartData, options: _generateChartOptions());
+        type: 'bar',
+        data: chartData,
+        options: _generateChartOptions(isNormaliseEnabled: isNormaliseEnabled));
 
     wrapper.children.clear();
     var canvas = html.CanvasElement();
@@ -533,6 +567,7 @@ class View {
       List<model.Interaction> interactions,
       List<model.Interaction> compareInteractions,
       bool isCompareEnabled,
+      bool isNormaliseEnabled,
       List<String> themeIDs) {
     logger.log('Rendering graphs for themes');
 
@@ -543,8 +578,13 @@ class View {
       'statement',
       'question'
     ];
-    _renderThemeChart(classThemesIDs, interactions, compareInteractions,
-        responseClassificationGraphWrapper, isCompareEnabled);
+    _renderThemeChart(
+        classThemesIDs,
+        interactions,
+        compareInteractions,
+        responseClassificationGraphWrapper,
+        isCompareEnabled,
+        isNormaliseEnabled);
 
     var filteredThemeIDs = List<String>.from(themeIDs);
     for (var theme in classThemesIDs) {
@@ -552,8 +592,14 @@ class View {
     }
     filteredThemeIDs.remove('all');
 
-    _renderThemeChart(filteredThemeIDs, interactions, compareInteractions,
-        responseThemeGraphWrapper, isCompareEnabled);
+    _renderThemeChart(
+      filteredThemeIDs,
+      interactions,
+      compareInteractions,
+      responseThemeGraphWrapper,
+      isCompareEnabled,
+      isNormaliseEnabled,
+    );
   }
 
   void _renderDemogGenderGraph(
