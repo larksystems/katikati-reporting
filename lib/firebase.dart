@@ -147,7 +147,6 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
       'label': 'Age',
       'options': [
         {'value': 'all', 'label': 'All age buckets'},
-        {'value': '10_to_14', 'label': '10 - 14 yrs'},
         {'value': '15_to_17', 'label': '15 - 17 yrs'},
         {'value': '18_to_35', 'label': '18 - 35 yrs'},
         {'value': '36_to_54', 'label': '36 - 54 yrs'},
@@ -181,6 +180,32 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
         {'value': 'other', 'label': 'Others'},
         {'value': 'UNKNOWN', 'label': 'Unknown'}
       ]
+    },
+    {
+      'value': 'location_region',
+      'label': 'Region',
+      'options': [
+        {'value': 'all', 'label': 'All regions'},
+        {'value': 'galgaduud', 'label': 'Galgaduud'},
+        {'value': 'middle shabelle', 'label': 'Middle Shabelle'},
+        {'value': 'lower shabelle', 'label': 'Lower Shabelle'},
+        {'value': 'banadir', 'label': 'Banadir'},
+        {'value': 'bari', 'label': 'Bari'},
+        {'value': 'nugaal', 'label': 'Nugaal'},
+        {'value': 'lower juba', 'label': 'Lower Juba'},
+        {'value': 'hiraan', 'label': 'Hiraan'},
+        {'value': 'mudug', 'label': 'Mudug'},
+        {'value': 'bay', 'label': 'Bay'},
+        {'value': 'gedo', 'label': 'Gedo'},
+        {'value': 'bakool', 'label': 'Bakool'},
+        {'value': 'sanaag', 'label': 'Sanaag'},
+        {'value': 'woqooyi galbeed', 'label': 'Woqooyi Galbeed'},
+        {'value': 'togdheer', 'label': 'Togdheer'},
+        {'value': 'middle juba', 'label': 'Middle Juba'},
+        {'value': 'awdal', 'label': 'Awdal'},
+        {'value': 'sool', 'label': 'Sool'},
+        {'value': 'UNKNOWN', 'label': 'Unknown'}
+      ]
     }
   ];
 
@@ -199,7 +224,7 @@ Future<List<model.Option>> readAllThemes() async {
     {'value': 'about_coronavirus', 'label': 'About coronavirus'},
     {'value': 'anxiety_panic', 'label': 'Anxiety or panic'},
     {'value': 'attitude', 'label': 'Attitude'},
-    {'value': 'chasing_reply', 'label': 'Chasing reply'},
+    // {'value': 'chasing_reply', 'label': 'Chasing reply'},
     {'value': 'call_for_right_practice', 'label': 'Call for right practice'},
     {'value': 'religious_hope_practice', 'label': 'Religious hope or practice'},
     {'value': 'statement', 'label': 'Statement'},
@@ -208,7 +233,7 @@ Future<List<model.Option>> readAllThemes() async {
     {'value': 'government_responce', 'label': 'Government response'},
     {'value': 'behaviour', 'label': 'Behaviour'},
     {'value': 'about_conversation', 'label': 'About conversation'},
-    {'value': 'gratitude', 'label': 'Gratitude'},
+    // {'value': 'gratitude', 'label': 'Gratitude'},
     {'value': 'call_for_awareness_creation', 'label': 'Call for awareness'},
     {'value': 'how_to_treat', 'label': 'How to treat'},
     {'value': 'how_to_prevent', 'label': 'How to prevent'},

@@ -250,6 +250,9 @@ class Controller {
           case 'theme':
             interactions.removeWhere((i) => !i.themes.contains(value));
             break;
+          case 'location_region':
+            interactions.removeWhere((i) => i.location_region != value);
+            break;
           default:
             logger.error('No such interaction filter');
         }
