@@ -212,7 +212,9 @@ class Controller {
             _filteredCompareInteractions,
             _isCompareEnabled,
             _isNormaliseEnabled,
-            _themes.map((t) => t.value).toList());
+            _themes.map((t) => t.value).toList(),
+            _filterValues,
+            _filterCompareValues);
         break;
       case 'demog':
         view.renderDemogGraphs(

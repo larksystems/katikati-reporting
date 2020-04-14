@@ -486,14 +486,19 @@ class View {
             yAxes: [chartY]));
   }
 
-  ChartDataSets _getDataset(String key, List data, {String forceColor}) {
+  ChartDataSets _getDataset(String key, List data,
+      {String forceColor, String forceLabel}) {
     var metadata = util.metadata[key];
     if (!util.metadata.containsKey(key)) {
       metadata = util.MetaData(forceColor ?? '#000000', key);
     }
 
     if (forceColor != null) {
-      metadata.color = forceColor;
+      metadata = util.MetaData(forceColor, metadata.label);
+    }
+
+    if (forceLabel != null) {
+      metadata = util.MetaData(metadata.color, forceLabel);
     }
 
     return ChartDataSets(
@@ -510,13 +515,26 @@ class View {
         data: data);
   }
 
+  String _generateLabelFromFilters(Map<String, String> filterValues) {
+    var label = [];
+    filterValues.forEach((k, v) {
+      if (v != 'all') {
+        label.add(util.metadata[v] == null ? k : util.metadata[v].label);
+      }
+    });
+
+    return label.isEmpty ? 'All interactions' : label.join(', ');
+  }
+
   void _renderThemeChart(
       List<String> themeIDs,
       List<model.Interaction> interactions,
       List<model.Interaction> compareInteractions,
       html.DivElement wrapper,
       bool isCompareEnabled,
-      bool isNormaliseEnabled) {
+      bool isNormaliseEnabled,
+      Map<String, String> filterValues,
+      Map<String, String> filterCompareValues) {
     var buckets = {
       for (var t in themeIDs..sort((a, b) => a.compareTo(b)))
         t: model.Bucket(0, 0)
@@ -545,9 +563,13 @@ class View {
       bDataset = _getNormalisedPercent(bDataset, compareInteractions.length);
     }
 
-    var dataSets = <ChartDataSets>[_getDataset('a', aDataset)];
+    var dataSets = <ChartDataSets>[
+      _getDataset('a', aDataset,
+          forceLabel: _generateLabelFromFilters(filterValues))
+    ];
     if (isCompareEnabled) {
-      dataSets.add(_getDataset('b', bDataset));
+      dataSets.add(_getDataset('b', bDataset,
+          forceLabel: _generateLabelFromFilters(filterCompareValues)));
     }
 
     var chartData = LinearChartData(
@@ -572,7 +594,9 @@ class View {
       List<model.Interaction> compareInteractions,
       bool isCompareEnabled,
       bool isNormaliseEnabled,
-      List<String> themeIDs) {
+      List<String> themeIDs,
+      Map<String, String> filterValues,
+      Map<String, String> filterCompareValues) {
     logger.log('Rendering graphs for themes');
 
     var classThemesIDs = [
@@ -588,7 +612,9 @@ class View {
         compareInteractions,
         responseClassificationGraphWrapper,
         isCompareEnabled,
-        isNormaliseEnabled);
+        isNormaliseEnabled,
+        filterValues,
+        filterCompareValues);
 
     var filteredThemeIDs = List<String>.from(themeIDs);
     for (var theme in classThemesIDs) {
@@ -597,13 +623,14 @@ class View {
     filteredThemeIDs.remove('all');
 
     _renderThemeChart(
-      filteredThemeIDs,
-      interactions,
-      compareInteractions,
-      responseThemeGraphWrapper,
-      isCompareEnabled,
-      isNormaliseEnabled,
-    );
+        filteredThemeIDs,
+        interactions,
+        compareInteractions,
+        responseThemeGraphWrapper,
+        isCompareEnabled,
+        isNormaliseEnabled,
+        filterValues,
+        filterCompareValues);
   }
 
   void _renderDemogGenderGraph(
