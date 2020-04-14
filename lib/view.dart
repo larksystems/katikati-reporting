@@ -269,6 +269,8 @@ class View {
         ..appendText(o.label);
       if (o.value == filterValues[filter.value]) {
         option.setAttribute('selected', 'true');
+      } else if (filterValues[filter.value] == null && o.value == 'all') {
+        option.setAttribute('selected', 'true');
       }
       dropdown.append(option);
     });
@@ -278,6 +280,9 @@ class View {
         ..setAttribute('value', o.value)
         ..appendText(o.label);
       if (o.value == filterCompareValues[filter.value]) {
+        option.setAttribute('selected', 'true');
+      } else if (filterCompareValues[filter.value] == null &&
+          o.value == 'all') {
         option.setAttribute('selected', 'true');
       }
       compare.append(option);
@@ -368,6 +373,8 @@ class View {
         ..setAttribute('value', o.value)
         ..appendText(o.label);
       if (o.value == filterValues[filter.value]) {
+        option.setAttribute('selected', 'true');
+      } else if (filterValues[filter.value] == null && o.value == 'all') {
         option.setAttribute('selected', 'true');
       }
       dropdown.append(option);
