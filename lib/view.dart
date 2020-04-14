@@ -517,8 +517,8 @@ class View {
           .forEach((t) => buckets[t] != null ? ++buckets[t].compare : null);
     }
 
-    var aDataset = [];
-    var bDataset = [];
+    List<num> aDataset = [];
+    List<num> bDataset = [];
 
     buckets.forEach((_, value) {
       aDataset.add(value.count);
@@ -526,20 +526,8 @@ class View {
     });
 
     if (isNormaliseEnabled) {
-      aDataset = aDataset
-          .map(
-              (value) => (value / interactions.length * 100).toStringAsFixed(2))
-          .toList();
-      bDataset = bDataset
-          .map((value) =>
-              (value / compareInteractions.length * 100).toStringAsFixed(2))
-          .toList();
-      // for (var i = 0; i < aDataset.length; ++i) {
-      //   var a = aDataset[i] == 0 ? 1 : aDataset[i];
-      //   var b = bDataset[i] == 0 ? 1 : bDataset[i];
-      //   aDataset[i] = a / (a + b) * 100;
-      //   bDataset[i] = b / (a + b) * 100;
-      // }
+      aDataset = _getNormalisedPercent(aDataset, interactions.length);
+      bDataset = _getNormalisedPercent(bDataset, compareInteractions.length);
     }
 
     var dataSets = <ChartDataSets>[_getDataset('a', aDataset)];
@@ -609,6 +597,7 @@ class View {
       List<model.Interaction> compareInteractions,
       html.DivElement wrapper,
       bool isCompareEnabled,
+      bool isNormaliseEnabled,
       List<model.InteractionFilter> filters,
       Map<String, String> filterValues,
       Map<String, String> filterCompareValues) {
@@ -658,13 +647,18 @@ class View {
       }
     }
 
-    var aDataset = [];
-    var bDataset = [];
+    List<num> aDataset = [];
+    List<num> bDataset = [];
 
     buckets.forEach((_, value) {
       aDataset.add(value.count);
       bDataset.add(value.compare);
     });
+
+    if (isNormaliseEnabled) {
+      aDataset = _getNormalisedPercent(aDataset, interactions.length);
+      bDataset = _getNormalisedPercent(bDataset, compareInteractions.length);
+    }
 
     var dataSets = <ChartDataSets>[
       _getDataset(filterValues['theme'], aDataset,
@@ -682,7 +676,9 @@ class View {
         datasets: dataSets);
 
     var config = ChartConfiguration(
-        type: 'bar', data: chartData, options: _generateChartOptions());
+        type: 'bar',
+        data: chartData,
+        options: _generateChartOptions(isNormaliseEnabled: isNormaliseEnabled));
 
     wrapper.children.clear();
     var canvas = html.CanvasElement();
@@ -694,6 +690,7 @@ class View {
       List<model.Interaction> interactions,
       List<model.Interaction> compareInteractions,
       bool isCompareEnabled,
+      bool isNormaliseEnabled,
       List<model.InteractionFilter> filters,
       Map<String, String> filterValues,
       Map<String, String> filterCompareValues) {
@@ -705,6 +702,7 @@ class View {
         compareInteractions,
         demogGenderGraphWrapper,
         isCompareEnabled,
+        isNormaliseEnabled,
         filters,
         filterValues,
         filterCompareValues);
@@ -714,6 +712,7 @@ class View {
         compareInteractions,
         demogAgeGraphWrapper,
         isCompareEnabled,
+        isNormaliseEnabled,
         filters,
         filterValues,
         filterCompareValues);
@@ -723,6 +722,7 @@ class View {
         compareInteractions,
         demogIDPWrapper,
         isCompareEnabled,
+        isNormaliseEnabled,
         filters,
         filterValues,
         filterCompareValues);
@@ -732,9 +732,17 @@ class View {
         compareInteractions,
         demogLangWrapper,
         isCompareEnabled,
+        isNormaliseEnabled,
         filters,
         filterValues,
         filterCompareValues);
+  }
+
+  List<num> _getNormalisedPercent(List<num> values, int count) {
+    return values
+        .map(((value) =>
+            num.parse(((value / count) * 100).toStringAsExponential(2))))
+        .toList();
   }
 
   void render() {

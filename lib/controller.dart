@@ -219,6 +219,7 @@ class Controller {
             _filteredInteractions,
             _filteredCompareInteractions,
             _isCompareEnabled,
+            _isNormaliseEnabled,
             _filters,
             _filterValues,
             _filterCompareValues);
