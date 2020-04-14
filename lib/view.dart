@@ -755,8 +755,8 @@ class View {
         isNormaliseEnabled, filters, filterValues, filterCompareValues);
   }
 
-  svg.SvgSvgElement _getSomaliaMap(
-      Map<String, int> buckets, int max, String color) {
+  svg.SvgSvgElement _getSomaliaMap(Map<String, num> buckets, num max,
+      String color, bool isNormaliseEnabled) {
     var img = svg.SvgSvgElement()
       ..setAttribute('viewBox', _map.somalia['viewbox'])
       ..setAttribute('style', 'enable-background: ${_map.somalia["viewbox"]}');
@@ -776,7 +776,11 @@ class View {
       var text = svg.TextElement()
         ..classes = ['map-label']
         ..setAttribute('transform', 'matrix(1 0 0 1 ${region["label-pos"]})')
-        ..appendText(region['name'] + '(' + buckets[k].toString() + ')');
+        ..appendText(region['name'] +
+            '(' +
+            buckets[k].toString() +
+            (isNormaliseEnabled ? '%' : '') +
+            ')');
 
       if (region['line'] != null) {
         var pts = region['line'].toString().split(',');
@@ -812,9 +816,15 @@ class View {
       ++buckets[interaction.location_region].count;
     }
 
-    var counts = buckets.map((k, v) => MapEntry(k, v.count));
-    var mapToShow = _getSomaliaMap(
-        counts, counts.values.reduce(math.max), util.metadata['a'].color);
+    var counts = buckets.map((k, v) {
+      var value = isNormalisedEnabled
+          ? util.trucateDecimal(v.count / interactions.length * 100, 2)
+          : v.count;
+      return MapEntry(k, value);
+    });
+
+    var mapToShow = _getSomaliaMap(counts, counts.values.reduce(math.max),
+        util.metadata['a'].color, isNormalisedEnabled);
     demogMapWrapper.append(mapToShow);
 
     if (!isCompareEnabled) return;
@@ -823,16 +833,24 @@ class View {
       ++buckets[interaction.location_region].compare;
     }
 
-    var compareCounts = buckets.map((k, v) => MapEntry(k, v.compare));
-    var compMapToShow = _getSomaliaMap(compareCounts,
-        compareCounts.values.reduce(math.max), util.metadata['b'].color);
+    var compareCounts = buckets.map((k, v) {
+      var value = isNormalisedEnabled
+          ? util.trucateDecimal(v.compare / compareInteractions.length * 100, 2)
+          : v.compare;
+      return MapEntry(k, value);
+    });
+
+    var compMapToShow = _getSomaliaMap(
+        compareCounts,
+        compareCounts.values.reduce(math.max),
+        util.metadata['b'].color,
+        isNormalisedEnabled);
     demogMapCompareWrapper.append(compMapToShow);
   }
 
   List<num> _getNormalisedPercent(List<num> values, int count) {
     return values
-        .map(((value) =>
-            num.parse(((value / count) * 100).toStringAsExponential(2))))
+        .map((value) => util.trucateDecimal((value / count) * 100, 2))
         .toList();
   }
 

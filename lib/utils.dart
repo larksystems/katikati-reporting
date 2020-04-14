@@ -12,6 +12,10 @@ String NumFormat(int num) {
   return NumberFormat().format(num);
 }
 
+num trucateDecimal(num number, int decimals) {
+  return num.parse((number).toStringAsExponential(2));
+}
+
 class MetaData {
   String color;
   String label;
