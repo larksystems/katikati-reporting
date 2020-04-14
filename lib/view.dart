@@ -519,7 +519,7 @@ class View {
     var label = [];
     filterValues.forEach((k, v) {
       if (v != 'all') {
-        label.add(util.metadata[v] == null ? k : util.metadata[v].label);
+        label.add(util.metadata[v] == null ? v : util.metadata[v].label);
       }
     });
 
