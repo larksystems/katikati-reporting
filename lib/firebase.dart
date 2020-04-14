@@ -34,7 +34,7 @@ void init(String constantsFilePath) async {
   logger.log('Firebase initialised');
 
   var _store = firebase.firestore();
-  _summaryMetricsRef = _store.collection(fb_constants.summaryMetrics);
+  _summaryMetricsRef = _store.collection('daily_tag_metrics');
   _topMetricRef =
       _store.collection('total_counts_metrics').doc('total_counts_metrics');
   _eventsRef = _store.collection('events');
