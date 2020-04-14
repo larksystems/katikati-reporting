@@ -94,7 +94,7 @@ class Controller {
         logger.log('Loading interactions');
         _filters ??= await fb.readThemeFilters();
         _themes ??= await fb.readAllThemes();
-        _interactions ??= await fb.readAllInteractions(readFromLocal: true);
+        _interactions ??= await fb.readAllInteractions();
         _updateFilteredInteractions();
         logger.log('Received ${_interactions.length} interactions');
         setInteractionTab('theme');

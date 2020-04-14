@@ -449,9 +449,10 @@ class View {
   }
 
   ChartOptions _generateChartOptions({bool isNormaliseEnabled = false}) {
-    var labelString = 'Number of interactions';
+    var labelString =
+        (isNormaliseEnabled ? 'Percentage' : 'Number') + ' of interactions';
     var chartY = ChartYAxe(
-        stacked: isNormaliseEnabled,
+        stacked: false,
         scaleLabel: ScaleTitleOptions(labelString: labelString, display: true));
     chartY.ticks = TickOptions(min: 0);
     if (isNormaliseEnabled) {
@@ -466,7 +467,7 @@ class View {
             position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
         scales: ChartScales(
             display: true,
-            xAxes: [ChartXAxe(stacked: isNormaliseEnabled)],
+            xAxes: [ChartXAxe(stacked: false)],
             yAxes: [chartY]));
   }
 
@@ -525,20 +526,20 @@ class View {
     });
 
     if (isNormaliseEnabled) {
-      for (var i = 0; i < aDataset.length; ++i) {
-        var a = aDataset[i];
-        var b = bDataset[i];
-        var sum = a + b;
-        var aPercent = a / sum * 100;
-        var bPercent = b / sum * 100;
-        aDataset[i] = aPercent;
-        bDataset[i] = bPercent;
-      }
-      // aDataset =
-      //     aDataset.map((value) => value / interactions.length * 100).toList();
-      // bDataset = bDataset
-      //     .map((value) => value / compareInteractions.length * 100)
-      //     .toList();
+      aDataset = aDataset
+          .map(
+              (value) => (value / interactions.length * 100).toStringAsFixed(2))
+          .toList();
+      bDataset = bDataset
+          .map((value) =>
+              (value / compareInteractions.length * 100).toStringAsFixed(2))
+          .toList();
+      // for (var i = 0; i < aDataset.length; ++i) {
+      //   var a = aDataset[i] == 0 ? 1 : aDataset[i];
+      //   var b = bDataset[i] == 0 ? 1 : bDataset[i];
+      //   aDataset[i] = a / (a + b) * 100;
+      //   bDataset[i] = b / (a + b) * 100;
+      // }
     }
 
     var dataSets = <ChartDataSets>[_getDataset('a', aDataset)];
