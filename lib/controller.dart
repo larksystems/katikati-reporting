@@ -96,7 +96,7 @@ class Controller {
         _interactions ??= await fb.readAllInteractions();
         _updateFilteredInteractions();
         logger.log('Received ${_interactions.length} interactions');
-        setInteractionTab('demog');
+        setInteractionTab('theme');
         break;
       default:
         logger.error('No such tab');
@@ -141,6 +141,7 @@ class Controller {
     _filterValues = {'theme': 'all'};
     _filterCompareValues = {'theme': 'all'};
     _activeInteractionTabID = tabID;
+    _updateFilteredInteractions();
     _renderInteractionFilters();
     _renderInteractionCharts();
     view.toggleInteractionTab(_activeInteractionTabID);
@@ -166,15 +167,17 @@ class Controller {
     setFilterValue(theme, _filterValues[theme] ?? 'all');
     setFilterCompareValue(theme, _filterCompareValues[theme] ?? 'all');
     _renderInteractionFilters();
+    _renderInteractionCharts();
   }
 
   void removeFromActiveFilters(String theme) {
     logger.log('Remove from active filter ${theme}');
     if (!_activeFilters.contains(theme)) return;
     _activeFilters.removeWhere((t) => t == theme);
-    _renderInteractionFilters();
 
     _updateFilteredInteractions();
+    _renderInteractionFilters();
+    _renderInteractionCharts();
   }
 
   void setFilterValue(String theme, String value) {

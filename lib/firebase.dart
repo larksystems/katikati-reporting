@@ -3,6 +3,8 @@ import 'package:firebase/firestore.dart' as firestore;
 import 'firebase_constants.dart' as fb_constants;
 import 'logger.dart';
 import 'model.dart' as model;
+import 'dart:html' as html;
+import 'dart:convert' as convert;
 
 Logger logger = Logger('firebase.dart');
 
@@ -165,7 +167,7 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
     },
     {
       'value': 'household_language',
-      'label': '🏠 Language',
+      'label': 'Household language',
       'options': [
         {'value': 'all', 'label': 'All languages'},
         {'value': 'arabic', 'label': 'Arabic'},
@@ -232,7 +234,26 @@ Future<List<model.Option>> readAllThemes() async {
   return Future.delayed(Duration(seconds: 0), () => themesList);
 }
 
-Future<List<model.Interaction>> readAllInteractions() async {
+Future<List<model.Interaction>> readAllInteractionsFromLocal() async {
+  var str = await html.HttpRequest.getString('firebase/data.json');
+  var json = convert.jsonDecode(str);
+
+  var interactionsList = List<model.Interaction>();
+
+  json['data'].forEach((obj) {
+    var interaction = model.Interaction.fromFirebaseMap(obj);
+    interactionsList.add(interaction);
+  });
+
+  return interactionsList;
+}
+
+Future<List<model.Interaction>> readAllInteractions(
+    {bool readFromLocal = false}) async {
+  if (readFromLocal) {
+    return readAllInteractionsFromLocal();
+  }
+
   var interactionsSnap = await _interactionsRef.get();
   var interactionsList = List<model.Interaction>();
 

@@ -218,7 +218,7 @@ class View {
       List<String> activeFilters,
       bool isCompareEnabled) {
     var row = html.DivElement()..classes = ['row'];
-    var checkboxCol = html.DivElement()..classes = ['col-2'];
+    var checkboxCol = html.DivElement()..classes = ['col-3'];
     var dropdownCol = html.DivElement()..classes = ['col-2'];
     var compareCol = html.DivElement()..classes = ['col-2'];
 
@@ -309,7 +309,7 @@ class View {
     var row = html.DivElement();
     row
       ..classes = ['row']
-      ..append(html.DivElement()..classes = ['col-2'])
+      ..append(html.DivElement()..classes = ['col-3'])
       ..append(html.DivElement()
         ..classes = ['col-2']
         ..append(_getFilterABLabel('a')))
@@ -327,7 +327,7 @@ class View {
   html.DivElement _getDemogFilterRow(model.InteractionFilter filter,
       Map<String, String> filterValues, List<String> activeFilters) {
     var row = html.DivElement()..classes = ['row'];
-    var checkboxCol = html.DivElement()..classes = ['col-2'];
+    var checkboxCol = html.DivElement()..classes = ['col-3'];
     var dropdownCol = html.DivElement()..classes = ['col-2'];
 
     var label = html.LabelElement()
@@ -536,7 +536,13 @@ class View {
       List<String> themeIDs) {
     logger.log('Rendering graphs for themes');
 
-    var classThemesIDs = ['attitude', 'behaviour', 'knowledge', 'gratitude'];
+    var classThemesIDs = [
+      'attitude',
+      'behaviour',
+      'knowledge',
+      'statement',
+      'question'
+    ];
     _renderThemeChart(classThemesIDs, interactions, compareInteractions,
         responseClassificationGraphWrapper, isCompareEnabled);
 
