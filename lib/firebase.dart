@@ -248,6 +248,32 @@ Future<List<model.Option>> readAllThemes() async {
     {'value': 'somalia_update', 'label': 'Somalia update'},
     {'value': 'other', 'label': 'Others'},
     {'value': 'other_theme', 'label': 'Other themes'},
+
+    {
+      'value': 'right_practice_general_follow_advice',
+      'label': 'Right practice: general follow advice'
+    },
+    {
+      'value': 'right_practice_distancing_isolation_quarantine',
+      'label': 'Right practice: Distancing / isolation / quarantine'
+    },
+    {'value': 'right_practice_hygiene', 'label': 'Right practice: Hygiene'},
+    {'value': 'right_practice_multiple', 'label': 'Right practice: Multiple'},
+    {'value': 'religion_practice', 'label': 'Religious practice'},
+    {'value': 'religion_guidance', 'label': 'Religious guidance'},
+    {'value': 'religion_hope_and_fate', 'label': 'Religious hope and fate'},
+    {
+      'value': 'rumour_misinfo_therapies_cures',
+      'label': 'Rumour / misinfo: Therapies & cures'
+    },
+    {
+      'value': 'rumour_misinfo_cause_misunderstood',
+      'label': 'Rumour /misinfo: Cause misunderstood'
+    },
+    {
+      'value': 'stigma_hostility_rejection_anger',
+      'label': 'Stigma: hostility / rejection / anger'
+    },
   ];
 
   var themesList = List<model.Option>();

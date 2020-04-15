@@ -214,7 +214,8 @@ class Controller {
             _isNormaliseEnabled,
             _themes.map((t) => t.value).toList(),
             _filterValues,
-            _filterCompareValues);
+            _filterCompareValues,
+            _activeFilters);
         break;
       case 'demog':
         view.renderDemogGraphs(

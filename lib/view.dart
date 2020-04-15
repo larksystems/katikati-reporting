@@ -40,6 +40,8 @@ html.DivElement get responseClassificationGraphWrapper =>
     html.querySelector('#analyse-themes-response-classification-graph');
 html.DivElement get responseThemeGraphWrapper =>
     html.querySelector('#analyse-themes-response-theme-graph');
+html.DivElement get responseThemePracticeGraphWrapper =>
+    html.querySelector('#analyse-themes-response-practice-graph');
 
 html.DivElement get demogGenderGraphWrapper =>
     html.querySelector('#analyse-demographics-gender-graph');
@@ -470,9 +472,6 @@ class View {
         stacked: false,
         scaleLabel: ScaleTitleOptions(labelString: labelString, display: true));
     chartY.ticks = TickOptions(min: 0);
-    if (isNormaliseEnabled) {
-      chartY.ticks = TickOptions(max: 100, min: 0);
-    }
 
     return ChartOptions(
         responsive: true,
@@ -515,10 +514,11 @@ class View {
         data: data);
   }
 
-  String _generateLabelFromFilters(Map<String, String> filterValues) {
+  String _generateLabelFromFilters(
+      Map<String, String> filterValues, List<String> activeFilters) {
     var label = [];
     filterValues.forEach((k, v) {
-      if (v != 'all') {
+      if (v != 'all' && activeFilters.contains(k)) {
         label.add(util.metadata[v] == null ? v : util.metadata[v].label);
       }
     });
@@ -534,7 +534,8 @@ class View {
       bool isCompareEnabled,
       bool isNormaliseEnabled,
       Map<String, String> filterValues,
-      Map<String, String> filterCompareValues) {
+      Map<String, String> filterCompareValues,
+      List<String> activeFilters) {
     var buckets = {
       for (var t in themeIDs..sort((a, b) => a.compareTo(b)))
         t: model.Bucket(0, 0)
@@ -565,11 +566,12 @@ class View {
 
     var dataSets = <ChartDataSets>[
       _getDataset('a', aDataset,
-          forceLabel: _generateLabelFromFilters(filterValues))
+          forceLabel: _generateLabelFromFilters(filterValues, activeFilters))
     ];
     if (isCompareEnabled) {
       dataSets.add(_getDataset('b', bDataset,
-          forceLabel: _generateLabelFromFilters(filterCompareValues)));
+          forceLabel:
+              _generateLabelFromFilters(filterCompareValues, activeFilters)));
     }
 
     var chartData = LinearChartData(
@@ -596,7 +598,8 @@ class View {
       bool isNormaliseEnabled,
       List<String> themeIDs,
       Map<String, String> filterValues,
-      Map<String, String> filterCompareValues) {
+      Map<String, String> filterCompareValues,
+      List<String> activeFilters) {
     logger.log('Rendering graphs for themes');
 
     var classThemesIDs = [
@@ -614,10 +617,37 @@ class View {
         isCompareEnabled,
         isNormaliseEnabled,
         filterValues,
-        filterCompareValues);
+        filterCompareValues,
+        activeFilters);
+
+    var practiceThemesIDs = [
+      'right_practice_general_follow_advice',
+      'right_practice_distancing_isolation_quarantine',
+      'right_practice_hygiene',
+      'right_practice_multiple',
+      'religion_practice',
+      'religion_guidance',
+      'religion_hope_and_fate',
+      'rumour_misinfo_therapies_cures',
+      'rumour_misinfo_cause_misunderstood',
+      'stigma_hostility_rejection_anger',
+    ];
+    _renderThemeChart(
+        practiceThemesIDs,
+        interactions,
+        compareInteractions,
+        responseThemePracticeGraphWrapper,
+        isCompareEnabled,
+        isNormaliseEnabled,
+        filterValues,
+        filterCompareValues,
+        activeFilters);
 
     var filteredThemeIDs = List<String>.from(themeIDs);
     for (var theme in classThemesIDs) {
+      filteredThemeIDs.remove(theme);
+    }
+    for (var theme in practiceThemesIDs) {
       filteredThemeIDs.remove(theme);
     }
     filteredThemeIDs.remove('all');
@@ -630,7 +660,8 @@ class View {
         isCompareEnabled,
         isNormaliseEnabled,
         filterValues,
-        filterCompareValues);
+        filterCompareValues,
+        activeFilters);
   }
 
   void _renderDemogGenderGraph(

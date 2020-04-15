@@ -82,5 +82,20 @@ Map<String, MetaData> metadata = {
   'what_is_govt_policy': MetaData('#805fce', 'What is govt. policy'),
   'kenya_update': MetaData('#8d6e63', 'Kenya update'),
   'other_theme': MetaData('#dddddd', 'Other themes'),
-  'radio_show': MetaData('#e80000', 'Radio show')
+  'radio_show': MetaData('#e80000', 'Radio show'),
+  'right_practice_general_follow_advice':
+      MetaData('#000000', 'Right practice: general follow advice'),
+  'right_practice_distancing_isolation_quarantine': MetaData(
+      '#000000', 'Right practice: Distancing / isolation / quarantine'),
+  'right_practice_hygiene': MetaData('#000000', 'Right practice: Hygiene'),
+  'right_practice_multiple': MetaData('#000000', 'Right practice: Multiple'),
+  'religion_practice': MetaData('#000000', 'Religious practice'),
+  'religion_guidance': MetaData('#000000', 'Religious guidance'),
+  'religion_hope_and_fate': MetaData('#000000', 'Religious hope and fate'),
+  'rumour_misinfo_therapies_cures':
+      MetaData('#000000', 'Rumour / misinfo: Therapies & cures'),
+  'rumour_misinfo_cause_misunderstood':
+      MetaData('#000000', 'Rumour /misinfo: Cause misunderstood'),
+  'stigma_hostility_rejection_anger':
+      MetaData('#000000', 'Stigma: hostility / rejection / anger')
 };
