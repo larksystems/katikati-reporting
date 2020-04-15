@@ -230,6 +230,9 @@ class Controller {
       default:
         logger.error('No such chart type to render');
     }
+
+    view.renderAnalyseMessages(
+        _filteredInteractions, _filteredCompareInteractions, _isCompareEnabled);
   }
 
   List<model.Interaction> _getFilteredInteractions(

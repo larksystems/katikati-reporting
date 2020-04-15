@@ -101,7 +101,7 @@ label {
 
 .message-time {
   font-size: 0.7rem;
-  opacity: 0.5;
+  opacity: 0.8;
   padding: 12px 0;
   text-align: right;
 }
@@ -171,4 +171,9 @@ label {
 .map-line {
   stroke: black;
   stroke-width: 3px;
+}
+
+.analyse-messages-container {
+  max-height: 50vh;
+  overflow-y: scroll;
 }

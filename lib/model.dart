@@ -1,5 +1,7 @@
 import 'dart:core';
 
+import 'dart:math';
+
 class TopMetric {
   num conversations = 0;
   num messages_outgoing = 0;
@@ -226,12 +228,14 @@ class Message {
 class InteractionMessage {
   String id;
   bool is_sent;
+  bool is_featured;
   DateTime recorded_at;
   String text;
   String translated_text;
+  String theme;
 
-  InteractionMessage(
-      this.id, this.is_sent, this.recorded_at, this.text, this.translated_text);
+  InteractionMessage(this.id, this.is_sent, this.is_featured, this.recorded_at,
+      this.text, this.translated_text, this.theme);
 
   factory InteractionMessage.fromFirebaseMap(Map<String, dynamic> obj) {
     var id = obj['id'];
@@ -239,8 +243,11 @@ class InteractionMessage {
     var recorded_at = DateTime.tryParse(obj['recorded_at']);
     var text = obj['text'];
     var translated_text = obj['translated_text'];
+    var theme = obj['theme'];
+    var is_featured = obj['is_featured'] ?? false;
 
-    return InteractionMessage(id, is_sent, recorded_at, text, translated_text);
+    return InteractionMessage(
+        id, is_sent, is_featured, recorded_at, text, translated_text, theme);
   }
 }
 

@@ -57,6 +57,11 @@ html.DivElement get demogMapWrapper =>
 html.DivElement get demogMapCompareWrapper =>
     html.querySelector('#analyse-demographics-map-compare');
 
+html.DivElement get analyseMessagesFilterWrapper =>
+    html.querySelector('#analyse-filter-messages-wrapper');
+html.DivElement get analyseMessagesFilterCompareWrapper =>
+    html.querySelector('#analyse-filter-compare-messages-wrapper');
+
 class View {
   Controller controller;
 
@@ -910,6 +915,82 @@ class View {
     return values
         .map((value) => util.trucateDecimal((value / count) * 100, 2))
         .toList();
+  }
+
+  html.DivElement _getAnalyseMessageView(model.InteractionMessage message) {
+    var row = html.DivElement();
+
+    var wrapper = html.DivElement()..classes = ['message-box'];
+    var text = html.DivElement()..appendText(message.text);
+
+    wrapper.append(text);
+    if (message.translated_text != '') {
+      var translated = html.DivElement()
+        ..classes = ['message-translated']
+        ..appendText(message.translated_text);
+      wrapper.append(translated);
+    }
+
+    var metaWrapper = html.DivElement();
+
+    if (message.recorded_at != null) {
+      var recorded = html.SpanElement()
+        ..classes = ['message-time']
+        ..style.marginRight = '18px'
+        ..appendText(util.messageTimeFormat(message.recorded_at));
+      metaWrapper.append(recorded);
+    }
+
+    if (message.theme != null) {
+      var theme = html.SpanElement()
+        ..classes = ['message-time']
+        ..appendText(message.theme);
+      metaWrapper.append(theme);
+    }
+
+    if (message.recorded_at != null || message.theme != null) {
+      wrapper.append(metaWrapper);
+    }
+
+    return row..append(wrapper);
+  }
+
+  void renderAnalyseMessages(List<model.Interaction> interactions,
+      List<model.Interaction> compareInteractions, bool isCompareEnabled) {
+    analyseMessagesFilterWrapper.children.clear();
+    analyseMessagesFilterCompareWrapper.children.clear();
+
+    var count = 0;
+    for (var i in interactions) {
+      for (var m in i.messages) {
+        if (m.is_featured) {
+          ++count;
+          analyseMessagesFilterWrapper.append(_getAnalyseMessageView(m));
+        }
+      }
+    }
+    if (count == 0) {
+      analyseMessagesFilterWrapper.append(html.DivElement()
+        ..appendText('No messages')
+        ..style.opacity = '0.5');
+    }
+
+    if (!isCompareEnabled) return;
+
+    count = 0;
+    for (var i in compareInteractions) {
+      for (var m in i.messages) {
+        if (m.is_featured) {
+          ++count;
+          analyseMessagesFilterCompareWrapper.append(_getAnalyseMessageView(m));
+        }
+      }
+    }
+    if (count == 0) {
+      analyseMessagesFilterCompareWrapper.append(html.DivElement()
+        ..appendText('No messages')
+        ..style.opacity = '0.5');
+    }
   }
 
   void render() {
