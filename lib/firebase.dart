@@ -140,8 +140,6 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
         {'value': 'MALE', 'label': 'Male'},
         {'value': 'FEMALE', 'label': 'Female'},
         {'value': 'UNKNOWN', 'label': 'Unknown'},
-        // todo: remove
-        {'value': 'QUESTION', 'label': 'Question'},
       ]
     },
     {
@@ -154,10 +152,6 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
         {'value': '36_to_54', 'label': '36 - 54 yrs'},
         {'value': '55_to_99', 'label': '> 55 yrs'},
         {'value': 'UNKNOWN', 'label': 'Unknown'},
-        // todo: remove
-        {'value': '10_to_14', 'label': '10 - 14 yrs'},
-        {'value': 'question', 'label': 'Question'},
-        {'value': 'opt_in', 'label': 'Opt in'},
       ]
     },
     {
@@ -303,17 +297,16 @@ Future<List<model.Interaction>> readAllInteractions(
   var interactionsSnap = await _interactionsRef.get();
   var interactionsList = List<model.Interaction>();
 
-  // var themes = Set();
   interactionsSnap.forEach((doc) {
     var obj = doc.data();
     var interaction = model.Interaction.fromFirebaseMap(obj);
     interactionsList.add(interaction);
-    // themes.add(interaction.idp_status);
-    // interaction.themes.forEach((t) => themes.add(t));
   });
-  // print(themes);
 
-  // todo: check if the set of the interactions and filters match
+  interactionsList.removeWhere((i) {
+    return ['10_to_14', 'question', 'opt_in'].contains(i.age_bucket) ||
+        ['QUESTION'].contains(i.gender);
+  });
 
   return interactionsList;
 }
