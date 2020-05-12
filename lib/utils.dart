@@ -97,5 +97,22 @@ Map<String, MetaData> metadata = {
   'rumour_misinfo_cause_misunderstood':
       MetaData('#000000', 'Rumour /misinfo: Cause misunderstood'),
   'stigma_hostility_rejection_anger':
-      MetaData('#000000', 'Stigma: hostility / rejection / anger')
+      MetaData('#000000', 'Stigma: hostility / rejection / anger'),
+  'answer_cc': MetaData('#000000', 'Answer'),
+  'negative_stigma': MetaData('#000000', 'Negative stigma'),
+  'urgent_need': MetaData('#000000', 'Urgent need'),
+  'denial': MetaData('#000000', 'Denial'),
+  'follow_religious_guidance_hygiene':
+      MetaData('#000000', 'Follow religious guidance / hygiene'),
+  'follow_religious_guidance_prayer_Koran_etc':
+      MetaData('#000000', 'Follow religious guidance / prayer / Koran / etc'),
+  'follow_religious_guidance_distancing_quarantine': MetaData(
+      '#000000', 'Follow religious guidance / distancing / quarantine'),
+  'follow_religious_advice_treatment':
+      MetaData('#000000', 'Follow religious advice / treatment'),
+  'follow_health_advice_from_authorities':
+      MetaData('#000000', 'Follow health advice from authorities'),
+  'follow_health_advice_from_government':
+      MetaData('#000000', 'Follow health advice from govt.'),
+  'unclear_whose_advice': MetaData('#000000', 'Unclear whose advice')
 };

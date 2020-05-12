@@ -310,7 +310,8 @@ class Interaction {
     obj['messages'].forEach((m) {
       messages.add(InteractionMessage.fromFirebaseMap(m));
     });
-    var recorded_at = DateTime.tryParse(obj['recorded_at']);
+    var recorded_at = null;
+    // DateTime.tryParse(obj['recorded_at']);
     var themes = List<String>();
     obj['themes'].forEach((t) => themes.add(t));
 

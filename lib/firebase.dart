@@ -43,7 +43,7 @@ void init(String constantsFilePath) async {
       _store.collection('datasets').doc('misinfo').collection('messages');
   _interactionsRef = _store
       .collection('datasets')
-      .doc('covid19-som')
+      .doc('covid19-som-sources-of-advice')
       .collection('interactions');
 }
 
@@ -139,7 +139,9 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
         {'value': 'all', 'label': 'All genders'},
         {'value': 'MALE', 'label': 'Male'},
         {'value': 'FEMALE', 'label': 'Female'},
-        {'value': 'UNKNOWN', 'label': 'Unknown'}
+        {'value': 'UNKNOWN', 'label': 'Unknown'},
+        // todo: remove
+        {'value': 'QUESTION', 'label': 'Question'},
       ]
     },
     {
@@ -151,7 +153,11 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
         {'value': '18_to_35', 'label': '18 - 35 yrs'},
         {'value': '36_to_54', 'label': '36 - 54 yrs'},
         {'value': '55_to_99', 'label': '> 55 yrs'},
-        {'value': 'UNKNOWN', 'label': 'Unknown'}
+        {'value': 'UNKNOWN', 'label': 'Unknown'},
+        // todo: remove
+        {'value': '10_to_14', 'label': '10 - 14 yrs'},
+        {'value': 'question', 'label': 'Question'},
+        {'value': 'opt_in', 'label': 'Opt in'},
       ]
     },
     {
@@ -221,59 +227,43 @@ Future<List<model.InteractionFilter>> readThemeFilters() async {
 Future<List<model.Option>> readAllThemes() async {
   const themes = [
     {'value': 'all', 'label': 'All themes'},
-    {'value': 'about_coronavirus', 'label': 'About coronavirus'},
-    {'value': 'anxiety_panic', 'label': 'Anxiety or panic'},
-    {'value': 'attitude', 'label': 'Attitude'},
-    // {'value': 'chasing_reply', 'label': 'Chasing reply'},
-    {'value': 'call_for_right_practice', 'label': 'Call for right practice'},
-    {'value': 'religious_hope_practice', 'label': 'Religious hope or practice'},
+    {'value': 'answer_cc', 'label': 'Answer'},
+    {'value': 'question', 'label': 'Question'},
     {'value': 'statement', 'label': 'Statement'},
-    {'value': 'knowledge', 'label': 'Knowledge'},
+    {'value': 'about_conversation', 'label': 'About conversation'},
+    {'value': 'about_coronavirus', 'label': 'About coronavirus'},
     {'value': 'rumour_stigma_misinfo', 'label': 'Rumour stigma misinfo'},
     {'value': 'government_responce', 'label': 'Government response'},
-    {'value': 'behaviour', 'label': 'Behaviour'},
-    {'value': 'about_conversation', 'label': 'About conversation'},
-    // {'value': 'gratitude', 'label': 'Gratitude'},
-    {'value': 'call_for_awareness_creation', 'label': 'Call for awareness'},
-    {'value': 'how_to_treat', 'label': 'How to treat'},
+    {'value': 'religious_hope_practice', 'label': 'Religious hope or practice'},
+    {'value': 'negative_stigma', 'label': 'Negative stigma'},
     {'value': 'how_to_prevent', 'label': 'How to prevent'},
-    {'value': 'collective_hope', 'label': 'Collective hope'},
-    {
-      'value': 'how_spread_transmitted',
-      'label': 'How virus spreads or transmitted'
-    },
-    {'value': 'symptoms', 'label': 'Symptoms'},
-    {'value': 'humanitarian_aid', 'label': 'Humanitarian aid'},
+    {'value': 'urgent_need', 'label': 'Urgent need'},
     {'value': 'denial', 'label': 'Denial'},
-    {'value': 'somalia_update', 'label': 'Somalia update'},
-    {'value': 'other', 'label': 'Others'},
-    {'value': 'other_theme', 'label': 'Other themes'},
-
     {
-      'value': 'right_practice_general_follow_advice',
-      'label': 'Right practice: general follow advice'
+      'value': 'follow_religious_guidance_hygiene',
+      'label': 'Follow religious guidance / hygiene'
     },
     {
-      'value': 'right_practice_distancing_isolation_quarantine',
-      'label': 'Right practice: Distancing / isolation / quarantine'
-    },
-    {'value': 'right_practice_hygiene', 'label': 'Right practice: Hygiene'},
-    {'value': 'right_practice_multiple', 'label': 'Right practice: Multiple'},
-    {'value': 'religion_practice', 'label': 'Religious practice'},
-    {'value': 'religion_guidance', 'label': 'Religious guidance'},
-    {'value': 'religion_hope_and_fate', 'label': 'Religious hope and fate'},
-    {
-      'value': 'rumour_misinfo_therapies_cures',
-      'label': 'Rumour / misinfo: Therapies & cures'
+      'value': 'follow_religious_guidance_prayer_Koran_etc',
+      'label': 'Follow religious guidance / prayer / Koran / etc'
     },
     {
-      'value': 'rumour_misinfo_cause_misunderstood',
-      'label': 'Rumour /misinfo: Cause misunderstood'
+      'value': 'follow_religious_guidance_distancing_quarantine',
+      'label': 'Follow religious guidance / distancing / quarantine'
     },
     {
-      'value': 'stigma_hostility_rejection_anger',
-      'label': 'Stigma: hostility / rejection / anger'
+      'value': 'follow_religious_advice_treatment',
+      'label': 'Follow religious advice / treatment'
     },
+    {
+      'value': 'follow_health_advice_from_authorities',
+      'label': 'Follow health advice from authorities'
+    },
+    {
+      'value': 'follow_health_advice_from_government',
+      'label': 'Follow health advice from govt.'
+    },
+    {'value': 'unclear_whose_advice', 'label': 'Unclear whose advice'},
   ];
 
   var themesList = List<model.Option>();
@@ -291,10 +281,15 @@ Future<List<model.Interaction>> readAllInteractionsFromLocal() async {
 
   var interactionsList = List<model.Interaction>();
 
+  var themes = Set();
+
   json['data'].forEach((obj) {
     var interaction = model.Interaction.fromFirebaseMap(obj);
     interactionsList.add(interaction);
+    interaction.themes.forEach((t) => themes.add(t));
   });
+
+  print(themes);
 
   return interactionsList;
 }
@@ -308,11 +303,15 @@ Future<List<model.Interaction>> readAllInteractions(
   var interactionsSnap = await _interactionsRef.get();
   var interactionsList = List<model.Interaction>();
 
+  // var themes = Set();
   interactionsSnap.forEach((doc) {
     var obj = doc.data();
     var interaction = model.Interaction.fromFirebaseMap(obj);
     interactionsList.add(interaction);
+    // themes.add(interaction.idp_status);
+    // interaction.themes.forEach((t) => themes.add(t));
   });
+  // print(themes);
 
   // todo: check if the set of the interactions and filters match
 

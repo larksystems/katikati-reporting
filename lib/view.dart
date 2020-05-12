@@ -607,13 +607,7 @@ class View {
       List<String> activeFilters) {
     logger.log('Rendering graphs for themes');
 
-    var classThemesIDs = [
-      'attitude',
-      'behaviour',
-      'knowledge',
-      'statement',
-      'question'
-    ];
+    var classThemesIDs = ['question', 'statement', 'answer_cc'];
     _renderThemeChart(
         classThemesIDs,
         interactions,
@@ -626,16 +620,13 @@ class View {
         activeFilters);
 
     var practiceThemesIDs = [
-      'right_practice_general_follow_advice',
-      'right_practice_distancing_isolation_quarantine',
-      'right_practice_hygiene',
-      'right_practice_multiple',
-      'religion_practice',
-      'religion_guidance',
-      'religion_hope_and_fate',
-      'rumour_misinfo_therapies_cures',
-      'rumour_misinfo_cause_misunderstood',
-      'stigma_hostility_rejection_anger',
+      'follow_religious_guidance_hygiene',
+      'follow_religious_guidance_prayer_Koran_etc',
+      'follow_religious_guidance_distancing_quarantine',
+      'follow_religious_advice_treatment',
+      'follow_health_advice_from_authorities',
+      'follow_health_advice_from_government',
+      'unclear_whose_advice'
     ];
     _renderThemeChart(
         practiceThemesIDs,
@@ -648,13 +639,17 @@ class View {
         filterCompareValues,
         activeFilters);
 
-    var filteredThemeIDs = List<String>.from(themeIDs);
-    for (var theme in classThemesIDs) {
-      filteredThemeIDs.remove(theme);
-    }
-    for (var theme in practiceThemesIDs) {
-      filteredThemeIDs.remove(theme);
-    }
+    var filteredThemeIDs = [
+      'about_conversation',
+      'about_coronavirus',
+      'rumour_stigma_misinfo',
+      'government_responce',
+      'religious_hope_practice',
+      'negative_stigma',
+      'how_to_prevent',
+      'urgent_need',
+      'denial'
+    ];
     filteredThemeIDs.remove('all');
 
     _renderThemeChart(
