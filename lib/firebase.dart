@@ -311,7 +311,9 @@ Future<List<model.Interaction>> readAllInteractions(
   interactionsSnap.forEach((doc) {
     var obj = doc.data();
     var interaction = model.Interaction.fromFirebaseMap(obj);
-    interactionsList.add(interaction);
+    if (interaction.age_bucket != '10_to_14') {
+      interactionsList.add(interaction);
+    }
   });
 
   // todo: check if the set of the interactions and filters match
