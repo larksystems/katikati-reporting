@@ -1,16 +1,11 @@
-import 'controller.dart';
-import 'view.dart';
+import 'dart:html' as html;
 import 'logger.dart';
 
 Logger logger = Logger('app.dart');
 
 class App {
-  Controller controller;
-  View view;
-
   App() {
-    view = View();
-    controller = Controller('show-interactions', view);
-    view.controller = controller;
+    var body = html.document.getElementsByTagName('body');
+    body.first.append(html.ParagraphElement()..innerText = 'Hello world');
   }
 }

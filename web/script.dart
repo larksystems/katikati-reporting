@@ -1,4 +1,4 @@
-import 'package:covid/app.dart';
+import 'package:dashboard/app.dart';
 
 void main() {
   App();
