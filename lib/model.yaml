@@ -1,0 +1,48 @@
+FieldOperator:
+  dartType: "enum"
+  defaultValue: "equals"
+  dartValues:
+    - equals
+    - contains
+    - not_contains
+
+ChartType:
+  dartType: "enum"
+  defaultValue: "bar"
+  dartValues:
+    - bar
+    - line
+    - map
+
+Filter:
+  key: "String"
+  label: "String" #optional
+  tooltip: "String" #optional
+  exclude_values: "array any" #optional
+
+FieldOperation:
+  key: "String"
+  operator: FieldOperator
+  value: "any"
+
+Field:
+  label: "String" #optional
+  tooltip: "String" #optional
+  field: FieldOperation
+
+Chart:
+  type: ChartType
+  title: "String" #optional
+  narrative: "String" #optional
+  fields: "array Field"
+
+Tab:
+  id: "String"
+  label: "String" #optional
+  exclude_filters: "array String" #optional
+  charts: "array Chart"
+
+Config:
+  data_paths: "map String"
+  filters: "array Filter"
+  tabs: "array Tab"
