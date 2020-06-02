@@ -15,34 +15,34 @@ ChartType:
     - map
 
 Filter:
-  key: "String"
-  label: "String" #optional
-  tooltip: "String" #optional
-  exclude_values: "array any" #optional
+  key: "string"
+  label: "string" #optional
+  tooltip: "string" #optional
+  exclude_values: "array dynamic" #optional
 
 FieldOperation:
-  key: "String"
+  key: "string"
   operator: FieldOperator
-  value: "any"
+  value: "dynamic"
 
 Field:
-  label: "String" #optional
-  tooltip: "String" #optional
+  label: "string" #optional
+  tooltip: "string" #optional
   field: FieldOperation
 
 Chart:
   type: ChartType
-  title: "String" #optional
-  narrative: "String" #optional
+  title: "string" #optional
+  narrative: "string" #optional
   fields: "array Field"
 
 Tab:
-  id: "String"
-  label: "String" #optional
-  exclude_filters: "array String" #optional
+  id: "string"
+  label: "string" #optional
+  exclude_filters: "array string" #optional
   charts: "array Chart"
 
 Config:
-  data_paths: "map String"
+  data_paths: "map string"
   filters: "array Filter"
   tabs: "array Tab"
