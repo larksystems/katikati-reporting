@@ -7,6 +7,231 @@ import 'logger.dart';
 
 Logger log = Logger('model.g.dart');
 
+class Config {
+  String docId;
+  Map<String, String> data_paths;
+  List<Filter> filters;
+  List<Tab> tabs;
+
+  static Config fromSnapshot(DocSnapshot doc, [Config modelObj]) =>
+      fromData(doc.data, modelObj)..docId = doc.id;
+
+  static Config fromData(data, [Config modelObj]) {
+    if (data == null) return null;
+    return (modelObj ?? Config())
+      ..data_paths = Map_fromData<String>(data['data_paths'], String_fromData)
+      ..filters = List_fromData<Filter>(data['filters'], Filter.fromData)
+      ..tabs = List_fromData<Tab>(data['tabs'], Tab.fromData);
+  }
+
+  static void listen(DocStorage docStorage, ConfigCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Config>(docStorage, listener, collectionRoot, Config.fromSnapshot);
+
+  Map<String, dynamic> toData() {
+    return {
+      if (data_paths != null) 'data_paths': data_paths,
+      if (filters != null) 'filters': filters.map((elem) => elem?.toData()).toList(),
+      if (tabs != null) 'tabs': tabs.map((elem) => elem?.toData()).toList(),
+    };
+  }
+
+  String toString() => 'Config [$docId]: ${toData().toString()}';
+}
+typedef void ConfigCollectionListener(
+  List<Config> added,
+  List<Config> modified,
+  List<Config> removed,
+);
+
+class Tab {
+  String docId;
+  String id;
+  String label;
+  List<String> exclude_filters;
+  List<Chart> charts;
+
+  static Tab fromSnapshot(DocSnapshot doc, [Tab modelObj]) =>
+      fromData(doc.data, modelObj)..docId = doc.id;
+
+  static Tab fromData(data, [Tab modelObj]) {
+    if (data == null) return null;
+    return (modelObj ?? Tab())
+      ..id = String_fromData(data['id'])
+      ..label = String_fromData(data['label'])
+      ..exclude_filters = List_fromData<String>(data['exclude_filters'], String_fromData)
+      ..charts = List_fromData<Chart>(data['charts'], Chart.fromData);
+  }
+
+  static void listen(DocStorage docStorage, TabCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Tab>(docStorage, listener, collectionRoot, Tab.fromSnapshot);
+
+  Map<String, dynamic> toData() {
+    return {
+      if (id != null) 'id': id,
+      if (label != null) 'label': label,
+      if (exclude_filters != null) 'exclude_filters': exclude_filters,
+      if (charts != null) 'charts': charts.map((elem) => elem?.toData()).toList(),
+    };
+  }
+
+  String toString() => 'Tab [$docId]: ${toData().toString()}';
+}
+typedef void TabCollectionListener(
+  List<Tab> added,
+  List<Tab> modified,
+  List<Tab> removed,
+);
+
+class Chart {
+  String docId;
+  ChartType type;
+  String title;
+  String narrative;
+  List<Field> fields;
+
+  static Chart fromSnapshot(DocSnapshot doc, [Chart modelObj]) =>
+      fromData(doc.data, modelObj)..docId = doc.id;
+
+  static Chart fromData(data, [Chart modelObj]) {
+    if (data == null) return null;
+    return (modelObj ?? Chart())
+      ..type = ChartType.fromString(data['type'] as String)
+      ..title = String_fromData(data['title'])
+      ..narrative = String_fromData(data['narrative'])
+      ..fields = List_fromData<Field>(data['fields'], Field.fromData);
+  }
+
+  static void listen(DocStorage docStorage, ChartCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Chart>(docStorage, listener, collectionRoot, Chart.fromSnapshot);
+
+  Map<String, dynamic> toData() {
+    return {
+      if (type != null) 'type': type.toString(),
+      if (title != null) 'title': title,
+      if (narrative != null) 'narrative': narrative,
+      if (fields != null) 'fields': fields.map((elem) => elem?.toData()).toList(),
+    };
+  }
+
+  String toString() => 'Chart [$docId]: ${toData().toString()}';
+}
+typedef void ChartCollectionListener(
+  List<Chart> added,
+  List<Chart> modified,
+  List<Chart> removed,
+);
+
+class Field {
+  String docId;
+  String label;
+  String tooltip;
+  FieldOperation field;
+
+  static Field fromSnapshot(DocSnapshot doc, [Field modelObj]) =>
+      fromData(doc.data, modelObj)..docId = doc.id;
+
+  static Field fromData(data, [Field modelObj]) {
+    if (data == null) return null;
+    return (modelObj ?? Field())
+      ..label = String_fromData(data['label'])
+      ..tooltip = String_fromData(data['tooltip'])
+      ..field = FieldOperation.fromData(data['field']);
+  }
+
+  static void listen(DocStorage docStorage, FieldCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Field>(docStorage, listener, collectionRoot, Field.fromSnapshot);
+
+  Map<String, dynamic> toData() {
+    return {
+      if (label != null) 'label': label,
+      if (tooltip != null) 'tooltip': tooltip,
+      if (field != null) 'field': field.toData(),
+    };
+  }
+
+  String toString() => 'Field [$docId]: ${toData().toString()}';
+}
+typedef void FieldCollectionListener(
+  List<Field> added,
+  List<Field> modified,
+  List<Field> removed,
+);
+
+class FieldOperation {
+  String docId;
+  String key;
+  FieldOperator operator;
+  dynamic value;
+
+  static FieldOperation fromSnapshot(DocSnapshot doc, [FieldOperation modelObj]) =>
+      fromData(doc.data, modelObj)..docId = doc.id;
+
+  static FieldOperation fromData(data, [FieldOperation modelObj]) {
+    if (data == null) return null;
+    return (modelObj ?? FieldOperation())
+      ..key = String_fromData(data['key'])
+      ..operator = FieldOperator.fromString(data['operator'] as String)
+      ..value = data['value'];
+  }
+
+  static void listen(DocStorage docStorage, FieldOperationCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<FieldOperation>(docStorage, listener, collectionRoot, FieldOperation.fromSnapshot);
+
+  Map<String, dynamic> toData() {
+    return {
+      if (key != null) 'key': key,
+      if (operator != null) 'operator': operator.toString(),
+      if (value != null) 'value': value,
+    };
+  }
+
+  String toString() => 'FieldOperation [$docId]: ${toData().toString()}';
+}
+typedef void FieldOperationCollectionListener(
+  List<FieldOperation> added,
+  List<FieldOperation> modified,
+  List<FieldOperation> removed,
+);
+
+class Filter {
+  String docId;
+  String key;
+  String label;
+  String tooltip;
+  List<dynamic> exclude_values;
+
+  static Filter fromSnapshot(DocSnapshot doc, [Filter modelObj]) =>
+      fromData(doc.data, modelObj)..docId = doc.id;
+
+  static Filter fromData(data, [Filter modelObj]) {
+    if (data == null) return null;
+    return (modelObj ?? Filter())
+      ..key = String_fromData(data['key'])
+      ..label = String_fromData(data['label'])
+      ..tooltip = String_fromData(data['tooltip'])
+      ..exclude_values = List_fromData<dynamic>(data['exclude_values'], null);
+  }
+
+  static void listen(DocStorage docStorage, FilterCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Filter>(docStorage, listener, collectionRoot, Filter.fromSnapshot);
+
+  Map<String, dynamic> toData() {
+    return {
+      if (key != null) 'key': key,
+      if (label != null) 'label': label,
+      if (tooltip != null) 'tooltip': tooltip,
+      if (exclude_values != null) 'exclude_values': exclude_values,
+    };
+  }
+
+  String toString() => 'Filter [$docId]: ${toData().toString()}';
+}
+typedef void FilterCollectionListener(
+  List<Filter> added,
+  List<Filter> modified,
+  List<Filter> removed,
+);
+
 class FieldOperator {
   static const equals = FieldOperator('equals');
   static const contains = FieldOperator('contains');
@@ -72,219 +297,6 @@ class ChartType {
   String toString() => 'ChartType.$name';
 }
 ChartType Function(String text) ChartType_fromStringOverride;
-
-class Filter {
-  String docId;
-  String key;
-  String label;
-  String tooltip;
-  List<dynamic> exclude_values;
-
-  static Filter fromSnapshot(DocSnapshot doc, [Filter modelObj]) =>
-      fromData(doc.data, modelObj)..docId = doc.id;
-
-  static Filter fromData(data, [Filter modelObj]) {
-    if (data == null) return null;
-    return (modelObj ?? Filter())
-      ..key = String_fromData(data['key'])
-      ..label = String_fromData(data['label'])
-      ..tooltip = String_fromData(data['tooltip'])
-      ..exclude_values = List_fromData<dynamic>(data['exclude_values'], null);
-  }
-
-  static void listen(DocStorage docStorage, FilterCollectionListener listener, String collectionRoot) =>
-      listenForUpdates<Filter>(docStorage, listener, collectionRoot, Filter.fromSnapshot);
-
-  Map<String, dynamic> toData() {
-    return {
-      if (key != null) 'key': key,
-      if (label != null) 'label': label,
-      if (tooltip != null) 'tooltip': tooltip,
-      if (exclude_values != null) 'exclude_values': exclude_values,
-    };
-  }
-}
-typedef void FilterCollectionListener(
-  List<Filter> added,
-  List<Filter> modified,
-  List<Filter> removed,
-);
-
-class FieldOperation {
-  String docId;
-  String key;
-  FieldOperator operator;
-  dynamic value;
-
-  static FieldOperation fromSnapshot(DocSnapshot doc, [FieldOperation modelObj]) =>
-      fromData(doc.data, modelObj)..docId = doc.id;
-
-  static FieldOperation fromData(data, [FieldOperation modelObj]) {
-    if (data == null) return null;
-    return (modelObj ?? FieldOperation())
-      ..key = String_fromData(data['key'])
-      ..operator = FieldOperator.fromString(data['operator'] as String)
-      ..value = data['value'];
-  }
-
-  static void listen(DocStorage docStorage, FieldOperationCollectionListener listener, String collectionRoot) =>
-      listenForUpdates<FieldOperation>(docStorage, listener, collectionRoot, FieldOperation.fromSnapshot);
-
-  Map<String, dynamic> toData() {
-    return {
-      if (key != null) 'key': key,
-      if (operator != null) 'operator': operator.toString(),
-      if (value != null) 'value': value,
-    };
-  }
-}
-typedef void FieldOperationCollectionListener(
-  List<FieldOperation> added,
-  List<FieldOperation> modified,
-  List<FieldOperation> removed,
-);
-
-class Field {
-  String docId;
-  String label;
-  String tooltip;
-  FieldOperation field;
-
-  static Field fromSnapshot(DocSnapshot doc, [Field modelObj]) =>
-      fromData(doc.data, modelObj)..docId = doc.id;
-
-  static Field fromData(data, [Field modelObj]) {
-    if (data == null) return null;
-    return (modelObj ?? Field())
-      ..label = String_fromData(data['label'])
-      ..tooltip = String_fromData(data['tooltip'])
-      ..field = FieldOperation.fromData(data['field']);
-  }
-
-  static void listen(DocStorage docStorage, FieldCollectionListener listener, String collectionRoot) =>
-      listenForUpdates<Field>(docStorage, listener, collectionRoot, Field.fromSnapshot);
-
-  Map<String, dynamic> toData() {
-    return {
-      if (label != null) 'label': label,
-      if (tooltip != null) 'tooltip': tooltip,
-      if (field != null) 'field': field.toData(),
-    };
-  }
-}
-typedef void FieldCollectionListener(
-  List<Field> added,
-  List<Field> modified,
-  List<Field> removed,
-);
-
-class Chart {
-  String docId;
-  ChartType type;
-  String title;
-  String narrative;
-  List<Field> fields;
-
-  static Chart fromSnapshot(DocSnapshot doc, [Chart modelObj]) =>
-      fromData(doc.data, modelObj)..docId = doc.id;
-
-  static Chart fromData(data, [Chart modelObj]) {
-    if (data == null) return null;
-    return (modelObj ?? Chart())
-      ..type = ChartType.fromString(data['type'] as String)
-      ..title = String_fromData(data['title'])
-      ..narrative = String_fromData(data['narrative'])
-      ..fields = List_fromData<Field>(data['fields'], Field.fromData);
-  }
-
-  static void listen(DocStorage docStorage, ChartCollectionListener listener, String collectionRoot) =>
-      listenForUpdates<Chart>(docStorage, listener, collectionRoot, Chart.fromSnapshot);
-
-  Map<String, dynamic> toData() {
-    return {
-      if (type != null) 'type': type.toString(),
-      if (title != null) 'title': title,
-      if (narrative != null) 'narrative': narrative,
-      if (fields != null) 'fields': fields.map((elem) => elem?.toData()).toList(),
-    };
-  }
-}
-typedef void ChartCollectionListener(
-  List<Chart> added,
-  List<Chart> modified,
-  List<Chart> removed,
-);
-
-class Tab {
-  String docId;
-  String id;
-  String label;
-  List<String> exclude_filters;
-  List<Chart> charts;
-
-  static Tab fromSnapshot(DocSnapshot doc, [Tab modelObj]) =>
-      fromData(doc.data, modelObj)..docId = doc.id;
-
-  static Tab fromData(data, [Tab modelObj]) {
-    if (data == null) return null;
-    return (modelObj ?? Tab())
-      ..id = String_fromData(data['id'])
-      ..label = String_fromData(data['label'])
-      ..exclude_filters = List_fromData<String>(data['exclude_filters'], String_fromData)
-      ..charts = List_fromData<Chart>(data['charts'], Chart.fromData);
-  }
-
-  static void listen(DocStorage docStorage, TabCollectionListener listener, String collectionRoot) =>
-      listenForUpdates<Tab>(docStorage, listener, collectionRoot, Tab.fromSnapshot);
-
-  Map<String, dynamic> toData() {
-    return {
-      if (id != null) 'id': id,
-      if (label != null) 'label': label,
-      if (exclude_filters != null) 'exclude_filters': exclude_filters,
-      if (charts != null) 'charts': charts.map((elem) => elem?.toData()).toList(),
-    };
-  }
-}
-typedef void TabCollectionListener(
-  List<Tab> added,
-  List<Tab> modified,
-  List<Tab> removed,
-);
-
-class Config {
-  String docId;
-  Map<String, String> data_paths;
-  List<Filter> filters;
-  List<Tab> tabs;
-
-  static Config fromSnapshot(DocSnapshot doc, [Config modelObj]) =>
-      fromData(doc.data, modelObj)..docId = doc.id;
-
-  static Config fromData(data, [Config modelObj]) {
-    if (data == null) return null;
-    return (modelObj ?? Config())
-      ..data_paths = Map_fromData<String>(data['data_paths'], String_fromData)
-      ..filters = List_fromData<Filter>(data['filters'], Filter.fromData)
-      ..tabs = List_fromData<Tab>(data['tabs'], Tab.fromData);
-  }
-
-  static void listen(DocStorage docStorage, ConfigCollectionListener listener, String collectionRoot) =>
-      listenForUpdates<Config>(docStorage, listener, collectionRoot, Config.fromSnapshot);
-
-  Map<String, dynamic> toData() {
-    return {
-      if (data_paths != null) 'data_paths': data_paths,
-      if (filters != null) 'filters': filters.map((elem) => elem?.toData()).toList(),
-      if (tabs != null) 'tabs': tabs.map((elem) => elem?.toData()).toList(),
-    };
-  }
-}
-typedef void ConfigCollectionListener(
-  List<Config> added,
-  List<Config> modified,
-  List<Config> removed,
-);
 
 // ======================================================================
 // Core firebase/yaml utilities
@@ -408,6 +420,9 @@ abstract class DocBatchUpdate {
 
 /// A pub/sub based mechanism for updating documents
 abstract class DocPubSubUpdate {
+  /// Publish the given opinion for the given namespace.
+  Future<void> publishAddOpinion(String namespace, Map<String, dynamic> opinion);
+
   /// Publish the given document list/set additions,
   /// where [additions] is a mapping of field name to new values to be added to the list/set.
   /// Callers should catch and handle IOException.
