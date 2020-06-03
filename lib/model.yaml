@@ -1,0 +1,48 @@
+Config:
+  data_paths: "map string"
+  filters: "array Filter"
+  tabs: "array Tab"
+
+Tab:
+  id: "string"
+  label: "string" #optional
+  exclude_filters: "array string" #optional
+  charts: "array Chart"
+
+Chart:
+  type: ChartType
+  title: "string" #optional
+  narrative: "string" #optional
+  fields: "array Field"
+
+Field:
+  label: "string" #optional
+  tooltip: "string" #optional
+  field: FieldOperation
+
+FieldOperation:
+  key: "string"
+  operator: FieldOperator
+  value: "dynamic"
+
+Filter:
+  key: "string"
+  label: "string" #optional
+  tooltip: "string" #optional
+  exclude_values: "array dynamic" #optional
+
+FieldOperator:
+  dartType: "enum"
+  defaultValue: "equals"
+  dartValues:
+    - equals
+    - contains
+    - not_contains
+
+ChartType:
+  dartType: "enum"
+  defaultValue: "bar"
+  dartValues:
+    - bar
+    - line
+    - map
