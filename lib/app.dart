@@ -15,11 +15,11 @@ class App {
   nav_controller.Controller navController;
   App() {
     navController = nav_controller.Controller(links);
-    _handlePathChange(null);
-    utils.listenToPathChanges(_handlePathChange);
+    _handlePath(null);
+    utils.listenToPathChanges(_handlePath);
   }
 
-  void _handlePathChange(html.Event event) {
+  void _handlePath(html.Event event) {
     logger.debug('updated url to ${utils.currentPathname}');
     switch (utils.currentPathname) {
       case '/charts':
