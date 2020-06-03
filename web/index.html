@@ -10,15 +10,43 @@
       content="https://github.com/dart-lang/stagehand"
     />
     <title>Dashboard</title>
-    <link
-      rel="stylesheet"
-      href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
-      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
-      crossorigin="anonymous"
-    />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="style/index.css" />
     <script defer src="script.dart.js"></script>
   </head>
 
-  <body></body>
+  <body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-md">
+      <div class="container">
+        <span class="navbar-brand" id="nav-brand">Dashboard</span>
+        <div>
+          <ul class="navbar-nav ml-auto" id="nav-links-wrapper"></ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="container">
+      <div id="content"></div>
+    </div>
+
+    <!-- Loading modal -->
+    <div class="modal-wrapper" id="loading-modal">
+      <span>Loading data...</span>
+    </div>
+
+    <!-- Login modal -->
+    <div class="modal-wrapper" id="login-modal" hidden>
+      <div class="modal-content">
+        <h5>
+          This demo is only accessible to accounts with email domains -
+          <span id="login-email-domains"></span>.
+        </h5>
+        <button class="btn btn-danger" id="login-button">
+          Sign in with Google
+        </button>
+        <div class="alert alert-primary" id="login-error" hidden></div>
+      </div>
+    </div>
+  </body>
 </html>

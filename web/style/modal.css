@@ -1,0 +1,41 @@
+.modal-wrapper {
+  background-color: var(--maroon-90);
+  height: 100%;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 100;
+  backdrop-filter: blur(4px) saturate(50%);
+}
+
+#loading-modal {
+  text-align: center;
+  padding-top: 25vh;
+  backdrop-filter: blur(4px) saturate(50%);
+}
+
+#loading-modal span {
+  animation: blink-animation 0.8s ease infinite;
+  background-color: white;
+  border-radius: 6px;
+  padding: 12px 18px;
+  box-shadow: 0 0 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.modal-content {
+  background-color: white;
+  box-shadow: 0 0 12px 0 rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  margin: 25vh auto 0 auto;
+  max-width: 320px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 0 12px 0 rgba(0, 0, 0, 0.1);
+  border: none;
+}
+
+@keyframes blink-animation {
+  50% {
+    opacity: 0.3;
+  }
+}
