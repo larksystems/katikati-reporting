@@ -1,24 +1,56 @@
-import 'dart:html';
+LogLevel logLevel = LogLevel.VERBOSE;
+
+enum LogLevel { ERROR, WARNING, DEBUG, VERBOSE }
 
 class Logger {
-  String file;
+  String name;
 
-  Logger(this.file);
+  Logger(this.name);
 
-  String _getPrefix() {
-    var date = DateTime.now();
-    return '[${file} $date]';
+  void error(String s) {
+    _log(s);
   }
 
-  void log(String message) {
-    window.console.log('${_getPrefix()} $message');
+  void warning(String s) {
+    switch (logLevel) {
+      case LogLevel.ERROR:
+        return;
+      default:
+        _log(s);
+    }
   }
 
-  void warn(String message) {
-    window.console.warn('${_getPrefix()} $message');
+  void success(String s) {
+    switch (logLevel) {
+      case LogLevel.ERROR:
+        return;
+      default:
+        _log(s);
+    }
   }
 
-  void error(String message) {
-    window.console.error('${_getPrefix()} $message');
+  void debug(String s) {
+    switch (logLevel) {
+      case LogLevel.WARNING:
+      case LogLevel.ERROR:
+        return;
+      default:
+        _log(s);
+    }
+  }
+
+  void verbose(String s) {
+    switch (logLevel) {
+      case LogLevel.DEBUG:
+      case LogLevel.WARNING:
+      case LogLevel.ERROR:
+        return;
+      default:
+        _log(s);
+    }
+  }
+
+  void _log(String s) {
+    print('${DateTime.now().toIso8601String()} $name: $s');
   }
 }
