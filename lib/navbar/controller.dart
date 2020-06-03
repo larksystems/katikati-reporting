@@ -1,6 +1,6 @@
 import 'package:dashboard/logger.dart';
 import 'package:dashboard/navbar/view.dart' as nav_view;
-import 'package:dashboard/navbar/model.dart' as model;
+import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/utils.dart' as utils;
 
 Logger logger = Logger('navbar/controller.dart');

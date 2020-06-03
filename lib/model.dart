@@ -1,4 +1,5 @@
-// TODO temporary: move to model once prev PR is merged
+export 'package:dashboard/model.g.dart';
+
 class Link {
   String pathname;
   String label;
