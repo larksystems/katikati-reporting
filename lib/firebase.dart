@@ -1,6 +1,6 @@
 import 'package:firebase/firebase.dart' as firebase;
-import 'firebase_constants.dart' as fb_constants;
-import 'logger.dart';
+import 'package:dashboard/firebase_constants.dart' as fb_constants;
+import 'package:dashboard/logger.dart';
 
 Logger logger = Logger('firebase.dart');
 

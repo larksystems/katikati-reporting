@@ -1,5 +1,5 @@
 import 'dart:html' as html;
-import 'controller.dart';
+import 'package:dashboard/navbar/controller.dart';
 
 const NAV_BRAND_ID = 'nav-brand';
 const NAV_LINKS_WRAPPER_ID = 'nav-links-wrapper';
