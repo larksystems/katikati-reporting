@@ -1,0 +1,18 @@
+nav.navbar {
+  background-color: #111;
+  color: white;
+
+  position: fixed;
+  width: 100%;
+  padding: 6px 0;
+}
+
+nav.navbar .nav-item {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+
+nav.navbar .nav-item.active {
+  background-color: rgba(255, 255, 255, 0.2);
+}
