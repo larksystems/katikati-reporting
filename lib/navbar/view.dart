@@ -23,10 +23,7 @@ class View {
 
   void appendNavLink(String pathname, String label, bool isSelected) {
     var li = html.LIElement()
-      ..classes = [
-        NAV_ITEM_CSS_CLASSNAME,
-        isSelected ? ACTIVE_CSS_CLASSNAME : '_'
-      ]
+      ..classes = [NAV_ITEM_CSS_CLASSNAME, if (isSelected) ACTIVE_CSS_CLASSNAME]
       ..innerText = label
       ..id = pathname
       ..onClick.listen(

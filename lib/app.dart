@@ -14,6 +14,7 @@ var links = [
 class App {
   nav_controller.Controller navController;
   App() {
+    // TO THINK ABOUT: navController might want to take in the respective controllers as well
     navController = nav_controller.Controller(links);
     _handlePath(null);
     utils.listenToPathChanges(_handlePath);
