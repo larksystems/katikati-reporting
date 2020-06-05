@@ -9,4 +9,6 @@ build/
 
 # Directory created by dartdoc
 doc/api/
-web/firebase/constants.json
+
+# Firebase constants
+**/firebase-constants.json
