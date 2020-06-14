@@ -11,6 +11,10 @@
     />
     <title>Dashboard</title>
     <link rel="stylesheet" href="style/index.css" />
+    <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-auth.js"></script>
     <script defer src="script.dart.js"></script>
   </head>
 
@@ -36,11 +40,12 @@
     </div>
 
     <!-- Login modal -->
-    <div class="modal-wrapper" id="login-modal" hidden>
+    <div class="modal-wrapper" id="login-modal">
       <div class="modal-content">
         <h5>
-          This demo is only accessible to accounts with email domains -
-          <span id="login-email-domains"></span>.
+          Please login with an email ID from
+          <div id="login-email-domains">...</div>
+          to continue.
         </h5>
         <button class="btn btn-danger" id="login-button">
           Sign in with Google

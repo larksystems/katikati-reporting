@@ -1,5 +1,5 @@
-import 'package:dashboard/app.dart';
+import 'package:dashboard/app.dart' as app;
 
 void main() {
-  App();
+  app.init();
 }

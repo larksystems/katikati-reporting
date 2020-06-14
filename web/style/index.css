@@ -1,3 +1,7 @@
 @import "./bootstrap.min.css";
 @import "./nav.css";
 @import "./modal.css";
+
+#content {
+  padding: 72px 0;
+}
