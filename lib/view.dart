@@ -38,20 +38,20 @@ void init() {
 
 // Loading
 void showLoading() {
-  loadingModal.removeAttribute('hidden');
+  loadingModal.hidden = false;
 }
 
 void hideLoading() {
-  loadingModal.setAttribute('hidden', 'true');
+  loadingModal.hidden = true;
 }
 
 // Login modal
 void showLoginModal() {
-  loginModal.removeAttribute('hidden');
+  loginModal.hidden = false;
 }
 
 void hideLoginModal() {
-  loginModal.setAttribute('hidden', 'true');
+  loginModal.hidden = true;
 }
 
 void setLoginDomains(List<String> domains) {
@@ -59,23 +59,23 @@ void setLoginDomains(List<String> domains) {
 }
 
 void enableLoginButton() {
-  loginButton.removeAttribute('disabled');
+  loginButton.disabled = false;
   loginButton.innerText = 'Sign in with Google';
 }
 
 void disableLoginButton() {
-  loginButton.setAttribute('disabled', 'true');
+  loginButton.disabled = true;
   loginButton.innerText = 'Signing in ...';
 }
 
 void showLoginError(String message) {
   loginErrorAlert.innerText = message;
-  loginErrorAlert.removeAttribute('hidden');
+  loginErrorAlert.hidden = false;
 }
 
 void hideLoginError() {
   loginErrorAlert.innerText = '';
-  loginErrorAlert.setAttribute('hidden', 'true');
+  loginErrorAlert.hidden = true;
 }
 
 // Nav bar

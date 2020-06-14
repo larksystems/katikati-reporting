@@ -7,11 +7,12 @@ import 'package:dashboard/logger.dart';
 
 Logger logger = Logger('controller.dart');
 
-var _navLinks = [
-  model.Link('analyse', 'Analyse', view.renderAnalyseTab),
-  model.Link('settings', 'Settings', view.renderSettingsTab)
-];
-var _currentNavLink = _navLinks.first.pathname;
+Map<String, model.Link> _navLinks = {
+  'analyse': model.Link('analyse', 'Analyse', view.renderAnalyseTab),
+  'settings': model.Link('settings', 'Settings', view.renderSettingsTab)
+};
+
+var _currentNavLink = _navLinks['analyse'].pathname;
 
 // Actions
 enum UIAction { signinWithGoogle, changeNavTab }
@@ -28,28 +29,28 @@ class NavChangeData extends Data {
 void init() async {
   view.init();
   view.showLoginModal();
-  for (var n in _navLinks) {
+  _navLinks.forEach((_, n) {
     view.appendNavLink(n.pathname, n.label, _currentNavLink == n.pathname);
-  }
+  });
 
   await fb.init(
       'assets/firebase-constants.json', onLoginCompleted, onLogoutCompleted);
 }
 
 void onLoginCompleted() async {
-  await loadDataFromDB();
+  await loadDataFromFirebase();
   view.setNavlinkSelected(_currentNavLink);
-  _navLinks.first.render();
-}
-
-void loadDataFromDB() async {
-  view.showLoading();
-  logger.debug('Read all required data');
-  view.hideLoading();
+  _navLinks['analyse'].render();
 }
 
 void onLogoutCompleted() async {
   logger.debug('Delete all local data');
+}
+
+void loadDataFromFirebase() async {
+  view.showLoading();
+  logger.debug('Read all required data');
+  view.hideLoading();
 }
 
 void command(UIAction action, Data data) {
@@ -61,7 +62,7 @@ void command(UIAction action, Data data) {
       var d = data as NavChangeData;
       _currentNavLink = d.pathname;
       view.setNavlinkSelected(_currentNavLink);
-      _navLinks.firstWhere((n) => n.pathname == _currentNavLink).render();
+      _navLinks[_currentNavLink].render();
       break;
     default:
   }
