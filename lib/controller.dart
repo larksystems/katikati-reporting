@@ -31,7 +31,7 @@ Map<String, String> _filterComparisionValues = {};
 Map<String, Map<String, dynamic>> _allInteractions;
 Map<String, Map<String, dynamic>> _filteredInteractions;
 Map<String, Map<String, dynamic>> _filteredComparisonInteractions;
-Map<String, List> _uniqueFieldValues;
+Map<String, Set> _uniqueFieldValues;
 model.Config _config;
 List<model.Chart> _charts;
 
@@ -98,19 +98,19 @@ void loadDataFromFirebase() async {
 }
 
 void computeUniqFieldValues() {
-  var uniqValues = Map<String, Set>();
+  _uniqueFieldValues = Map<String, Set>();
   _config.filters.forEach((filter) {
-    uniqValues[filter.key] = Set();
+    _uniqueFieldValues[filter.key] = Set();
   });
 
   _allInteractions.forEach((_, interaction) {
-    uniqValues.forEach((key, valueSet) {
+    _uniqueFieldValues.forEach((key, valueSet) {
       var value = interaction[key];
       (value is List) ? valueSet.addAll(value) : valueSet.add(value);
     });
   });
 
-  logger.debug('Computed unique values');
+  logger.debug('Computed unique field values for all filters');
 }
 
 void command(UIAction action, Data data) {
