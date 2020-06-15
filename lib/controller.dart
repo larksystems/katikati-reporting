@@ -69,7 +69,10 @@ void onLoginCompleted() async {
   _selectedTab = _config.tabs.first.id;
 
   view.setNavlinkSelected(_currentNavLink);
-  _navLinks['analyse'].render();
+
+  var tabIDs = _config.tabs.map((t) => t.id).toList();
+  var tabLabels = _config.tabs.map((t) => t.label ?? t.id).toList();
+  view.renderTabRadioSelect(tabIDs, tabLabels);
 
   view.hideLoading();
 }

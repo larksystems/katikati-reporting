@@ -104,6 +104,43 @@ void clearContentTab() {
   content.children.clear();
 }
 
+void renderTabRadioSelect(List<String> options, List<String> labels) {
+  var wrapper = html.DivElement()..classes = ['row'];
+  var labelCol = html.DivElement()
+    ..classes = ['col-lg-2', 'col-md-3', 'col-sm-12', 'col-xs-12']
+    ..innerText = 'Analyse';
+  var radioCol = html.DivElement()
+    ..classes = ['col-lg-10', 'col-md-9', 'col-sm-12', 'col-xs-12'];
+
+  for (var i = 0; i < options.length; ++i) {
+    var radioWrapper = html.DivElement()
+      ..classes = ['form-check', 'form-check-inline'];
+    var radioOption = html.InputElement()
+      ..type = 'radio'
+      ..name = 'analyse-tab-options'
+      ..id = 'analyse-tab-options-${options[i]}'
+      ..value = options[i]
+      ..classes = ['form-check-input']
+      ..checked = i == 0
+      ..onChange.listen((e) {
+        if (!(e.target as html.RadioButtonInputElement).checked) return;
+        // todo: call the UI command to change tabs
+      });
+    var radioLabel = html.LabelElement()
+      ..htmlFor = 'analyse-tab-options-${options[i]}'
+      ..classes = ['form-check-label']
+      ..innerText = labels[i];
+
+    radioWrapper.append(radioOption);
+    radioWrapper.append(radioLabel);
+    radioCol.append(radioWrapper);
+  }
+
+  wrapper.append(labelCol);
+  wrapper.append(radioCol);
+  content.append(wrapper);
+}
+
 void renderAnalyseTab() {
   clearContentTab();
   content.append(html.DivElement()..innerText = 'Analyse');
