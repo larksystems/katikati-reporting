@@ -21,17 +21,17 @@ var _currentNavLink = _navLinks['analyse'].pathname;
 
 // UI States
 String _selectedTab;
-bool _isCompareEnabled;
-bool _isChartsNormalisedEnabled;
-List<String> _activeFilters;
-Map<String, String> _filterValues;
-Map<String, String> _filterComparisionValues;
+bool _isCompareEnabled = true;
+bool _isChartsNormalisedEnabled = false;
+List<String> _activeFilters = [];
+Map<String, String> _filterValues = {};
+Map<String, String> _filterComparisionValues = {};
 
 // Data states
 Map<String, Map<String, dynamic>> _allInteractions;
 Map<String, Map<String, dynamic>> _filteredInteractions;
 Map<String, Map<String, dynamic>> _filteredComparisonInteractions;
-Map<String, List<String>> _uniqueFieldValues;
+Map<String, List> _uniqueFieldValues;
 model.Config _config;
 List<model.Chart> _charts;
 
@@ -59,9 +59,19 @@ void init() async {
 }
 
 void onLoginCompleted() async {
+  view.showLoading();
+
   await loadDataFromFirebase();
+  _filteredInteractions = _allInteractions;
+  _filteredComparisonInteractions = _allInteractions;
+
+  computeUniqFieldValues();
+  _selectedTab = _config.tabs.first.id;
+
   view.setNavlinkSelected(_currentNavLink);
   _navLinks['analyse'].render();
+
+  view.hideLoading();
 }
 
 void onLogoutCompleted() async {
@@ -69,8 +79,6 @@ void onLogoutCompleted() async {
 }
 
 void loadDataFromFirebase() async {
-  view.showLoading();
-
   try {
     _config = await fb.fetchConfig();
   } catch (e) {
@@ -87,8 +95,22 @@ void loadDataFromFirebase() async {
     logger.error(e);
     rethrow;
   }
+}
 
-  view.hideLoading();
+void computeUniqFieldValues() {
+  var uniqValues = Map<String, Set>();
+  _config.filters.forEach((filter) {
+    uniqValues[filter.key] = Set();
+  });
+
+  _allInteractions.forEach((_, interaction) {
+    uniqValues.forEach((key, valueSet) {
+      var value = interaction[key];
+      (value is List) ? valueSet.addAll(value) : valueSet.add(value);
+    });
+  });
+
+  logger.debug('Computed unique values');
 }
 
 void command(UIAction action, Data data) {
