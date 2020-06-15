@@ -23,3 +23,4 @@ String get appId => _constants['appId'];
 String get measurementId => _constants['measurementId'];
 List<String> get allowedEmailDomains =>
     _constants['allowedEmailDomains'].split('|');
+String get metadataPath => _constants['metadataPath'];

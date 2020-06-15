@@ -1,6 +1,7 @@
 import 'package:firebase/firebase.dart' as firebase;
 import 'package:dashboard/firebase_constants.dart' as fb_constants;
 import 'package:dashboard/view.dart' as view;
+import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/logger.dart';
 
 Logger logger = Logger('firebase.dart');
@@ -27,6 +28,7 @@ void init(String constantsFilePath, Function loginCallback,
       .listen((user) => _fbAuthChanged(user, loginCallback, logoutCallback));
 }
 
+// Auth methods
 Future<firebase.UserCredential> signInWithGoogle() async {
   var provider = firebase.GoogleAuthProvider();
   return firebaseAuth.signInWithPopup(provider);
@@ -71,4 +73,13 @@ void _fbAuthChanged(
   view.hideLoginModal();
 
   loginCallback();
+}
+
+// Read data
+Future<model.Config> fetchConfig() async {
+  var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
+  var configSnap = await chartsConfigRef.get();
+  var configData = configSnap.data();
+
+  return model.Config.fromData(configData);
 }

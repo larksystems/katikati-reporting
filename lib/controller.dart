@@ -14,6 +14,22 @@ Map<String, model.Link> _navLinks = {
 
 var _currentNavLink = _navLinks['analyse'].pathname;
 
+// UI States
+String _selectedTab;
+bool _isCompareEnabled;
+bool _isChartsNormalisedEnabled;
+List<String> _activeFilters;
+Map<String, String> _filterValues;
+Map<String, String> _filterComparisionValues;
+
+// Data states
+Map<String, Map<String, dynamic>> _allInteractions;
+Map<String, Map<String, dynamic>> _filteredInteractions;
+Map<String, Map<String, dynamic>> _filteredComparisonInteractions;
+Map<String, List<String>> _uniqueFieldValues;
+model.Config _config;
+List<model.Chart> _charts;
+
 // Actions
 enum UIAction { signinWithGoogle, changeNavTab }
 
@@ -49,7 +65,7 @@ void onLogoutCompleted() async {
 
 void loadDataFromFirebase() async {
   view.showLoading();
-  logger.debug('Read all required data');
+  _config = await fb.fetchConfig();
   view.hideLoading();
 }
 
