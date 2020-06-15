@@ -118,3 +118,7 @@ void render404() {
   clearContentTab();
   content.append(html.DivElement()..innerText = '404 page not found');
 }
+
+void showAlert(String message) {
+  html.window.alert('Error: ${message}');
+}

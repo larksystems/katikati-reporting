@@ -12,6 +12,11 @@ Map<String, model.Link> _navLinks = {
   'settings': model.Link('settings', 'Settings', view.renderSettingsTab)
 };
 
+Map<String, String> _errorMessages = {
+  'parse-config': 'Unable to parse "Config" to the required format',
+  'fetch-interactions': 'Unable to fetch interactions'
+};
+
 var _currentNavLink = _navLinks['analyse'].pathname;
 
 // UI States
@@ -65,7 +70,24 @@ void onLogoutCompleted() async {
 
 void loadDataFromFirebase() async {
   view.showLoading();
-  _config = await fb.fetchConfig();
+
+  try {
+    _config = await fb.fetchConfig();
+  } catch (e) {
+    view.showAlert(_errorMessages['parse-config']);
+    logger.error(e);
+    rethrow;
+  }
+
+  try {
+    _allInteractions =
+        await fb.fetchInteractions(_config.data_paths['interactions']);
+  } catch (e) {
+    view.showAlert(_errorMessages['fetch-interactions']);
+    logger.error(e);
+    rethrow;
+  }
+
   view.hideLoading();
 }
 

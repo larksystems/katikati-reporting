@@ -77,9 +77,29 @@ void _fbAuthChanged(
 
 // Read data
 Future<model.Config> fetchConfig() async {
+  logger.debug('Fetching config from firebase ..');
   var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
   var configSnap = await chartsConfigRef.get();
   var configData = configSnap.data();
 
   return model.Config.fromData(configData);
+}
+
+Future<Map<String, Map<String, dynamic>>> fetchInteractions(String path) async {
+  if (path == null || path == '') {
+    throw Error();
+  }
+
+  logger.debug('Fetching interactions from firebase ..');
+  var _interactionsRef = firebase.firestore().collection(path);
+
+  var interactionsSnap = await _interactionsRef.get();
+  logger.debug('Fetched ${interactionsSnap.size} interactions');
+
+  var interactionsMap = Map<String, Map<String, dynamic>>();
+  interactionsSnap.forEach((doc) {
+    interactionsMap[doc.id] = doc.data();
+  });
+
+  return interactionsMap;
 }
