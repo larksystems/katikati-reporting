@@ -12,7 +12,7 @@ Map<String, model.Link> _navLinks = {
   'settings': model.Link('settings', 'Settings', view.renderSettingsTab)
 };
 
-Map<String, String> _errorMessages = {
+const _errorMessages = {
   'parse-config': 'Unable to parse "Config" to the required format',
   'fetch-interactions': 'Unable to fetch interactions'
 };
@@ -65,7 +65,8 @@ void onLoginCompleted() async {
   _filteredInteractions = _allInteractions;
   _filteredComparisonInteractions = _allInteractions;
 
-  computeUniqFieldValues();
+  _uniqueFieldValues =
+      computeUniqFieldValues(_config.filters, _allInteractions);
   _selectedTab = _config.tabs.first.id;
 
   view.setNavlinkSelected(_currentNavLink);
@@ -100,20 +101,22 @@ void loadDataFromFirebase() async {
   }
 }
 
-void computeUniqFieldValues() {
-  _uniqueFieldValues = Map<String, Set>();
-  _config.filters.forEach((filter) {
-    _uniqueFieldValues[filter.key] = Set();
+Map<String, Set> computeUniqFieldValues(List<model.Filter> filterOptions,
+    Map<String, Map<String, dynamic>> interactions) {
+  var uniqueFieldValues;
+  filterOptions.forEach((option) {
+    uniqueFieldValues[option.key] = Set();
   });
 
-  _allInteractions.forEach((_, interaction) {
-    _uniqueFieldValues.forEach((key, valueSet) {
+  interactions.forEach((_, interaction) {
+    uniqueFieldValues.forEach((key, valueSet) {
       var value = interaction[key];
       (value is List) ? valueSet.addAll(value) : valueSet.add(value);
     });
   });
 
   logger.debug('Computed unique field values for all filters');
+  return uniqueFieldValues;
 }
 
 void command(UIAction action, Data data) {
