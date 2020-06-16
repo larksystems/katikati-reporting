@@ -104,7 +104,7 @@ void clearContentTab() {
   content.children.clear();
 }
 
-void renderTabRadioSelect(List<String> options, List<String> labels) {
+void renderAnalysisTabRadio(List<String> labels) {
   var wrapper = html.DivElement()..classes = ['row'];
   var labelCol = html.DivElement()
     ..classes = ['col-lg-2', 'col-md-3', 'col-sm-12', 'col-xs-12']
@@ -112,22 +112,22 @@ void renderTabRadioSelect(List<String> options, List<String> labels) {
   var radioCol = html.DivElement()
     ..classes = ['col-lg-10', 'col-md-9', 'col-sm-12', 'col-xs-12'];
 
-  for (var i = 0; i < options.length; ++i) {
+  for (var i = 0; i < labels.length; ++i) {
     var radioWrapper = html.DivElement()
       ..classes = ['form-check', 'form-check-inline'];
     var radioOption = html.InputElement()
       ..type = 'radio'
       ..name = 'analyse-tab-options'
-      ..id = 'analyse-tab-options-${options[i]}'
-      ..value = options[i]
+      ..id = 'analyse-tab-options-${labels[i]}'
+      ..value = labels[i]
       ..classes = ['form-check-input']
       ..checked = i == 0
       ..onChange.listen((e) {
         if (!(e.target as html.RadioButtonInputElement).checked) return;
-        // todo: call the UI command to change tabs
+        command(UIAction.changeAnalysisTab, AnalysisTabChangeData(i));
       });
     var radioLabel = html.LabelElement()
-      ..htmlFor = 'analyse-tab-options-${options[i]}'
+      ..htmlFor = 'analyse-tab-options-${labels[i]}'
       ..classes = ['form-check-label']
       ..innerText = labels[i];
 
@@ -139,11 +139,6 @@ void renderTabRadioSelect(List<String> options, List<String> labels) {
   wrapper.append(labelCol);
   wrapper.append(radioCol);
   content.append(wrapper);
-}
-
-void renderAnalyseTab() {
-  clearContentTab();
-  content.append(html.DivElement()..innerText = 'Analyse');
 }
 
 void renderSettingsTab() {

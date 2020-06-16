@@ -8,8 +8,8 @@ import 'package:dashboard/logger.dart';
 Logger logger = Logger('controller.dart');
 
 Map<String, model.Link> _navLinks = {
-  'analyse': model.Link('analyse', 'Analyse', view.renderAnalyseTab),
-  'settings': model.Link('settings', 'Settings', view.renderSettingsTab)
+  'analyse': model.Link('analyse', 'Analyse', handleNavToAnalysis),
+  'settings': model.Link('settings', 'Settings', handleNavToSettings)
 };
 
 const _errorMessages = {
@@ -20,7 +20,7 @@ const _errorMessages = {
 var _currentNavLink = _navLinks['analyse'].pathname;
 
 // UI States
-String _selectedTab;
+int _selectedAnalysisTabIndex;
 bool _isCompareEnabled = true;
 bool _isChartsNormalisedEnabled = false;
 List<String> _activeFilters = [];
@@ -36,7 +36,7 @@ model.Config _config;
 List<model.Chart> _charts;
 
 // Actions
-enum UIAction { signinWithGoogle, changeNavTab }
+enum UIAction { signinWithGoogle, changeNavTab, changeAnalysisTab }
 
 // Action data
 class Data {}
@@ -44,6 +44,11 @@ class Data {}
 class NavChangeData extends Data {
   String pathname;
   NavChangeData(this.pathname);
+}
+
+class AnalysisTabChangeData extends Data {
+  int tabIndex;
+  AnalysisTabChangeData(this.tabIndex);
 }
 
 // Controller functions
@@ -58,6 +63,7 @@ void init() async {
       'assets/firebase-constants.json', onLoginCompleted, onLogoutCompleted);
 }
 
+// Login, logout, load data
 void onLoginCompleted() async {
   view.showLoading();
 
@@ -67,13 +73,10 @@ void onLoginCompleted() async {
 
   _uniqueFieldValues =
       computeUniqFieldValues(_config.filters, _allInteractions);
-  _selectedTab = _config.tabs.first.id;
+  _selectedAnalysisTabIndex = 0;
 
   view.setNavlinkSelected(_currentNavLink);
-
-  var tabIDs = _config.tabs.map((t) => t.id).toList();
-  var tabLabels = _config.tabs.map((t) => t.label ?? t.id).toList();
-  view.renderTabRadioSelect(tabIDs, tabLabels);
+  handleNavToAnalysis();
 
   view.hideLoading();
 }
@@ -101,9 +104,10 @@ void loadDataFromFirebase() async {
   }
 }
 
+// Compute data methods
 Map<String, Set> computeUniqFieldValues(List<model.Filter> filterOptions,
     Map<String, Map<String, dynamic>> interactions) {
-  var uniqueFieldValues;
+  var uniqueFieldValues = Map<String, Set>();
   filterOptions.forEach((option) {
     uniqueFieldValues[option.key] = Set();
   });
@@ -119,6 +123,24 @@ Map<String, Set> computeUniqFieldValues(List<model.Filter> filterOptions,
   return uniqueFieldValues;
 }
 
+// Render methods
+void handleNavToAnalysis() {
+  view.clearContentTab();
+  var tabLabels = _config.tabs
+      .asMap()
+      .map((i, t) => MapEntry(i, t.label ?? 'Tab ${i}'))
+      .values
+      .toList();
+  view.renderAnalysisTabRadio(tabLabels);
+}
+
+void handleNavToSettings() {
+  view.clearContentTab();
+  // todo: replace with actual contents for settings tab
+  view.renderSettingsTab();
+}
+
+// User actions
 void command(UIAction action, Data data) {
   switch (action) {
     case UIAction.signinWithGoogle:
@@ -129,6 +151,12 @@ void command(UIAction action, Data data) {
       _currentNavLink = d.pathname;
       view.setNavlinkSelected(_currentNavLink);
       _navLinks[_currentNavLink].render();
+      break;
+    case UIAction.changeAnalysisTab:
+      var d = data as AnalysisTabChangeData;
+      _selectedAnalysisTabIndex = d.tabIndex;
+      logger.debug('Changed to analysis tab ${_selectedAnalysisTabIndex}');
+      // todo: handle switch between analysis tabs
       break;
     default:
   }
