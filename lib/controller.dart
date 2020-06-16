@@ -21,8 +21,8 @@ var _currentNavLink = _navLinks['analyse'].pathname;
 
 // UI States
 int _selectedAnalysisTabIndex;
-bool _isCompareEnabled = true;
-bool _isChartsNormalisedEnabled = false;
+bool _isDataComparisonEnabled = true;
+bool _isDataNormalisationEnabled = false;
 List<String> _activeFilters = [];
 Map<String, String> _filterValues = {};
 Map<String, String> _filterComparisionValues = {};
@@ -36,7 +36,13 @@ model.Config _config;
 List<model.Chart> _charts;
 
 // Actions
-enum UIAction { signinWithGoogle, changeNavTab, changeAnalysisTab }
+enum UIAction {
+  signinWithGoogle,
+  changeNavTab,
+  changeAnalysisTab,
+  toggleDataComparison,
+  toggleDataNormalisation
+}
 
 // Action data
 class Data {}
@@ -49,6 +55,11 @@ class NavChangeData extends Data {
 class AnalysisTabChangeData extends Data {
   int tabIndex;
   AnalysisTabChangeData(this.tabIndex);
+}
+
+class ToggleData extends Data {
+  bool isEnabled;
+  ToggleData(this.isEnabled);
 }
 
 // Controller functions
@@ -132,6 +143,8 @@ void handleNavToAnalysis() {
       .values
       .toList();
   view.renderAnalysisTabRadio(tabLabels);
+  view.renderChartOptions(
+      _isDataComparisonEnabled, _isDataNormalisationEnabled);
 }
 
 void handleNavToSettings() {
@@ -157,6 +170,19 @@ void command(UIAction action, Data data) {
       _selectedAnalysisTabIndex = d.tabIndex;
       logger.debug('Changed to analysis tab ${_selectedAnalysisTabIndex}');
       // todo: handle switch between analysis tabs
+      break;
+    case UIAction.toggleDataComparison:
+      var d = data as ToggleData;
+      _isDataComparisonEnabled = d.isEnabled;
+      logger.debug('Data comparison changed to ${_isDataComparisonEnabled}');
+      // todo: handle for data comparison
+      break;
+    case UIAction.toggleDataNormalisation:
+      var d = data as ToggleData;
+      _isDataNormalisationEnabled = d.isEnabled;
+      logger.debug(
+          'Data normalisation changed to ${_isDataNormalisationEnabled}');
+      // todo: handle for data normalisation
       break;
     default:
   }

@@ -104,13 +104,24 @@ void clearContentTab() {
   content.children.clear();
 }
 
-void renderAnalysisTabRadio(List<String> labels) {
-  var wrapper = html.DivElement()..classes = ['row'];
-  var labelCol = html.DivElement()
-    ..classes = ['col-lg-2', 'col-md-3', 'col-sm-12', 'col-xs-12']
-    ..innerText = 'Analyse';
-  var radioCol = html.DivElement()
+html.DivElement getRowDiv() {
+  return html.DivElement()..classes = ['row'];
+}
+
+html.DivElement getLabelColDiv() {
+  return html.DivElement()
+    ..classes = ['col-lg-2', 'col-md-3', 'col-sm-12', 'col-xs-12'];
+}
+
+html.DivElement getOptionsColDiv() {
+  return html.DivElement()
     ..classes = ['col-lg-10', 'col-md-9', 'col-sm-12', 'col-xs-12'];
+}
+
+void renderAnalysisTabRadio(List<String> labels) {
+  var wrapper = getRowDiv();
+  var labelCol = getLabelColDiv()..innerText = 'Analyse';
+  var optionsCol = getOptionsColDiv();
 
   for (var i = 0; i < labels.length; ++i) {
     var radioWrapper = html.DivElement()
@@ -132,11 +143,59 @@ void renderAnalysisTabRadio(List<String> labels) {
 
     radioWrapper.append(radioOption);
     radioWrapper.append(radioLabel);
-    radioCol.append(radioWrapper);
+    optionsCol.append(radioWrapper);
   }
 
   wrapper.append(labelCol);
-  wrapper.append(radioCol);
+  wrapper.append(optionsCol);
+  content.append(wrapper);
+}
+
+void renderChartOptions(bool isComparisonChecked, bool isNormalisationChecked) {
+  var wrapper = getRowDiv();
+  var labelCol = getLabelColDiv()..innerText = 'Options';
+  var optionsCol = getOptionsColDiv();
+
+  var comparisonWrapper = html.DivElement()
+    ..classes = ['form-check', 'form-check-inline'];
+  var comparisonOption = html.InputElement()
+    ..type = 'checkbox'
+    ..id = 'comparison-option'
+    ..classes = ['form-check-input']
+    ..checked = isComparisonChecked
+    ..onChange.listen((e) {
+      command(UIAction.toggleDataComparison,
+          ToggleData((e.target as html.CheckboxInputElement).checked));
+    });
+  var comparisonLabel = html.LabelElement()
+    ..htmlFor = 'comparison-option'
+    ..classes = ['form-check-label']
+    ..innerText = 'Compare data';
+  comparisonWrapper.append(comparisonOption);
+  comparisonWrapper.append(comparisonLabel);
+  optionsCol.append(comparisonWrapper);
+
+  var normalisationWrapper = html.DivElement()
+    ..classes = ['form-check', 'form-check-inline'];
+  var normalisationOption = html.InputElement()
+    ..type = 'checkbox'
+    ..id = 'normalisation-option'
+    ..classes = ['form-check-input']
+    ..checked = isNormalisationChecked
+    ..onChange.listen((e) {
+      command(UIAction.toggleDataNormalisation,
+          ToggleData((e.target as html.CheckboxInputElement).checked));
+    });
+  var normalisationLabel = html.LabelElement()
+    ..htmlFor = 'normalisation-option'
+    ..classes = ['form-check-label']
+    ..innerText = 'Normalise data';
+  normalisationWrapper.append(normalisationOption);
+  normalisationWrapper.append(normalisationLabel);
+  optionsCol.append(normalisationWrapper);
+
+  wrapper.append(labelCol);
+  wrapper.append(optionsCol);
   content.append(wrapper);
 }
 
