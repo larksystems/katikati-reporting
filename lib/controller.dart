@@ -76,7 +76,7 @@ void onLoginCompleted() async {
   _selectedAnalysisTabIndex = 0;
 
   view.setNavlinkSelected(_currentNavLink);
-  _navLinks['analyse'].render();
+  _navLinks[_currentNavLink].render();
 
   view.hideLoading();
 }
