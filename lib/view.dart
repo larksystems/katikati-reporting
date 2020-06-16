@@ -119,7 +119,6 @@ void renderAnalysisTabRadio(List<String> labels) {
       ..type = 'radio'
       ..name = 'analyse-tab-options'
       ..id = 'analyse-tab-options-${labels[i]}'
-      ..value = labels[i]
       ..classes = ['form-check-input']
       ..checked = i == 0
       ..onChange.listen((e) {
