@@ -176,7 +176,9 @@ void renderChartOptions(bool isComparisonChecked, bool isNormalisationChecked) {
 }
 
 void renderFilterDropdowns(
-    List<String> filterKeys, Map<String, List<String>> filterOptions) {
+    List<String> filterKeys,
+    Map<String, List<String>> filterOptions,
+    bool shouldRenderComparisonFilters) {
   var wrapper = getRowDiv();
   var labelCol = getLabelColDiv()..innerText = 'Filters';
   var optionsCol = getOptionsColDiv();
@@ -185,7 +187,6 @@ void renderFilterDropdowns(
     var filterRow = getRowDiv();
     var checkboxCol = html.DivElement()..classes = ['col-3'];
     var filterCol = html.DivElement()..classes = ['col-3'];
-    var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
 
     var checkboxWithLabel = _getCheckboxWithLabel(
         'filter-option-${key}', key, false, (bool isChecked) {
@@ -200,17 +201,19 @@ void renderFilterDropdowns(
     });
     filterCol.append(filterDropdown);
 
+    filterRow.append(checkboxCol);
+    filterRow.append(filterCol);
+    optionsCol.append(filterRow);
+
+    if (!shouldRenderComparisonFilters) continue;
+    var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
     var comparisonFilterDropdown =
         _getDropdown(filterOptions[key].toList(), '__all', (String value) {
       command(
           UIAction.setComparisonFilterValue, SetFilterValueData(key, value));
     });
     comparisonFilterCol.append(comparisonFilterDropdown);
-
-    filterRow.append(checkboxCol);
-    filterRow.append(filterCol);
     filterRow.append(comparisonFilterCol);
-    optionsCol.append(filterRow);
   }
 
   wrapper.append(labelCol);

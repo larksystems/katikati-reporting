@@ -169,7 +169,8 @@ void handleNavToAnalysis() {
         key, setValues.map((s) => s.toString()).toList()..add('__all'));
   });
 
-  view.renderFilterDropdowns(filterKeys, filterOptions);
+  view.renderFilterDropdowns(
+      filterKeys, filterOptions, _isDataComparisonEnabled);
 }
 
 void handleNavToSettings() {
