@@ -156,47 +156,107 @@ void renderChartOptions(bool isComparisonChecked, bool isNormalisationChecked) {
   var labelCol = getLabelColDiv()..innerText = 'Options';
   var optionsCol = getOptionsColDiv();
 
-  var comparisonWrapper = html.DivElement()
-    ..classes = ['form-check', 'form-check-inline'];
-  var comparisonOption = html.InputElement()
-    ..type = 'checkbox'
-    ..id = 'comparison-option'
-    ..classes = ['form-check-input']
-    ..checked = isComparisonChecked
-    ..onChange.listen((e) {
-      command(UIAction.toggleDataComparison,
-          ToggleData((e.target as html.CheckboxInputElement).checked));
-    });
-  var comparisonLabel = html.LabelElement()
-    ..htmlFor = 'comparison-option'
-    ..classes = ['form-check-label']
-    ..innerText = 'Compare data';
-  comparisonWrapper.append(comparisonOption);
-  comparisonWrapper.append(comparisonLabel);
-  optionsCol.append(comparisonWrapper);
+  var comparisonCheckbox = _getCheckboxWithLabel(
+      'comparison-option', 'Compare data', isComparisonChecked,
+      (bool isChecked) {
+    command(UIAction.toggleDataComparison, ToggleData(isChecked));
+  });
+  optionsCol.append(comparisonCheckbox);
 
-  var normalisationWrapper = html.DivElement()
-    ..classes = ['form-check', 'form-check-inline'];
-  var normalisationOption = html.InputElement()
-    ..type = 'checkbox'
-    ..id = 'normalisation-option'
-    ..classes = ['form-check-input']
-    ..checked = isNormalisationChecked
-    ..onChange.listen((e) {
-      command(UIAction.toggleDataNormalisation,
-          ToggleData((e.target as html.CheckboxInputElement).checked));
-    });
-  var normalisationLabel = html.LabelElement()
-    ..htmlFor = 'normalisation-option'
-    ..classes = ['form-check-label']
-    ..innerText = 'Normalise data';
-  normalisationWrapper.append(normalisationOption);
-  normalisationWrapper.append(normalisationLabel);
-  optionsCol.append(normalisationWrapper);
+  var normalisationCheckbox = _getCheckboxWithLabel(
+      'normalisation-option', 'Normalise data', isNormalisationChecked,
+      (bool isChecked) {
+    command(UIAction.toggleDataNormalisation, ToggleData(isChecked));
+  });
+  optionsCol.append(normalisationCheckbox);
 
   wrapper.append(labelCol);
   wrapper.append(optionsCol);
   content.append(wrapper);
+}
+
+void renderFilterDropdowns(
+    List<String> filterKeys, Map<String, List<String>> filterOptions) {
+  var wrapper = getRowDiv();
+  var labelCol = getLabelColDiv()..innerText = 'Filters';
+  var optionsCol = getOptionsColDiv();
+
+  for (var key in filterKeys) {
+    var filterRow = getRowDiv();
+    var checkboxCol = html.DivElement()..classes = ['col-3'];
+    var filterCol = html.DivElement()..classes = ['col-3'];
+    var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
+
+    var checkboxWithLabel = _getCheckboxWithLabel(
+        'filter-option-${key}', key, false, (bool isChecked) {
+      command(
+          UIAction.toggleActiveFilter, ToggleActiveFilterData(key, isChecked));
+    });
+    checkboxCol.append(checkboxWithLabel);
+
+    var filterDropdown =
+        _getDropdown(filterOptions[key].toList(), '__all', (String value) {
+      command(UIAction.setFilterValue, SetFilterValueData(key, value));
+    });
+    filterCol.append(filterDropdown);
+
+    var comparisonFilterDropdown =
+        _getDropdown(filterOptions[key].toList(), '__all', (String value) {
+      command(
+          UIAction.setComparisonFilterValue, SetFilterValueData(key, value));
+    });
+    comparisonFilterCol.append(comparisonFilterDropdown);
+
+    filterRow.append(checkboxCol);
+    filterRow.append(filterCol);
+    filterRow.append(comparisonFilterCol);
+    optionsCol.append(filterRow);
+  }
+
+  wrapper.append(labelCol);
+  wrapper.append(optionsCol);
+  content.append(wrapper);
+}
+
+html.DivElement _getCheckboxWithLabel(
+    String id, String label, bool isChecked, Function(bool) onChange) {
+  var checkboxWrapper = html.DivElement()
+    ..classes = ['form-check', 'form-check-inline'];
+  var checkboxOption = html.InputElement()
+    ..type = 'checkbox'
+    ..id = id
+    ..classes = ['form-check-input']
+    ..checked = isChecked
+    ..onChange.listen((e) {
+      onChange((e.target as html.CheckboxInputElement).checked);
+    });
+  var checkboxLabel = html.LabelElement()
+    ..htmlFor = id
+    ..classes = ['form-check-label']
+    ..innerText = label;
+  checkboxWrapper.append(checkboxOption);
+  checkboxWrapper.append(checkboxLabel);
+  return checkboxWrapper;
+}
+
+html.SelectElement _getDropdown(
+    List<String> options, String selectedOption, Function(String) onChange) {
+  var dropdownSelect = html.SelectElement()
+    ..classes = ['form-control']
+    ..onChange.listen((e) {
+      var value = (e.target as html.SelectElement).value;
+      onChange(value);
+    });
+
+  for (var option in options) {
+    var dropdownOption = html.OptionElement()
+      ..setAttribute('value', option)
+      ..selected = option == selectedOption
+      ..appendText(option);
+    dropdownSelect.append(dropdownOption);
+  }
+
+  return dropdownSelect;
 }
 
 void renderSettingsTab() {
