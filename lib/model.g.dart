@@ -3,7 +3,7 @@
 
 import 'dart:async';
 
-import 'package:dashboard/logger.dart';
+import 'logger.dart';
 
 Logger log = Logger('model.g.dart');
 
@@ -24,23 +24,19 @@ class Config {
       ..tabs = List_fromData<Tab>(data['tabs'], Tab.fromData);
   }
 
-  static void listen(DocStorage docStorage, ConfigCollectionListener listener,
-          String collectionRoot) =>
-      listenForUpdates<Config>(
-          docStorage, listener, collectionRoot, Config.fromSnapshot);
+  static void listen(DocStorage docStorage, ConfigCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Config>(docStorage, listener, collectionRoot, Config.fromSnapshot);
 
   Map<String, dynamic> toData() {
     return {
       if (data_paths != null) 'data_paths': data_paths,
-      if (filters != null)
-        'filters': filters.map((elem) => elem?.toData()).toList(),
+      if (filters != null) 'filters': filters.map((elem) => elem?.toData()).toList(),
       if (tabs != null) 'tabs': tabs.map((elem) => elem?.toData()).toList(),
     };
   }
 
   String toString() => 'Config [$docId]: ${toData().toString()}';
 }
-
 typedef void ConfigCollectionListener(
   List<Config> added,
   List<Config> modified,
@@ -49,7 +45,6 @@ typedef void ConfigCollectionListener(
 
 class Tab {
   String docId;
-  String id;
   String label;
   List<String> exclude_filters;
   List<Chart> charts;
@@ -60,31 +55,24 @@ class Tab {
   static Tab fromData(data, [Tab modelObj]) {
     if (data == null) return null;
     return (modelObj ?? Tab())
-      ..id = String_fromData(data['id'])
       ..label = String_fromData(data['label'])
-      ..exclude_filters =
-          List_fromData<String>(data['exclude_filters'], String_fromData)
+      ..exclude_filters = List_fromData<String>(data['exclude_filters'], String_fromData)
       ..charts = List_fromData<Chart>(data['charts'], Chart.fromData);
   }
 
-  static void listen(DocStorage docStorage, TabCollectionListener listener,
-          String collectionRoot) =>
-      listenForUpdates<Tab>(
-          docStorage, listener, collectionRoot, Tab.fromSnapshot);
+  static void listen(DocStorage docStorage, TabCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Tab>(docStorage, listener, collectionRoot, Tab.fromSnapshot);
 
   Map<String, dynamic> toData() {
     return {
-      if (id != null) 'id': id,
       if (label != null) 'label': label,
       if (exclude_filters != null) 'exclude_filters': exclude_filters,
-      if (charts != null)
-        'charts': charts.map((elem) => elem?.toData()).toList(),
+      if (charts != null) 'charts': charts.map((elem) => elem?.toData()).toList(),
     };
   }
 
   String toString() => 'Tab [$docId]: ${toData().toString()}';
 }
-
 typedef void TabCollectionListener(
   List<Tab> added,
   List<Tab> modified,
@@ -110,24 +98,20 @@ class Chart {
       ..fields = List_fromData<Field>(data['fields'], Field.fromData);
   }
 
-  static void listen(DocStorage docStorage, ChartCollectionListener listener,
-          String collectionRoot) =>
-      listenForUpdates<Chart>(
-          docStorage, listener, collectionRoot, Chart.fromSnapshot);
+  static void listen(DocStorage docStorage, ChartCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Chart>(docStorage, listener, collectionRoot, Chart.fromSnapshot);
 
   Map<String, dynamic> toData() {
     return {
       if (type != null) 'type': type.toString(),
       if (title != null) 'title': title,
       if (narrative != null) 'narrative': narrative,
-      if (fields != null)
-        'fields': fields.map((elem) => elem?.toData()).toList(),
+      if (fields != null) 'fields': fields.map((elem) => elem?.toData()).toList(),
     };
   }
 
   String toString() => 'Chart [$docId]: ${toData().toString()}';
 }
-
 typedef void ChartCollectionListener(
   List<Chart> added,
   List<Chart> modified,
@@ -151,10 +135,8 @@ class Field {
       ..field = FieldOperation.fromData(data['field']);
   }
 
-  static void listen(DocStorage docStorage, FieldCollectionListener listener,
-          String collectionRoot) =>
-      listenForUpdates<Field>(
-          docStorage, listener, collectionRoot, Field.fromSnapshot);
+  static void listen(DocStorage docStorage, FieldCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Field>(docStorage, listener, collectionRoot, Field.fromSnapshot);
 
   Map<String, dynamic> toData() {
     return {
@@ -166,7 +148,6 @@ class Field {
 
   String toString() => 'Field [$docId]: ${toData().toString()}';
 }
-
 typedef void FieldCollectionListener(
   List<Field> added,
   List<Field> modified,
@@ -179,8 +160,7 @@ class FieldOperation {
   FieldOperator operator;
   dynamic value;
 
-  static FieldOperation fromSnapshot(DocSnapshot doc,
-          [FieldOperation modelObj]) =>
+  static FieldOperation fromSnapshot(DocSnapshot doc, [FieldOperation modelObj]) =>
       fromData(doc.data, modelObj)..docId = doc.id;
 
   static FieldOperation fromData(data, [FieldOperation modelObj]) {
@@ -191,10 +171,8 @@ class FieldOperation {
       ..value = data['value'];
   }
 
-  static void listen(DocStorage docStorage,
-          FieldOperationCollectionListener listener, String collectionRoot) =>
-      listenForUpdates<FieldOperation>(
-          docStorage, listener, collectionRoot, FieldOperation.fromSnapshot);
+  static void listen(DocStorage docStorage, FieldOperationCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<FieldOperation>(docStorage, listener, collectionRoot, FieldOperation.fromSnapshot);
 
   Map<String, dynamic> toData() {
     return {
@@ -206,7 +184,6 @@ class FieldOperation {
 
   String toString() => 'FieldOperation [$docId]: ${toData().toString()}';
 }
-
 typedef void FieldOperationCollectionListener(
   List<FieldOperation> added,
   List<FieldOperation> modified,
@@ -232,10 +209,8 @@ class Filter {
       ..exclude_values = List_fromData<dynamic>(data['exclude_values'], null);
   }
 
-  static void listen(DocStorage docStorage, FilterCollectionListener listener,
-          String collectionRoot) =>
-      listenForUpdates<Filter>(
-          docStorage, listener, collectionRoot, Filter.fromSnapshot);
+  static void listen(DocStorage docStorage, FilterCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Filter>(docStorage, listener, collectionRoot, Filter.fromSnapshot);
 
   Map<String, dynamic> toData() {
     return {
@@ -248,7 +223,6 @@ class Filter {
 
   String toString() => 'Filter [$docId]: ${toData().toString()}';
 }
-
 typedef void FilterCollectionListener(
   List<Filter> added,
   List<Filter> modified,
@@ -266,16 +240,14 @@ class FieldOperator {
     not_contains,
   ];
 
-  static FieldOperator fromString(String text,
-      [FieldOperator defaultValue = FieldOperator.equals]) {
+  static FieldOperator fromString(String text, [FieldOperator defaultValue = FieldOperator.equals]) {
     if (FieldOperator_fromStringOverride != null) {
       var value = FieldOperator_fromStringOverride(text);
       if (value != null) return value;
     }
     if (text != null) {
       const prefix = 'FieldOperator.';
-      String valueName =
-          text.startsWith(prefix) ? text.substring(prefix.length) : text;
+      String valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
       for (var value in values) {
         if (value.name == valueName) return value;
       }
@@ -288,7 +260,6 @@ class FieldOperator {
   const FieldOperator(this.name);
   String toString() => 'FieldOperator.$name';
 }
-
 FieldOperator Function(String text) FieldOperator_fromStringOverride;
 
 class ChartType {
@@ -302,16 +273,14 @@ class ChartType {
     map,
   ];
 
-  static ChartType fromString(String text,
-      [ChartType defaultValue = ChartType.bar]) {
+  static ChartType fromString(String text, [ChartType defaultValue = ChartType.bar]) {
     if (ChartType_fromStringOverride != null) {
       var value = ChartType_fromStringOverride(text);
       if (value != null) return value;
     }
     if (text != null) {
       const prefix = 'ChartType.';
-      String valueName =
-          text.startsWith(prefix) ? text.substring(prefix.length) : text;
+      String valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
       for (var value in values) {
         if (value.name == valueName) return value;
       }
@@ -324,7 +293,6 @@ class ChartType {
   const ChartType(this.name);
   String toString() => 'ChartType.$name';
 }
-
 ChartType Function(String text) ChartType_fromStringOverride;
 
 // ======================================================================
@@ -367,23 +335,20 @@ List<T> List_fromData<T>(dynamic data, T createModel(data)) =>
     (data as List)?.map<T>((elem) => createModel(elem))?.toList();
 
 Map<String, T> Map_fromData<T>(dynamic data, T createModel(data)) =>
-    (data as Map)?.map<String, T>(
-        (key, value) => MapEntry(key.toString(), createModel(value)));
+    (data as Map)?.map<String, T>((key, value) => MapEntry(key.toString(), createModel(value)));
 
 Set<T> Set_fromData<T>(dynamic data, T createModel(data)) =>
     (data as List)?.map<T>((elem) => createModel(elem))?.toSet();
 
 StreamSubscription<List<DocSnapshot>> listenForUpdates<T>(
-  DocStorage docStorage,
-  void listener(List<T> added, List<T> modified, List<T> removed),
-  String collectionRoot,
-  T createModel(DocSnapshot doc),
-) {
+    DocStorage docStorage,
+    void listener(List<T> added, List<T> modified, List<T> removed),
+    String collectionRoot,
+    T createModel(DocSnapshot doc),
+    ) {
   log.verbose('Loading from $collectionRoot');
   log.verbose('Query root: $collectionRoot');
-  return docStorage
-      .onChange(collectionRoot)
-      .listen((List<DocSnapshot> snapshots) {
+  return docStorage.onChange(collectionRoot).listen((List<DocSnapshot> snapshots) {
     List<T> added = [];
     List<T> modified = [];
     List<T> removed = [];
@@ -417,7 +382,11 @@ abstract class DocStorage {
   DocBatchUpdate batch();
 }
 
-enum DocChangeType { added, modified, removed }
+enum DocChangeType {
+  added,
+  modified,
+  removed
+}
 
 /// A snapshot of a document's id and data at a particular moment in time.
 class DocSnapshot {
@@ -449,24 +418,20 @@ abstract class DocBatchUpdate {
 /// A pub/sub based mechanism for updating documents
 abstract class DocPubSubUpdate {
   /// Publish the given opinion for the given namespace.
-  Future<void> publishAddOpinion(
-      String namespace, Map<String, dynamic> opinion);
+  Future<void> publishAddOpinion(String namespace, Map<String, dynamic> opinion);
 
   /// Publish the given document list/set additions,
   /// where [additions] is a mapping of field name to new values to be added to the list/set.
   /// Callers should catch and handle IOException.
-  Future<void> publishDocAdd(String collectionName, List<String> docIds,
-      Map<String, List<dynamic>> additions);
+  Future<void> publishDocAdd(String collectionName, List<String> docIds, Map<String, List<dynamic>> additions);
 
   /// Publish the given document changes,
   /// where [changes] is a mapping of field name to new value.
   /// Callers should catch and handle IOException.
-  Future<void> publishDocChange(
-      String collectionName, List<String> docIds, Map<String, dynamic> changes);
+  Future<void> publishDocChange(String collectionName, List<String> docIds, Map<String, dynamic> changes);
 
   /// Publish the given document list/set removals,
   /// where [removals] is a mapping of field name to old values to be removed from the list/set.
   /// Callers should catch and handle IOException.
-  Future<void> publishDocRemove(String collectionName, List<String> docIds,
-      Map<String, List<dynamic>> removals);
+  Future<void> publishDocRemove(String collectionName, List<String> docIds, Map<String, List<dynamic>> removals);
 }
