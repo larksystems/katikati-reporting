@@ -104,7 +104,7 @@ void clearContentTab() {
   content.children.clear();
 }
 
-void renderAnalysisTabRadio(List<String> labels) {
+void renderAnalysisTabs(List<String> labels) {
   var wrapper = html.DivElement()..classes = ['row'];
   var labelCol = html.DivElement()
     ..classes = ['col-lg-2', 'col-md-3', 'col-sm-12', 'col-xs-12']
@@ -118,7 +118,7 @@ void renderAnalysisTabRadio(List<String> labels) {
     var radioOption = html.InputElement()
       ..type = 'radio'
       ..name = 'analyse-tab-options'
-      ..id = 'analyse-tab-options-${labels[i]}'
+      ..id = 'analyse-tab-options-${i}'
       ..classes = ['form-check-input']
       ..checked = i == 0
       ..onChange.listen((e) {
@@ -126,7 +126,7 @@ void renderAnalysisTabRadio(List<String> labels) {
         command(UIAction.changeAnalysisTab, AnalysisTabChangeData(i));
       });
     var radioLabel = html.LabelElement()
-      ..htmlFor = 'analyse-tab-options-${labels[i]}'
+      ..htmlFor = 'analyse-tab-options-${i}'
       ..classes = ['form-check-label']
       ..innerText = labels[i];
 

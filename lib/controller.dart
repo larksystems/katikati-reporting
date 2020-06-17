@@ -128,10 +128,10 @@ void handleNavToAnalysis() {
   view.clearContentTab();
   var tabLabels = _config.tabs
       .asMap()
-      .map((i, t) => MapEntry(i, t.label ?? 'Tab ${i}'))
+      .map((i, t) => MapEntry(i, t.label))
       .values
       .toList();
-  view.renderAnalysisTabRadio(tabLabels);
+  view.renderAnalysisTabs(tabLabels);
 }
 
 void handleNavToSettings() {
