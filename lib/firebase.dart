@@ -1,6 +1,7 @@
 import 'package:firebase/firebase.dart' as firebase;
 import 'package:dashboard/firebase_constants.dart' as fb_constants;
 import 'package:dashboard/view.dart' as view;
+import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/logger.dart';
 
 Logger logger = Logger('firebase.dart');
@@ -27,6 +28,7 @@ void init(String constantsFilePath, Function loginCallback,
       .listen((user) => _fbAuthChanged(user, loginCallback, logoutCallback));
 }
 
+// Auth methods
 Future<firebase.UserCredential> signInWithGoogle() async {
   var provider = firebase.GoogleAuthProvider();
   return firebaseAuth.signInWithPopup(provider);
@@ -71,4 +73,34 @@ void _fbAuthChanged(
   view.hideLoginModal();
 
   loginCallback();
+}
+
+// Read data
+Future<model.Config> fetchConfig() async {
+  logger.debug('Fetching config from firebase ..');
+  var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
+  var configSnapshot = await chartsConfigRef.get();
+  var configData = configSnapshot.data();
+
+  return model.Config.fromData(configData);
+}
+
+Future<Map<String, Map<String, dynamic>>> fetchInteractions(String path) async {
+  if (path == null || path == '') {
+    throw ArgumentError(
+        'Path for fetching interactions cannot be empty or null');
+  }
+
+  logger.debug('Fetching interactions from firebase ..');
+  var _interactionsRef = firebase.firestore().collection(path);
+
+  var interactionsSnapshot = await _interactionsRef.get();
+  logger.debug('Fetched ${interactionsSnapshot.size} interactions');
+
+  var interactionsMap = Map<String, Map<String, dynamic>>();
+  interactionsSnapshot.forEach((doc) {
+    interactionsMap[doc.id] = doc.data();
+  });
+
+  return interactionsMap;
 }

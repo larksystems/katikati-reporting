@@ -4,8 +4,7 @@ Config:
   tabs: "array Tab"
 
 Tab:
-  id: "string"
-  label: "string" #optional
+  label: "string"
   exclude_filters: "array string" #optional
   charts: "array Chart"
 

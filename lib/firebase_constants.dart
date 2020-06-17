@@ -9,6 +9,7 @@ void init(String _constantsFilePath) async {
   var constantsJson = await html.HttpRequest.getString(_constantsFilePath);
   _constants = (convert.json.decode(constantsJson) as Map).map<String, String>(
       (key, value) => MapEntry(key.toString(), value.toString()));
+  // todo: show error if any of the required keys are missing
 }
 
 Map<String, String> _constants;
@@ -23,3 +24,4 @@ String get appId => _constants['appId'];
 String get measurementId => _constants['measurementId'];
 List<String> get allowedEmailDomains =>
     _constants['allowedEmailDomains'].split('|');
+String get metadataPath => _constants['metadataPath'];

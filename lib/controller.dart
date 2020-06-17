@@ -8,14 +8,34 @@ import 'package:dashboard/logger.dart';
 Logger logger = Logger('controller.dart');
 
 Map<String, model.Link> _navLinks = {
-  'analyse': model.Link('analyse', 'Analyse', view.renderAnalyseTab),
-  'settings': model.Link('settings', 'Settings', view.renderSettingsTab)
+  'analyse': model.Link('analyse', 'Analyse', handleNavToAnalysis),
+  'settings': model.Link('settings', 'Settings', handleNavToSettings)
 };
+
+const UNABLE_TO_PARSE_CONFIG_ERROR_MSG =
+    'Unable to parse "Config" to the required format';
+const UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG = 'Unable to fetch interactions';
 
 var _currentNavLink = _navLinks['analyse'].pathname;
 
+// UI States
+int _selectedAnalysisTabIndex;
+bool _isCompareEnabled = true;
+bool _isChartsNormalisedEnabled = false;
+List<String> _activeFilters = [];
+Map<String, String> _filterValues = {};
+Map<String, String> _filterComparisionValues = {};
+
+// Data states
+Map<String, Map<String, dynamic>> _allInteractions;
+Map<String, Map<String, dynamic>> _filteredInteractions;
+Map<String, Map<String, dynamic>> _filteredComparisonInteractions;
+Map<String, Set> _uniqueFieldCategoryValues;
+model.Config _config;
+List<model.Chart> _charts;
+
 // Actions
-enum UIAction { signinWithGoogle, changeNavTab }
+enum UIAction { signinWithGoogle, changeNavTab, changeAnalysisTab }
 
 // Action data
 class Data {}
@@ -23,6 +43,11 @@ class Data {}
 class NavChangeData extends Data {
   String pathname;
   NavChangeData(this.pathname);
+}
+
+class AnalysisTabChangeData extends Data {
+  int tabIndex;
+  AnalysisTabChangeData(this.tabIndex);
 }
 
 // Controller functions
@@ -37,10 +62,22 @@ void init() async {
       'assets/firebase-constants.json', onLoginCompleted, onLogoutCompleted);
 }
 
+// Login, logout, load data
 void onLoginCompleted() async {
+  view.showLoading();
+
   await loadDataFromFirebase();
+  _filteredInteractions = _allInteractions;
+  _filteredComparisonInteractions = _allInteractions;
+
+  _uniqueFieldCategoryValues =
+      computeUniqFieldCategoryValues(_config.filters, _allInteractions);
+  _selectedAnalysisTabIndex = 0;
+
   view.setNavlinkSelected(_currentNavLink);
-  _navLinks['analyse'].render();
+  _navLinks[_currentNavLink].render();
+
+  view.hideLoading();
 }
 
 void onLogoutCompleted() async {
@@ -48,11 +85,59 @@ void onLogoutCompleted() async {
 }
 
 void loadDataFromFirebase() async {
-  view.showLoading();
-  logger.debug('Read all required data');
-  view.hideLoading();
+  try {
+    _config = await fb.fetchConfig();
+  } catch (e) {
+    view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
+    logger.error(e);
+    rethrow;
+  }
+
+  try {
+    _allInteractions =
+        await fb.fetchInteractions(_config.data_paths['interactions']);
+  } catch (e) {
+    view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
+    logger.error(e);
+    rethrow;
+  }
 }
 
+// Compute data methods
+Map<String, Set> computeUniqFieldCategoryValues(
+    List<model.Filter> filterOptions,
+    Map<String, Map<String, dynamic>> interactions) {
+  var uniqueFieldCategories = Map<String, Set>();
+  filterOptions.forEach((option) {
+    uniqueFieldCategories[option.key] = Set();
+  });
+
+  interactions.forEach((_, interaction) {
+    uniqueFieldCategories.forEach((key, valueSet) {
+      var value = interaction[key];
+      (value is List) ? valueSet.addAll(value) : valueSet.add(value);
+    });
+  });
+
+  logger.debug('Computed unique field values for all filters');
+  return uniqueFieldCategories;
+}
+
+// Render methods
+void handleNavToAnalysis() {
+  view.clearContentTab();
+  var tabLabels =
+      _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
+  view.renderAnalysisTabs(tabLabels);
+}
+
+void handleNavToSettings() {
+  view.clearContentTab();
+  // todo: replace with actual contents for settings tab
+  view.renderSettingsTab();
+}
+
+// User actions
 void command(UIAction action, Data data) {
   switch (action) {
     case UIAction.signinWithGoogle:
@@ -63,6 +148,12 @@ void command(UIAction action, Data data) {
       _currentNavLink = d.pathname;
       view.setNavlinkSelected(_currentNavLink);
       _navLinks[_currentNavLink].render();
+      break;
+    case UIAction.changeAnalysisTab:
+      var d = data as AnalysisTabChangeData;
+      _selectedAnalysisTabIndex = d.tabIndex;
+      logger.debug('Changed to analysis tab ${_selectedAnalysisTabIndex}');
+      // todo: handle switch between analysis tabs
       break;
     default:
   }
