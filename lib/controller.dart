@@ -66,8 +66,8 @@ class ToggleOptionEnabledData extends Data {
 
 class ToggleActiveFilterData extends Data {
   String key;
-  bool isActive;
-  ToggleActiveFilterData(this.key, this.isActive);
+  bool isEnabled;
+  ToggleActiveFilterData(this.key, this.isEnabled);
 }
 
 class SetFilterValueData extends Data {
@@ -208,7 +208,7 @@ void command(UIAction action, Data data) {
       break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
-      if (d.isActive) {
+      if (d.isEnabled) {
         _activeFilters.add(d.key);
         logger.debug('Added ${d.key} to active filters, ${_activeFilters}');
       } else {

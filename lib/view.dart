@@ -166,7 +166,8 @@ void renderChartOptions(bool isComparisonChecked, bool isNormalisationChecked) {
   var normalisationCheckbox = _getCheckboxWithLabel(
       'normalisation-option', 'Normalise data', isNormalisationChecked,
       (bool isChecked) {
-    command(UIAction.toggleDataNormalisation, ToggleOptionEnabledData(isChecked));
+    command(
+        UIAction.toggleDataNormalisation, ToggleOptionEnabledData(isChecked));
   });
   optionsCol.append(normalisationCheckbox);
 
@@ -230,9 +231,8 @@ html.DivElement _getCheckboxWithLabel(
     ..id = id
     ..classes = ['form-check-input']
     ..checked = isChecked
-    ..onChange.listen((e) {
-      onChange((e.target as html.CheckboxInputElement).checked);
-    });
+    ..onChange.listen(
+        (e) => onChange((e.target as html.CheckboxInputElement).checked));
   var checkboxLabel = html.LabelElement()
     ..htmlFor = id
     ..classes = ['form-check-label']
@@ -246,10 +246,7 @@ html.SelectElement _getDropdown(
     List<String> options, String selectedOption, Function(String) onChange) {
   var dropdownSelect = html.SelectElement()
     ..classes = ['form-control']
-    ..onChange.listen((e) {
-      var value = (e.target as html.SelectElement).value;
-      onChange(value);
-    });
+    ..onChange.listen((e) => onChange((e.target as html.SelectElement).value));
 
   for (var option in options) {
     var dropdownOption = html.OptionElement()
