@@ -79,25 +79,26 @@ void _fbAuthChanged(
 Future<model.Config> fetchConfig() async {
   logger.debug('Fetching config from firebase ..');
   var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
-  var configSnap = await chartsConfigRef.get();
-  var configData = configSnap.data();
+  var configSnapshot = await chartsConfigRef.get();
+  var configData = configSnapshot.data();
 
   return model.Config.fromData(configData);
 }
 
 Future<Map<String, Map<String, dynamic>>> fetchInteractions(String path) async {
   if (path == null || path == '') {
-    throw Error();
+    throw ArgumentError(
+        'Path for fetching interactions cannot be empty or null');
   }
 
   logger.debug('Fetching interactions from firebase ..');
   var _interactionsRef = firebase.firestore().collection(path);
 
-  var interactionsSnap = await _interactionsRef.get();
-  logger.debug('Fetched ${interactionsSnap.size} interactions');
+  var interactionsSnapshot = await _interactionsRef.get();
+  logger.debug('Fetched ${interactionsSnapshot.size} interactions');
 
   var interactionsMap = Map<String, Map<String, dynamic>>();
-  interactionsSnap.forEach((doc) {
+  interactionsSnapshot.forEach((doc) {
     interactionsMap[doc.id] = doc.data();
   });
 

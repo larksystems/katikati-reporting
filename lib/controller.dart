@@ -12,10 +12,9 @@ Map<String, model.Link> _navLinks = {
   'settings': model.Link('settings', 'Settings', handleNavToSettings)
 };
 
-const _errorMessages = {
-  'parse-config': 'Unable to parse "Config" to the required format',
-  'fetch-interactions': 'Unable to fetch interactions'
-};
+const UNABLE_TO_PARSE_CONFIG_ERROR_MSG =
+    'Unable to parse "Config" to the required format';
+const UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG = 'Unable to fetch interactions';
 
 var _currentNavLink = _navLinks['analyse'].pathname;
 
@@ -31,7 +30,7 @@ Map<String, String> _comparisonFilterValues = {};
 Map<String, Map<String, dynamic>> _allInteractions;
 Map<String, Map<String, dynamic>> _filteredInteractions;
 Map<String, Map<String, dynamic>> _filteredComparisonInteractions;
-Map<String, Set> _uniqueFieldValues;
+Map<String, Set> _uniqueFieldCategoryValues;
 model.Config _config;
 List<model.Chart> _charts;
 
@@ -60,9 +59,9 @@ class AnalysisTabChangeData extends Data {
   AnalysisTabChangeData(this.tabIndex);
 }
 
-class ToggleData extends Data {
+class ToggleOptionEnabledData extends Data {
   bool isEnabled;
-  ToggleData(this.isEnabled);
+  ToggleOptionEnabledData(this.isEnabled);
 }
 
 class ToggleActiveFilterData extends Data {
@@ -97,8 +96,8 @@ void onLoginCompleted() async {
   _filteredInteractions = _allInteractions;
   _filteredComparisonInteractions = _allInteractions;
 
-  _uniqueFieldValues =
-      computeUniqFieldValues(_config.filters, _allInteractions);
+  _uniqueFieldCategoryValues =
+      computeUniqFieldCategoryValues(_config.filters, _allInteractions);
   _selectedAnalysisTabIndex = 0;
 
   view.setNavlinkSelected(_currentNavLink);
@@ -115,7 +114,7 @@ void loadDataFromFirebase() async {
   try {
     _config = await fb.fetchConfig();
   } catch (e) {
-    view.showAlert(_errorMessages['parse-config']);
+    view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
     logger.error(e);
     rethrow;
   }
@@ -124,47 +123,44 @@ void loadDataFromFirebase() async {
     _allInteractions =
         await fb.fetchInteractions(_config.data_paths['interactions']);
   } catch (e) {
-    view.showAlert(_errorMessages['fetch-interactions']);
+    view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
     logger.error(e);
     rethrow;
   }
 }
 
 // Compute data methods
-Map<String, Set> computeUniqFieldValues(List<model.Filter> filterOptions,
+Map<String, Set> computeUniqFieldCategoryValues(
+    List<model.Filter> filterOptions,
     Map<String, Map<String, dynamic>> interactions) {
-  var uniqueFieldValues = Map<String, Set>();
+  var uniqueFieldCategories = Map<String, Set>();
   filterOptions.forEach((option) {
-    uniqueFieldValues[option.key] = Set();
+    uniqueFieldCategories[option.key] = Set();
   });
 
   interactions.forEach((_, interaction) {
-    uniqueFieldValues.forEach((key, valueSet) {
+    uniqueFieldCategories.forEach((key, valueSet) {
       var value = interaction[key];
       (value is List) ? valueSet.addAll(value) : valueSet.add(value);
     });
   });
 
   logger.debug('Computed unique field values for all filters');
-  return uniqueFieldValues;
+  return uniqueFieldCategories;
 }
 
 // Render methods
 void handleNavToAnalysis() {
   view.clearContentTab();
-  var tabLabels = _config.tabs
-      .asMap()
-      .map((i, t) => MapEntry(i, t.label ?? 'Tab ${i}'))
-      .values
-      .toList();
-  view.renderAnalysisTabRadio(tabLabels);
-  view.renderChartOptions(
-      _isDataComparisonEnabled, _isDataNormalisationEnabled);
+  var tabLabels =
+      _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
+  view.renderAnalysisTabs(tabLabels);
+  view.renderChartOptions(_isDataComparisonEnabled, _isDataNormalisationEnabled);
 
   var filterKeys = _config.filters.map((filter) => filter.key).toList();
   filterKeys.removeWhere((filter) =>
       _config.tabs[_selectedAnalysisTabIndex].exclude_filters.contains(filter));
-  var filterOptions = _uniqueFieldValues.map((key, setValues) {
+  var filterOptions = _uniqueFieldCategoryValues.map((key, setValues) {
     return MapEntry(
         key, setValues.map((s) => s.toString()).toList()..add('__all'));
   });
@@ -198,13 +194,13 @@ void command(UIAction action, Data data) {
       // todo: handle switch between analysis tabs
       break;
     case UIAction.toggleDataComparison:
-      var d = data as ToggleData;
+      var d = data as ToggleOptionEnabledData;
       _isDataComparisonEnabled = d.isEnabled;
       logger.debug('Data comparison changed to ${_isDataComparisonEnabled}');
       // todo: handle for data comparison
       break;
     case UIAction.toggleDataNormalisation:
-      var d = data as ToggleData;
+      var d = data as ToggleOptionEnabledData;
       _isDataNormalisationEnabled = d.isEnabled;
       logger.debug(
           'Data normalisation changed to ${_isDataNormalisationEnabled}');
@@ -213,24 +209,24 @@ void command(UIAction action, Data data) {
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
       if (d.isActive) {
-        _activeFilters.removeWhere((filter) => filter == d.key);
-        logger.debug('Added ${d.key} to active filters');
-      } else {
         _activeFilters.add(d.key);
-        logger.debug('Removed ${d.key} from active filters');
+        logger.debug('Added ${d.key} to active filters, ${_activeFilters}');
+      } else {
+        _activeFilters.removeWhere((filter) => filter == d.key);
+        logger.debug('Removed ${d.key} from active filters, ${_activeFilters}');
       }
       // todo: handle for changes in active filter
       break;
     case UIAction.setFilterValue:
       var d = data as SetFilterValueData;
       _filterValues[d.key] = d.value;
-      logger.debug('Current filters ${_filterValues}');
+      logger.debug('Set to filter values, ${_filterValues}');
       // todo: handle for filter changes
       break;
     case UIAction.setComparisonFilterValue:
       var d = data as SetFilterValueData;
       _comparisonFilterValues[d.key] = d.value;
-      logger.debug('Current comparison filters ${_comparisonFilterValues}');
+      logger.debug('Set to comparison filter values, ${_comparisonFilterValues}');
       // todo: handle for filter compare changes
       break;
     default:

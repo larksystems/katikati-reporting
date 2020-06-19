@@ -104,24 +104,24 @@ void clearContentTab() {
   content.children.clear();
 }
 
-html.DivElement getRowDiv() {
+html.DivElement getGridRow() {
   return html.DivElement()..classes = ['row'];
 }
 
-html.DivElement getLabelColDiv() {
+html.DivElement getGridLabelCol() {
   return html.DivElement()
     ..classes = ['col-lg-2', 'col-md-3', 'col-sm-12', 'col-xs-12'];
 }
 
-html.DivElement getOptionsColDiv() {
+html.DivElement getGridOptionsCol() {
   return html.DivElement()
     ..classes = ['col-lg-10', 'col-md-9', 'col-sm-12', 'col-xs-12'];
 }
 
-void renderAnalysisTabRadio(List<String> labels) {
-  var wrapper = getRowDiv();
-  var labelCol = getLabelColDiv()..innerText = 'Analyse';
-  var optionsCol = getOptionsColDiv();
+void renderAnalysisTabs(List<String> labels) {
+  var wrapper = getGridRow();
+  var labelCol = getGridLabelCol()..innerText = 'Analyse';
+  var optionsCol = getGridOptionsCol();
 
   for (var i = 0; i < labels.length; ++i) {
     var radioWrapper = html.DivElement()
@@ -129,7 +129,7 @@ void renderAnalysisTabRadio(List<String> labels) {
     var radioOption = html.InputElement()
       ..type = 'radio'
       ..name = 'analyse-tab-options'
-      ..id = 'analyse-tab-options-${labels[i]}'
+      ..id = 'analyse-tab-options-${i}'
       ..classes = ['form-check-input']
       ..checked = i == 0
       ..onChange.listen((e) {
@@ -137,7 +137,7 @@ void renderAnalysisTabRadio(List<String> labels) {
         command(UIAction.changeAnalysisTab, AnalysisTabChangeData(i));
       });
     var radioLabel = html.LabelElement()
-      ..htmlFor = 'analyse-tab-options-${labels[i]}'
+      ..htmlFor = 'analyse-tab-options-${i}'
       ..classes = ['form-check-label']
       ..innerText = labels[i];
 
@@ -152,21 +152,21 @@ void renderAnalysisTabRadio(List<String> labels) {
 }
 
 void renderChartOptions(bool isComparisonChecked, bool isNormalisationChecked) {
-  var wrapper = getRowDiv();
-  var labelCol = getLabelColDiv()..innerText = 'Options';
-  var optionsCol = getOptionsColDiv();
+  var wrapper = getGridRow();
+  var labelCol = getGridLabelCol()..innerText = 'Options';
+  var optionsCol = getGridOptionsCol();
 
   var comparisonCheckbox = _getCheckboxWithLabel(
       'comparison-option', 'Compare data', isComparisonChecked,
       (bool isChecked) {
-    command(UIAction.toggleDataComparison, ToggleData(isChecked));
+    command(UIAction.toggleDataComparison, ToggleOptionEnabledData(isChecked));
   });
   optionsCol.append(comparisonCheckbox);
 
   var normalisationCheckbox = _getCheckboxWithLabel(
       'normalisation-option', 'Normalise data', isNormalisationChecked,
       (bool isChecked) {
-    command(UIAction.toggleDataNormalisation, ToggleData(isChecked));
+    command(UIAction.toggleDataNormalisation, ToggleOptionEnabledData(isChecked));
   });
   optionsCol.append(normalisationCheckbox);
 
@@ -179,12 +179,12 @@ void renderFilterDropdowns(
     List<String> filterKeys,
     Map<String, List<String>> filterOptions,
     bool shouldRenderComparisonFilters) {
-  var wrapper = getRowDiv();
-  var labelCol = getLabelColDiv()..innerText = 'Filters';
-  var optionsCol = getOptionsColDiv();
+  var wrapper = getGridRow();
+  var labelCol = getGridLabelCol()..innerText = 'Filters';
+  var optionsCol = getGridOptionsCol();
 
   for (var key in filterKeys) {
-    var filterRow = getRowDiv();
+    var filterRow = getGridRow();
     var checkboxCol = html.DivElement()..classes = ['col-3'];
     var filterCol = html.DivElement()..classes = ['col-3'];
 
