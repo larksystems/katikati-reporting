@@ -56,9 +56,9 @@ class AnalysisTabChangeData extends Data {
   AnalysisTabChangeData(this.tabIndex);
 }
 
-class ToggleData extends Data {
+class ToggleOptionEnabledData extends Data {
   bool isEnabled;
-  ToggleData(this.isEnabled);
+  ToggleOptionEnabledData(this.isEnabled);
 }
 
 // Controller functions
@@ -168,13 +168,13 @@ void command(UIAction action, Data data) {
       // todo: handle switch between analysis tabs
       break;
     case UIAction.toggleDataComparison:
-      var d = data as ToggleData;
+      var d = data as ToggleOptionEnabledData;
       _isDataComparisonEnabled = d.isEnabled;
       logger.debug('Data comparison changed to ${_isDataComparisonEnabled}');
       // todo: handle for data comparison
       break;
     case UIAction.toggleDataNormalisation:
-      var d = data as ToggleData;
+      var d = data as ToggleOptionEnabledData;
       _isDataNormalisationEnabled = d.isEnabled;
       logger.debug(
           'Data normalisation changed to ${_isDataNormalisationEnabled}');
