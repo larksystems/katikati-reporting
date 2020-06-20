@@ -208,6 +208,7 @@ void renderFilterDropdowns(
 
     if (!shouldRenderComparisonFilters) continue;
     var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
+    // todo: remove __all hardcoding
     var comparisonFilterDropdown =
         _getDropdown(filterOptions[key].toList(), '__all', (String value) {
       command(
@@ -250,9 +251,9 @@ html.SelectElement _getDropdown(
 
   for (var option in options) {
     var dropdownOption = html.OptionElement()
-      ..setAttribute('value', option)
+      ..value = option
       ..selected = option == selectedOption
-      ..appendText(option);
+      ..text = option;
     dropdownSelect.append(dropdownOption);
   }
 
