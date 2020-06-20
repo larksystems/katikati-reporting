@@ -32,7 +32,7 @@ Map<String, Map<String, dynamic>> _filteredInteractions;
 Map<String, Map<String, dynamic>> _filteredComparisonInteractions;
 Map<String, Set> _uniqueFieldCategoryValues;
 model.Config _config;
-List<model.Chart> _charts;
+Map<String, Map<String, List<num>>> _buckets = {};
 
 // Actions
 enum UIAction {
@@ -149,13 +149,32 @@ Map<String, Set> computeUniqFieldCategoryValues(
   return uniqueFieldCategories;
 }
 
+void computeFieldCategoryBuckets() {
+  _buckets = {};
+  _config.tabs[_selectedAnalysisTabIndex].charts.forEach((chart) {
+    chart.fields.forEach((fieldObject) {
+      if (_buckets[fieldObject.field.key] == null) {
+        _buckets[fieldObject.field.key] = {};
+      }
+      _buckets[fieldObject.field.key][fieldObject.field.value] = [0, 0];
+    });
+  });
+
+  _allInteractions.values.forEach((interaction) {
+    // check if interaction falls within the filter
+  });
+
+  print(_buckets);
+}
+
 // Render methods
 void handleNavToAnalysis() {
   view.clearContentTab();
   var tabLabels =
       _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
   view.renderAnalysisTabs(tabLabels);
-  view.renderChartOptions(_isDataComparisonEnabled, _isDataNormalisationEnabled);
+  view.renderChartOptions(
+      _isDataComparisonEnabled, _isDataNormalisationEnabled);
 
   var filterKeys = _config.filters.map((filter) => filter.key).toList();
   filterKeys.removeWhere((filter) =>
@@ -167,6 +186,8 @@ void handleNavToAnalysis() {
 
   view.renderFilterDropdowns(
       filterKeys, filterOptions, _isDataComparisonEnabled);
+
+  computeFieldCategoryBuckets();
 }
 
 void handleNavToSettings() {
@@ -226,7 +247,8 @@ void command(UIAction action, Data data) {
     case UIAction.setComparisonFilterValue:
       var d = data as SetFilterValueData;
       _comparisonFilterValues[d.key] = d.value;
-      logger.debug('Set to comparison filter values, ${_comparisonFilterValues}');
+      logger
+          .debug('Set to comparison filter values, ${_comparisonFilterValues}');
       // todo: handle for filter compare changes
       break;
     default:

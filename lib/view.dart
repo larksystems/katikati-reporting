@@ -1,5 +1,6 @@
 import 'dart:html' as html;
 import 'controller.dart';
+import 'package:chartjs/chartjs.dart';
 
 const LOADING_MODAL_ID = 'loading-modal';
 
@@ -220,6 +221,11 @@ void renderFilterDropdowns(
   wrapper.append(labelCol);
   wrapper.append(optionsCol);
   content.append(wrapper);
+}
+
+void renderChart(
+    String title, String narrative, ChartConfiguration chartConfig) {
+  print('rendering chart');
 }
 
 html.DivElement _getCheckboxWithLabel(
