@@ -20,11 +20,11 @@ var _currentNavLink = _navLinks['analyse'].pathname;
 
 // UI States
 int _selectedAnalysisTabIndex;
-bool _isCompareEnabled = true;
-bool _isChartsNormalisedEnabled = false;
-List<String> _activeFilters = [];
+bool _dataComparisonEnabled = true;
+bool _dataNormalisationEnabled = false;
+Set<String> _activeFilters = {};
 Map<String, String> _filterValues = {};
-Map<String, String> _filterComparisionValues = {};
+Map<String, String> _comparisonFilterValues = {};
 
 // Data states
 Map<String, Map<String, dynamic>> _allInteractions;
@@ -35,7 +35,16 @@ model.Config _config;
 List<model.Chart> _charts;
 
 // Actions
-enum UIAction { signinWithGoogle, changeNavTab, changeAnalysisTab }
+enum UIAction {
+  signinWithGoogle,
+  changeNavTab,
+  changeAnalysisTab,
+  toggleDataComparison,
+  toggleDataNormalisation,
+  toggleActiveFilter,
+  setFilterValue,
+  setComparisonFilterValue
+}
 
 // Action data
 class Data {}
@@ -48,6 +57,23 @@ class NavChangeData extends Data {
 class AnalysisTabChangeData extends Data {
   int tabIndex;
   AnalysisTabChangeData(this.tabIndex);
+}
+
+class ToggleOptionEnabledData extends Data {
+  bool enabled;
+  ToggleOptionEnabledData(this.enabled);
+}
+
+class ToggleActiveFilterData extends Data {
+  String key;
+  bool enabled;
+  ToggleActiveFilterData(this.key, this.enabled);
+}
+
+class SetFilterValueData extends Data {
+  String key;
+  String value;
+  SetFilterValueData(this.key, this.value);
 }
 
 // Controller functions
@@ -129,6 +155,17 @@ void handleNavToAnalysis() {
   var tabLabels =
       _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
   view.renderAnalysisTabs(tabLabels);
+  view.renderChartOptions(_dataComparisonEnabled, _dataNormalisationEnabled);
+
+  var filterKeys = _config.filters.map((filter) => filter.key).toList();
+  filterKeys.removeWhere((filter) =>
+      _config.tabs[_selectedAnalysisTabIndex].exclude_filters.contains(filter));
+  var filterOptions = _uniqueFieldCategoryValues.map((key, setValues) {
+    return MapEntry(
+        key, setValues.map((s) => s.toString()).toList()..add('__all'));
+  });
+
+  view.renderFilterDropdowns(filterKeys, filterOptions, _dataComparisonEnabled);
 }
 
 void handleNavToSettings() {
@@ -154,6 +191,43 @@ void command(UIAction action, Data data) {
       _selectedAnalysisTabIndex = d.tabIndex;
       logger.debug('Changed to analysis tab ${_selectedAnalysisTabIndex}');
       // todo: handle switch between analysis tabs
+      break;
+    case UIAction.toggleDataComparison:
+      var d = data as ToggleOptionEnabledData;
+      _dataComparisonEnabled = d.enabled;
+      logger.debug('Data comparison changed to ${_dataComparisonEnabled}');
+      // todo: handle for data comparison
+      break;
+    case UIAction.toggleDataNormalisation:
+      var d = data as ToggleOptionEnabledData;
+      _dataNormalisationEnabled = d.enabled;
+      logger
+          .debug('Data normalisation changed to ${_dataNormalisationEnabled}');
+      // todo: handle for data normalisation
+      break;
+    case UIAction.toggleActiveFilter:
+      var d = data as ToggleActiveFilterData;
+      if (d.enabled) {
+        _activeFilters.add(d.key);
+        logger.debug('Added ${d.key} to active filters, ${_activeFilters}');
+      } else {
+        _activeFilters.removeWhere((filter) => filter == d.key);
+        logger.debug('Removed ${d.key} from active filters, ${_activeFilters}');
+      }
+      // todo: handle for changes in active filter
+      break;
+    case UIAction.setFilterValue:
+      var d = data as SetFilterValueData;
+      _filterValues[d.key] = d.value;
+      logger.debug('Set to filter values, ${_filterValues}');
+      // todo: handle for filter changes
+      break;
+    case UIAction.setComparisonFilterValue:
+      var d = data as SetFilterValueData;
+      _comparisonFilterValues[d.key] = d.value;
+      logger
+          .debug('Set to comparison filter values, ${_comparisonFilterValues}');
+      // todo: handle for filter compare changes
       break;
     default:
   }

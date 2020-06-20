@@ -83,9 +83,9 @@ void setNavBrand(String text) {
   navBrand.innerText = text;
 }
 
-void appendNavLink(String pathname, String label, bool isSelected) {
+void appendNavLink(String pathname, String label, bool selected) {
   var li = html.LIElement()
-    ..classes = [NAV_ITEM_CSS_CLASSNAME, if (isSelected) ACTIVE_CSS_CLASSNAME]
+    ..classes = [NAV_ITEM_CSS_CLASSNAME, if (selected) ACTIVE_CSS_CLASSNAME]
     ..innerText = label
     ..id = pathname
     ..onClick
@@ -104,13 +104,24 @@ void clearContentTab() {
   content.children.clear();
 }
 
-void renderAnalysisTabs(List<String> labels) {
-  var wrapper = html.DivElement()..classes = ['row'];
-  var labelCol = html.DivElement()
-    ..classes = ['col-lg-2', 'col-md-3', 'col-sm-12', 'col-xs-12']
-    ..innerText = 'Analyse';
-  var radioCol = html.DivElement()
+html.DivElement generateGridRowElement() {
+  return html.DivElement()..classes = ['row'];
+}
+
+html.DivElement generateGridLabelColumnElement() {
+  return html.DivElement()
+    ..classes = ['col-lg-2', 'col-md-3', 'col-sm-12', 'col-xs-12'];
+}
+
+html.DivElement generateGridOptionsColumnElement() {
+  return html.DivElement()
     ..classes = ['col-lg-10', 'col-md-9', 'col-sm-12', 'col-xs-12'];
+}
+
+void renderAnalysisTabs(List<String> labels) {
+  var wrapper = generateGridRowElement();
+  var labelCol = generateGridLabelColumnElement()..innerText = 'Analyse';
+  var optionsCol = generateGridOptionsColumnElement();
 
   for (var i = 0; i < labels.length; ++i) {
     var radioWrapper = html.DivElement()
@@ -132,12 +143,119 @@ void renderAnalysisTabs(List<String> labels) {
 
     radioWrapper.append(radioOption);
     radioWrapper.append(radioLabel);
-    radioCol.append(radioWrapper);
+    optionsCol.append(radioWrapper);
   }
 
   wrapper.append(labelCol);
-  wrapper.append(radioCol);
+  wrapper.append(optionsCol);
   content.append(wrapper);
+}
+
+void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
+  var wrapper = generateGridRowElement();
+  var labelCol = generateGridLabelColumnElement()..innerText = 'Options';
+  var optionsCol = generateGridOptionsColumnElement();
+
+  var comparisonCheckbox = _getCheckboxWithLabel(
+      'comparison-option', 'Compare data', comparisonEnabled, (bool checked) {
+    command(UIAction.toggleDataComparison, ToggleOptionEnabledData(checked));
+  });
+  optionsCol.append(comparisonCheckbox);
+
+  var normalisationCheckbox = _getCheckboxWithLabel(
+      'normalisation-option', 'Normalise data', normalisationEnabled,
+      (bool checked) {
+    command(UIAction.toggleDataNormalisation, ToggleOptionEnabledData(checked));
+  });
+  optionsCol.append(normalisationCheckbox);
+
+  wrapper.append(labelCol);
+  wrapper.append(optionsCol);
+  content.append(wrapper);
+}
+
+void renderFilterDropdowns(
+    List<String> filterKeys,
+    Map<String, List<String>> filterOptions,
+    bool shouldRenderComparisonFilters) {
+  var wrapper = generateGridRowElement();
+  var labelCol = generateGridLabelColumnElement()..innerText = 'Filters';
+  var optionsCol = generateGridOptionsColumnElement();
+
+  for (var key in filterKeys) {
+    var filterRow = generateGridRowElement();
+    var checkboxCol = html.DivElement()..classes = ['col-3'];
+    var filterCol = html.DivElement()..classes = ['col-3'];
+
+    var checkboxWithLabel = _getCheckboxWithLabel(
+        'filter-option-${key}', key, false, (bool checked) {
+      command(
+          UIAction.toggleActiveFilter, ToggleActiveFilterData(key, checked));
+    });
+    checkboxCol.append(checkboxWithLabel);
+
+    var filterDropdown =
+        _getDropdown(filterOptions[key].toList(), '__all', (String value) {
+      command(UIAction.setFilterValue, SetFilterValueData(key, value));
+    });
+    filterCol.append(filterDropdown);
+
+    filterRow.append(checkboxCol);
+    filterRow.append(filterCol);
+    optionsCol.append(filterRow);
+
+    if (!shouldRenderComparisonFilters) continue;
+    var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
+    // todo: remove __all hardcoding
+    var comparisonFilterDropdown =
+        _getDropdown(filterOptions[key].toList(), '__all', (String value) {
+      command(
+          UIAction.setComparisonFilterValue, SetFilterValueData(key, value));
+    });
+    comparisonFilterCol.append(comparisonFilterDropdown);
+    filterRow.append(comparisonFilterCol);
+  }
+
+  wrapper.append(labelCol);
+  wrapper.append(optionsCol);
+  content.append(wrapper);
+}
+
+html.DivElement _getCheckboxWithLabel(
+    String id, String label, bool checked, Function(bool) onChange) {
+  var checkboxWrapper = html.DivElement()
+    ..classes = ['form-check', 'form-check-inline'];
+  var checkboxOption = html.InputElement()
+    ..type = 'checkbox'
+    ..id = id
+    ..classes = ['form-check-input']
+    ..checked = checked
+    ..onChange.listen(
+        (e) => onChange((e.target as html.CheckboxInputElement).checked));
+  var checkboxLabel = html.LabelElement()
+    ..htmlFor = id
+    ..classes = ['form-check-label']
+    ..innerText = label;
+  checkboxWrapper.append(checkboxOption);
+  checkboxWrapper.append(checkboxLabel);
+  return checkboxWrapper;
+}
+
+html.SelectElement _getDropdown(
+    List<String> options, String selectedOption, Function(String) onChange) {
+  var dropdownSelect = html.SelectElement()
+    ..classes = ['form-control']
+    ..onChange.listen((e) => onChange((e.target as html.SelectElement).value));
+
+  for (var option in options) {
+    var dropdownOption = html.OptionElement()
+      ..value = option
+      ..selected = option == selectedOption
+      ..text = option;
+    dropdownSelect.append(dropdownOption);
+  }
+
+  return dropdownSelect;
 }
 
 void renderSettingsTab() {
