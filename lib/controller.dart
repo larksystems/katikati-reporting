@@ -8,7 +8,7 @@ import 'package:chartjs/chartjs.dart';
 
 Logger logger = Logger('controller.dart');
 
-const defaultBarChartColors = ['#ef5350', '#07acc1'];
+const barChartDefaultColors = ['#ef5350', '#07acc1'];
 
 Map<String, model.Link> _navLinks = {
   'analyse': model.Link('analyse', 'Analyse', handleNavToAnalysis),
@@ -277,7 +277,7 @@ ChartConfiguration _generateBarChartConfig(
     comparisonFilterData.add(chartCol.bucket[1]);
   }
 
-  var colors = chart.colors ?? defaultBarChartColors;
+  var colors = chart.colors ?? barChartDefaultColors;
 
   var datasets = [
     _generateBarChartDataset(
