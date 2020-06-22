@@ -1,5 +1,6 @@
 import 'dart:html' as html;
 import 'controller.dart';
+import 'package:chartjs/chartjs.dart' as chartjs;
 
 const LOADING_MODAL_ID = 'loading-modal';
 
@@ -12,6 +13,8 @@ const NAV_BRAND_ID = 'nav-brand';
 const NAV_LINKS_WRAPPER_ID = 'nav-links-wrapper';
 const NAV_ITEM_CSS_CLASSNAME = 'nav-item';
 const ACTIVE_CSS_CLASSNAME = 'active';
+const CARD_CLASSNAME = 'card';
+const CARD_BODY_CLASSNAME = 'card-body';
 
 const CONTENT_ID = 'content';
 
@@ -219,6 +222,34 @@ void renderFilterDropdowns(
   wrapper.append(labelCol);
   wrapper.append(optionsCol);
   content.append(wrapper);
+}
+
+void renderBarChart(
+    String title, String narrative, chartjs.ChartConfiguration chartConfig) {
+  var chart = _generateBarChart(title, narrative, chartConfig);
+  content.append(chart);
+}
+
+html.DivElement _generateBarChart(
+    String title, String narrative, chartjs.ChartConfiguration chartConfig) {
+  var wrapper = html.DivElement();
+
+  var titleElement = html.HeadingElement.h5()..text = title;
+  var narrativeElement = html.ParagraphElement()..text = narrative;
+  wrapper.append(titleElement);
+  wrapper.append(narrativeElement);
+
+  var card = html.DivElement()..classes = [CARD_CLASSNAME];
+  var cardBody = html.DivElement()..classes = [CARD_BODY_CLASSNAME];
+  card.append(cardBody);
+
+  var canvas = html.CanvasElement();
+  cardBody.append(canvas);
+  wrapper.append(card);
+
+  chartjs.Chart(canvas, chartConfig);
+
+  return wrapper;
 }
 
 html.DivElement _getCheckboxWithLabel(

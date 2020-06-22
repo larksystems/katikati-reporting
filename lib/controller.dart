@@ -4,8 +4,11 @@ import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
 import 'package:dashboard/logger.dart';
+import 'package:chartjs/chartjs.dart';
 
 Logger logger = Logger('controller.dart');
+
+const defaultBarChartColors = ['#ef5350', '#07acc1'];
 
 Map<String, model.Link> _navLinks = {
   'analyse': model.Link('analyse', 'Analyse', handleNavToAnalysis),
@@ -25,6 +28,12 @@ bool _dataNormalisationEnabled = false;
 Set<String> _activeFilters = {};
 Map<String, String> _filterValues = {};
 Map<String, String> _comparisonFilterValues = {};
+
+Map<String, String> get _activeFilterValues =>
+    {..._filterValues}..removeWhere((key, _) => !_activeFilters.contains(key));
+Map<String, String> get _activeComparisonFilterValues => {
+      ..._comparisonFilterValues
+    }..removeWhere((key, _) => !_activeFilters.contains(key));
 
 // Data states
 Map<String, Map<String, dynamic>> _allInteractions;
@@ -195,18 +204,12 @@ void _computeChartBuckets(List<model.Chart> charts) {
     }
   }
 
-  // Consider only active filters from filter values
-  var activeFilterValues = {..._filterValues}
-    ..removeWhere((key, _) => !_activeFilters.contains(key));
-  var activeComparisonFilterValues = {..._comparisonFilterValues}
-    ..removeWhere((key, _) => !_activeFilters.contains(key));
-
   for (var interaction in _allInteractions.values) {
     // Check if this interaction falls within the active filter
     var addToPrimaryBucket =
-        _interactionMatchesFilters(interaction, activeFilterValues);
+        _interactionMatchesFilters(interaction, _activeFilterValues);
     var addToComparisonBucket =
-        _interactionMatchesFilters(interaction, activeComparisonFilterValues);
+        _interactionMatchesFilters(interaction, _activeComparisonFilterValues);
 
     // If the interaction doesnt fall in the active filters, continue
     if (!addToPrimaryBucket && !addToComparisonBucket) continue;
@@ -228,6 +231,71 @@ void _computeChartBuckets(List<model.Chart> charts) {
   logger.debug('Computed chart buckets ${charts}');
 }
 
+String _generateLegendLabelFromFilters(Map<String, String> filters) {
+  var label = filters.values.join(',');
+  return label != '' ? label : 'All interactions';
+}
+
+ChartOptions _generateBarChartOptions() {
+  var labelString = 'Number of interactions';
+  var chartX = ChartXAxe(stacked: false, barPercentage: 1);
+  var chartY = ChartYAxe(
+      stacked: false,
+      scaleLabel: ScaleTitleOptions(labelString: labelString, display: true));
+  // todo: fix this
+  chartY.ticks = model.TickOptions()..min = 10;
+  return ChartOptions(
+      responsive: true,
+      tooltips: ChartTooltipOptions(mode: 'index'),
+      legend: ChartLegendOptions(
+          position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
+      scales: ChartScales(display: true, xAxes: [chartX], yAxes: [chartY]));
+}
+
+ChartDataSets _generateBarChartDataset(
+    String label, List<int> data, String barColor) {
+  return ChartDataSets(
+      label: label,
+      fill: true,
+      backgroundColor: barColor + 'aa',
+      borderColor: barColor,
+      hoverBackgroundColor: barColor,
+      hoverBorderColor: barColor,
+      borderWidth: 1,
+      data: data);
+}
+
+ChartConfiguration _generateBarChartConfig(
+    model.Chart chart, bool dataComparisonEnabled) {
+  var labels = [];
+  var filterData = List<int>();
+  var comparisonFilterData = List<int>();
+
+  for (var chartCol in chart.fields) {
+    labels.add(chartCol.label);
+    filterData.add(chartCol.bucket[0]);
+    comparisonFilterData.add(chartCol.bucket[1]);
+  }
+
+  var colors = chart.colors ?? defaultBarChartColors;
+
+  var datasets = [
+    _generateBarChartDataset(
+        _generateLegendLabelFromFilters(_activeFilterValues),
+        filterData,
+        colors[0]),
+    if (dataComparisonEnabled)
+      _generateBarChartDataset(
+          _generateLegendLabelFromFilters(_activeComparisonFilterValues),
+          comparisonFilterData,
+          colors[1])
+  ];
+
+  var dataset = LinearChartData(labels: labels, datasets: datasets);
+  return ChartConfiguration(
+      type: 'bar', data: dataset, options: _generateBarChartOptions());
+}
+
 // Render methods
 void handleNavToAnalysis() {
   view.clearContentTab();
@@ -246,7 +314,18 @@ void handleNavToAnalysis() {
 
   view.renderFilterDropdowns(filterKeys, filterOptions, _dataComparisonEnabled);
 
-  _computeChartBuckets(_config.tabs[_selectedAnalysisTabIndex].charts);
+  var charts = _config.tabs[_selectedAnalysisTabIndex].charts;
+  _computeChartBuckets(charts);
+  for (var chart in charts) {
+    switch (chart.type) {
+      case model.ChartType.bar:
+        view.renderBarChart(chart.title, chart.narrative,
+            _generateBarChartConfig(chart, _dataComparisonEnabled));
+        break;
+      default:
+        logger.error('No such chart type ${chart.type}');
+    }
+  }
 }
 
 void handleNavToSettings() {

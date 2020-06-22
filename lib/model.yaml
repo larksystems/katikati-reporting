@@ -13,6 +13,7 @@ Chart:
   title: "string" #optional
   narrative: "string" #optional
   fields: "array Field"
+  colors: "array string" #optional
 
 Field:
   label: "string" #optional
