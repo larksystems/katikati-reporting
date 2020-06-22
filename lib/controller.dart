@@ -159,8 +159,36 @@ bool _interactionMatchesFilters(
   return true;
 }
 
+bool _interactionMatchesOperation(
+    Map<String, dynamic> interaction, model.Field chartCol) {
+  switch (chartCol.field.operator) {
+    case model.FieldOperator.equals:
+      if (interaction[chartCol.field.key] == chartCol.field.value) {
+        return true;
+      }
+      break;
+    case model.FieldOperator.contains:
+      if ((interaction[chartCol.field.key] as List)
+          .contains(chartCol.field.value)) {
+        return true;
+      }
+      break;
+    case model.FieldOperator.not_contains:
+      if (!(interaction[chartCol.field.key] as List)
+          .contains(chartCol.field.value)) {
+        return true;
+      }
+      break;
+    default:
+      logger.error('No such operator, misleading results');
+      view.showAlert(
+          'Operator ${chartCol.field.operator} is not handled in your config!');
+  }
+  return false;
+}
+
 void _computeChartBuckets(List<model.Chart> charts) {
-  // initialise bucket to [filter(0), comparisonFilter(0)] for each chart
+  // reset bucket to [filter(0), comparisonFilter(0)] for each chart
   for (var chart in charts) {
     for (var chartCol in chart.fields) {
       chartCol.bucket = [0, 0];
@@ -181,45 +209,17 @@ void _computeChartBuckets(List<model.Chart> charts) {
         _interactionMatchesFilters(interaction, activeComparisonFilterValues);
 
     // If the interaction doesnt fall in the active filters, continue
-    if (!addToPrimaryBucket && !addToComparisonBucket) {
-      continue;
-    }
+    if (!addToPrimaryBucket && !addToComparisonBucket) continue;
 
-    // Go over each of the charts ..
     for (var chart in charts) {
-      // .. each of the fields of the chart
       for (var chartCol in chart.fields) {
-        // check if the field value of the interaction matches the operator & value
-        var interactionMatchesOperation = false;
-        switch (chartCol.field.operator) {
-          case model.FieldOperator.equals:
-            if (interaction[chartCol.field.key] == chartCol.field.value) {
-              interactionMatchesOperation = true;
-            }
-            break;
-          case model.FieldOperator.contains:
-            if ((interaction[chartCol.field.key] as List)
-                .contains(chartCol.field.value)) {
-              interactionMatchesOperation = true;
-            }
-            break;
-          case model.FieldOperator.not_contains:
-            if (!(interaction[chartCol.field.key] as List)
-                .contains(chartCol.field.value)) {
-              interactionMatchesOperation = true;
-            }
-            break;
-          default:
-            logger.error('No such operator, misleading results');
-        }
+        if (!_interactionMatchesOperation(interaction, chartCol)) continue;
 
-        if (interactionMatchesOperation) {
-          if (addToPrimaryBucket) {
-            ++chartCol.bucket[0];
-          }
-          if (addToComparisonBucket) {
-            ++chartCol.bucket[1];
-          }
+        if (addToPrimaryBucket) {
+          ++chartCol.bucket[0];
+        }
+        if (addToComparisonBucket) {
+          ++chartCol.bucket[1];
         }
       }
     }
