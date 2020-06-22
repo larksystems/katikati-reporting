@@ -122,6 +122,7 @@ class Field {
   String docId;
   String label;
   String tooltip;
+  List<int> bucket;
   FieldOperation field;
 
   static Field fromSnapshot(DocSnapshot doc, [Field modelObj]) =>
@@ -132,6 +133,7 @@ class Field {
     return (modelObj ?? Field())
       ..label = String_fromData(data['label'])
       ..tooltip = String_fromData(data['tooltip'])
+      ..bucket = List_fromData<int>(data['bucket'], int_fromData)
       ..field = FieldOperation.fromData(data['field']);
   }
 
@@ -142,6 +144,7 @@ class Field {
     return {
       if (label != null) 'label': label,
       if (tooltip != null) 'tooltip': tooltip,
+      if (bucket != null) 'bucket': bucket,
       if (field != null) 'field': field.toData(),
     };
   }

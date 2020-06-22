@@ -28,11 +28,8 @@ Map<String, String> _comparisonFilterValues = {};
 
 // Data states
 Map<String, Map<String, dynamic>> _allInteractions;
-Map<String, Map<String, dynamic>> _filteredInteractions;
-Map<String, Map<String, dynamic>> _filteredComparisonInteractions;
 Map<String, Set> _uniqueFieldCategoryValues;
 model.Config _config;
-Map<String, Map<String, List<num>>> _buckets = {};
 
 // Actions
 enum UIAction {
@@ -93,9 +90,6 @@ void onLoginCompleted() async {
   view.showLoading();
 
   await loadDataFromFirebase();
-  _filteredInteractions = _allInteractions;
-  _filteredComparisonInteractions = _allInteractions;
-
   _uniqueFieldCategoryValues =
       computeUniqFieldCategoryValues(_config.filters, _allInteractions);
   _selectedAnalysisTabIndex = 0;
@@ -149,22 +143,89 @@ Map<String, Set> computeUniqFieldCategoryValues(
   return uniqueFieldCategories;
 }
 
-void computeFieldCategoryBuckets() {
-  _buckets = {};
-  _config.tabs[_selectedAnalysisTabIndex].charts.forEach((chart) {
-    chart.fields.forEach((fieldObject) {
-      if (_buckets[fieldObject.field.key] == null) {
-        _buckets[fieldObject.field.key] = {};
+bool _interactionMatchesFilters(
+    Map<String, dynamic> interaction, Map<String, String> filters) {
+  for (var entry in filters.entries) {
+    var interactionValue = interaction[entry.key];
+    var interactionMatch = interactionValue is List
+        ? interactionValue.contains(entry.value)
+        : interactionValue == entry.value;
+
+    if (!interactionMatch) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void _computeChartBuckets(List<model.Chart> charts) {
+  // initialise bucket to [filter(0), comparisonFilter(0)] for each chart
+  for (var chart in charts) {
+    for (var chartCol in chart.fields) {
+      chartCol.bucket = [0, 0];
+    }
+  }
+
+  // Consider only active filters from filter values
+  var activeFilterValues = {..._filterValues}
+    ..removeWhere((key, _) => !_activeFilters.contains(key));
+  var activeComparisonFilterValues = {..._comparisonFilterValues}
+    ..removeWhere((key, _) => !_activeFilters.contains(key));
+
+  for (var interaction in _allInteractions.values) {
+    // Check if this interaction falls within the active filter
+    var addToPrimaryBucket =
+        _interactionMatchesFilters(interaction, activeFilterValues);
+    var addToComparisonBucket =
+        _interactionMatchesFilters(interaction, activeComparisonFilterValues);
+
+    // If the interaction doesnt fall in the active filters, continue
+    if (!addToPrimaryBucket && !addToComparisonBucket) {
+      continue;
+    }
+
+    // Go over each of the charts ..
+    for (var chart in charts) {
+      // .. each of the fields of the chart
+      for (var chartCol in chart.fields) {
+        // check if the field value of the interaction matches the operator & value
+        var interactionMatchesOperation = false;
+        switch (chartCol.field.operator) {
+          case model.FieldOperator.equals:
+            if (interaction[chartCol.field.key] == chartCol.field.value) {
+              interactionMatchesOperation = true;
+            }
+            break;
+          case model.FieldOperator.contains:
+            if ((interaction[chartCol.field.key] as List)
+                .contains(chartCol.field.value)) {
+              interactionMatchesOperation = true;
+            }
+            break;
+          case model.FieldOperator.not_contains:
+            if (!(interaction[chartCol.field.key] as List)
+                .contains(chartCol.field.value)) {
+              interactionMatchesOperation = true;
+            }
+            break;
+          default:
+            logger.error('No such operator, misleading results');
+        }
+
+        if (interactionMatchesOperation) {
+          if (addToPrimaryBucket) {
+            ++chartCol.bucket[0];
+          }
+          if (addToComparisonBucket) {
+            ++chartCol.bucket[1];
+          }
+        }
       }
-      _buckets[fieldObject.field.key][fieldObject.field.value] = [0, 0];
-    });
-  });
+    }
+  }
 
-  _allInteractions.values.forEach((interaction) {
-    // check if interaction falls within the filter
-  });
-
-  print(_buckets);
+  logger.debug('Computed chart buckets ${charts}');
 }
 
 // Render methods
@@ -184,6 +245,8 @@ void handleNavToAnalysis() {
   });
 
   view.renderFilterDropdowns(filterKeys, filterOptions, _dataComparisonEnabled);
+
+  _computeChartBuckets(_config.tabs[_selectedAnalysisTabIndex].charts);
 }
 
 void handleNavToSettings() {
