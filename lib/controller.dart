@@ -189,9 +189,8 @@ bool _interactionMatchesOperation(
       }
       break;
     default:
-      logger.error('No such operator, misleading results');
-      view.showAlert(
-          'Operator ${chartCol.field.operator} is not handled in your config!');
+      logger.error('No such operator: ${chartCol.field.operator}');
+      view.showAlert('Warning: Field operator ${chartCol.field.operator} listed in your config is not supported. Results may be misleading');
   }
   return false;
 }
