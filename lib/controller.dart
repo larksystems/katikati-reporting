@@ -4,12 +4,10 @@ import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
 import 'package:dashboard/utils.dart';
+import 'package:dashboard/chart_helpers.dart' as chart_helper;
 import 'package:dashboard/logger.dart';
-import 'package:chartjs/chartjs.dart';
 
 Logger logger = Logger('controller.dart');
-
-const barChartDefaultColors = ['#ef5350', '#07acc1'];
 
 Map<String, model.Link> _navLinks = {
   'analyse': model.Link('analyse', 'Analyse', handleNavToAnalysis),
@@ -190,9 +188,9 @@ bool _interactionMatchesOperation(
       }
       break;
     default:
-      logger.error('No such operator, misleading results');
+      logger.error('No such operator: ${chartCol.field.operator}');
       view.showAlert(
-          'Operator ${chartCol.field.operator} is not handled in your config!');
+          'Warning: Field operator ${chartCol.field.operator} listed in your config is not supported. Results may be misleading');
   }
   return false;
 }
@@ -232,71 +230,6 @@ void _computeChartBuckets(List<model.Chart> charts) {
   logger.debug('Computed chart buckets ${charts}');
 }
 
-String _generateLegendLabelFromFilters(Map<String, String> filters) {
-  var label = filters.values.join(',');
-  return label != '' ? label : 'All interactions';
-}
-
-ChartOptions _generateBarChartOptions() {
-  var labelString = 'Number of interactions';
-  var chartX = ChartXAxe(stacked: false, barPercentage: 1);
-  var chartY = ChartYAxe(
-      stacked: false,
-      scaleLabel: ScaleTitleOptions(labelString: labelString, display: true));
-  // todo: fix this
-  chartY.ticks = model.TickOptions()..min = 10;
-  return ChartOptions(
-      responsive: true,
-      tooltips: ChartTooltipOptions(mode: 'index'),
-      legend: ChartLegendOptions(
-          position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
-      scales: ChartScales(display: true, xAxes: [chartX], yAxes: [chartY]));
-}
-
-ChartDataSets _generateBarChartDataset(
-    String label, List<int> data, String barColor) {
-  return ChartDataSets(
-      label: label,
-      fill: true,
-      backgroundColor: barColor + 'aa',
-      borderColor: barColor,
-      hoverBackgroundColor: barColor,
-      hoverBorderColor: barColor,
-      borderWidth: 1,
-      data: data);
-}
-
-ChartConfiguration _generateBarChartConfig(
-    model.Chart chart, bool dataComparisonEnabled) {
-  var labels = [];
-  var filterData = List<int>();
-  var comparisonFilterData = List<int>();
-
-  for (var chartCol in chart.fields) {
-    labels.add(chartCol.label ?? chartCol.field.value);
-    filterData.add(chartCol.bucket[0]);
-    comparisonFilterData.add(chartCol.bucket[1]);
-  }
-
-  var colors = chart.colors ?? barChartDefaultColors;
-
-  var datasets = [
-    _generateBarChartDataset(
-        _generateLegendLabelFromFilters(_activeFilterValues),
-        filterData,
-        colors[0]),
-    if (dataComparisonEnabled)
-      _generateBarChartDataset(
-          _generateLegendLabelFromFilters(_activeComparisonFilterValues),
-          comparisonFilterData,
-          colors[1])
-  ];
-
-  var dataset = LinearChartData(labels: labels, datasets: datasets);
-  return ChartConfiguration(
-      type: 'bar', data: dataset, options: _generateBarChartOptions());
-}
-
 // Render methods
 void handleNavToAnalysis() {
   view.clearContentTab();
@@ -332,11 +265,16 @@ void _computeChartBucketsAndRender() {
   for (var chart in charts) {
     switch (chart.type) {
       case model.ChartType.bar:
-        view.renderBarChart(chart.title, chart.narrative,
-            _generateBarChartConfig(chart, _dataComparisonEnabled));
+        view.renderBarChart(
+            chart.title,
+            chart.narrative,
+            chart_helper.generateBarChartConfig(chart, _dataComparisonEnabled,
+                _activeFilterValues, _activeComparisonFilterValues));
         break;
       default:
         logger.error('No such chart type ${chart.type}');
+        view.showAlert(
+            'Warning: Chart type ${chart.type} listed in your config is not supported.');
     }
   }
 }
