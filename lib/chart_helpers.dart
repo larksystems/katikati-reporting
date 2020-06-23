@@ -35,10 +35,10 @@ ChartOptions _generateBarChartOptions() {
     ..ticks = (LinearTickOptions()..min = 0);
   return ChartOptions(
       responsive: true,
+      tooltips: ChartTooltipOptions(mode: 'index'),
       legend: ChartLegendOptions(
           position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
-      scales: ChartScales(display: true, xAxes: [chartX], yAxes: [chartY]))
-      ..tooltips = (ChartTooltipOptions()..mode = 'index');
+      scales: ChartScales(display: true, xAxes: [chartX], yAxes: [chartY]));
 }
 
 ChartConfiguration generateBarChartConfig(
