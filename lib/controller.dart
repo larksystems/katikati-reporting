@@ -28,11 +28,8 @@ Map<String, String> _comparisonFilterValues = {};
 
 // Data states
 Map<String, Map<String, dynamic>> _allInteractions;
-Map<String, Map<String, dynamic>> _filteredInteractions;
-Map<String, Map<String, dynamic>> _filteredComparisonInteractions;
 Map<String, Set> _uniqueFieldCategoryValues;
 model.Config _config;
-List<model.Chart> _charts;
 
 // Actions
 enum UIAction {
@@ -93,9 +90,6 @@ void onLoginCompleted() async {
   view.showLoading();
 
   await loadDataFromFirebase();
-  _filteredInteractions = _allInteractions;
-  _filteredComparisonInteractions = _allInteractions;
-
   _uniqueFieldCategoryValues =
       computeUniqFieldCategoryValues(_config.filters, _allInteractions);
   _selectedAnalysisTabIndex = 0;
@@ -149,6 +143,90 @@ Map<String, Set> computeUniqFieldCategoryValues(
   return uniqueFieldCategories;
 }
 
+bool _interactionMatchesFilters(
+    Map<String, dynamic> interaction, Map<String, String> filters) {
+  for (var entry in filters.entries) {
+    var interactionValue = interaction[entry.key];
+    var interactionMatch = interactionValue is List
+        ? interactionValue.contains(entry.value)
+        : interactionValue == entry.value;
+
+    if (!interactionMatch) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool _interactionMatchesOperation(
+    Map<String, dynamic> interaction, model.Field chartCol) {
+  switch (chartCol.field.operator) {
+    case model.FieldOperator.equals:
+      if (interaction[chartCol.field.key] == chartCol.field.value) {
+        return true;
+      }
+      break;
+    case model.FieldOperator.contains:
+      if ((interaction[chartCol.field.key] as List)
+          .contains(chartCol.field.value)) {
+        return true;
+      }
+      break;
+    case model.FieldOperator.not_contains:
+      if (!(interaction[chartCol.field.key] as List)
+          .contains(chartCol.field.value)) {
+        return true;
+      }
+      break;
+    default:
+      logger.error('No such operator: ${chartCol.field.operator}');
+      view.showAlert('Warning: Field operator ${chartCol.field.operator} listed in your config is not supported. Results may be misleading');
+  }
+  return false;
+}
+
+void _computeChartBuckets(List<model.Chart> charts) {
+  // reset bucket to [filter(0), comparisonFilter(0)] for each chart
+  for (var chart in charts) {
+    for (var chartCol in chart.fields) {
+      chartCol.bucket = [0, 0];
+    }
+  }
+
+  // Consider only active filters from filter values
+  var activeFilterValues = {..._filterValues}
+    ..removeWhere((key, _) => !_activeFilters.contains(key));
+  var activeComparisonFilterValues = {..._comparisonFilterValues}
+    ..removeWhere((key, _) => !_activeFilters.contains(key));
+
+  for (var interaction in _allInteractions.values) {
+    // Check if this interaction falls within the active filter
+    var addToPrimaryBucket =
+        _interactionMatchesFilters(interaction, activeFilterValues);
+    var addToComparisonBucket =
+        _interactionMatchesFilters(interaction, activeComparisonFilterValues);
+
+    // If the interaction doesnt fall in the active filters, continue
+    if (!addToPrimaryBucket && !addToComparisonBucket) continue;
+
+    for (var chart in charts) {
+      for (var chartCol in chart.fields) {
+        if (!_interactionMatchesOperation(interaction, chartCol)) continue;
+
+        if (addToPrimaryBucket) {
+          ++chartCol.bucket[0];
+        }
+        if (addToComparisonBucket) {
+          ++chartCol.bucket[1];
+        }
+      }
+    }
+  }
+
+  logger.debug('Computed chart buckets ${charts}');
+}
+
 // Render methods
 void handleNavToAnalysis() {
   view.clearContentTab();
@@ -166,6 +244,8 @@ void handleNavToAnalysis() {
   });
 
   view.renderFilterDropdowns(filterKeys, filterOptions, _dataComparisonEnabled);
+
+  _computeChartBuckets(_config.tabs[_selectedAnalysisTabIndex].charts);
 }
 
 void handleNavToSettings() {
