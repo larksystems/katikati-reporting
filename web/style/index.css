@@ -2,6 +2,41 @@
 @import "./nav.css";
 @import "./modal.css";
 
+:disabled {
+  cursor: not-allowed;
+}
+
+body {
+  background-color: #f3f3f3;
+}
+
 #content {
   padding: 72px 0;
+}
+
+#filters {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  margin-bottom: 24px;
+}
+
+.filter-row {
+  /* background-color: rgba(0, 0, 0, 0.05); */
+  padding: 12px 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: none;
+}
+
+/* .filter-row:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transition: background-color 0.2s;
+} */
+
+.filter-row:last-of-type {
+  background-color: black !important;
+}
+
+.filter-row-label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.9em;
 }

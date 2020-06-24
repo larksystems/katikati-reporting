@@ -135,13 +135,19 @@ void removeAllChartWrappers() {
   }
 }
 
-html.DivElement generateGridRowElement() {
-  return html.DivElement()..classes = ['row'];
+html.DivElement generateGridRowElement({List<String> classes}) {
+  return html.DivElement()..classes = ['row', ...(classes ?? [])];
 }
 
-html.DivElement generateGridLabelColumnElement() {
+html.DivElement generateGridLabelColumnElement({List<String> classes}) {
   return html.DivElement()
-    ..classes = ['col-lg-2', 'col-md-3', 'col-sm-12', 'col-xs-12'];
+    ..classes = [
+      'col-lg-2',
+      'col-md-3',
+      'col-sm-12',
+      'col-xs-12',
+      ...(classes ?? [])
+    ];
 }
 
 html.DivElement generateGridOptionsColumnElement() {
@@ -150,8 +156,9 @@ html.DivElement generateGridOptionsColumnElement() {
 }
 
 void renderAnalysisTabs(List<String> labels) {
-  var wrapper = generateGridRowElement();
-  var labelCol = generateGridLabelColumnElement()..innerText = 'Analyse';
+  var wrapper = generateGridRowElement(classes: ['filter-row']);
+  var labelCol = generateGridLabelColumnElement(classes: ['filter-row-label'])
+    ..innerText = 'Analyse';
   var optionsCol = generateGridOptionsColumnElement();
 
   for (var i = 0; i < labels.length; ++i) {
@@ -183,8 +190,9 @@ void renderAnalysisTabs(List<String> labels) {
 }
 
 void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
-  var wrapper = generateGridRowElement();
-  var labelCol = generateGridLabelColumnElement()..innerText = 'Options';
+  var wrapper = generateGridRowElement(classes: ['filter-row']);
+  var labelCol = generateGridLabelColumnElement(classes: ['filter-row-label'])
+    ..innerText = 'Options';
   var optionsCol = generateGridOptionsColumnElement();
 
   var comparisonCheckbox = _getCheckboxWithLabel(
@@ -222,8 +230,10 @@ void renderFilterDropdowns(
     Map<String, String> initialFilterValues,
     Map<String, String> initialFilterComparisonValues,
     bool shouldRenderComparisonFilters) {
-  var wrapper = generateGridRowElement()..id = FILTERS_WRAPPER_ID;
-  var labelCol = generateGridLabelColumnElement()..innerText = 'Filters';
+  var wrapper = generateGridRowElement(classes: ['filter-row'])
+    ..id = FILTERS_WRAPPER_ID;
+  var labelCol = generateGridLabelColumnElement(classes: ['filter-row-label'])
+    ..innerText = 'Filters';
   var optionsCol = generateGridOptionsColumnElement();
 
   for (var key in filterKeys) {
