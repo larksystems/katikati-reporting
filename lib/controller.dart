@@ -3,7 +3,6 @@ library controller;
 import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
-import 'package:dashboard/utils.dart';
 import 'package:dashboard/chart_helpers.dart' as chart_helper;
 import 'package:dashboard/logger.dart';
 
@@ -327,20 +326,18 @@ void command(UIAction action, Data data) {
       break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
-      var filterDropdownID = generateFilterDropdownID(d.key);
-      var comparisonDropdownID = generateComparisonFilterDropdownID(d.key);
       if (d.enabled) {
         _activeFilters.add(d.key);
-        view.enableFilterDropdown(filterDropdownID);
+        view.enableFilterDropdown(d.key);
         if (_dataComparisonEnabled) {
-          view.enableFilterDropdown(comparisonDropdownID);
+          view.enableFilterDropdown(d.key, comparison: true);
         }
         logger.debug('Added ${d.key} to active filters, ${_activeFilters}');
       } else {
         _activeFilters.removeWhere((filter) => filter == d.key);
-        view.disableFilterDropdown(filterDropdownID);
+        view.disableFilterDropdown(d.key);
         if (_dataComparisonEnabled) {
-          view.disableFilterDropdown(comparisonDropdownID);
+          view.disableFilterDropdown(d.key, comparison: true);
         }
         logger.debug('Removed ${d.key} from active filters, ${_activeFilters}');
       }

@@ -117,7 +117,7 @@ void clearContentTab() {
 void removeFiltersWrapper() {
   if (filtersWrapper == null) {
     logger
-        .error('Trying to remove non existant selector #${FILTERS_WRAPPER_ID}');
+        .error('Trying to remove non-existant selector #${FILTERS_WRAPPER_ID}');
     return;
   }
 
@@ -128,7 +128,7 @@ void removeAllChartWrappers() {
   for (var wrapper in chartWrappers) {
     if (wrapper == null) {
       logger.error(
-          'Trying to remove non existant selector .${CHART_WRAPPER_CLASSNAME}');
+          'Trying to remove non-existant selector .${CHART_WRAPPER_CLASSNAME}');
       continue;
     }
     wrapper.remove();
@@ -205,13 +205,19 @@ void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
   content.append(wrapper);
 }
 
-void enableFilterDropdown(String id) {
-  var dropdown = html.querySelector('#${id}') as html.SelectElement;
+void enableFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdownID = comparison == true
+      ? generateComparisonFilterDropdownID(filterKey)
+      : generateFilterDropdownID(filterKey);
+  var dropdown = html.querySelector('#${dropdownID}') as html.SelectElement;
   dropdown.disabled = false;
 }
 
-void disableFilterDropdown(String id) {
-  var dropdown = html.querySelector('#${id}') as html.SelectElement;
+void disableFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdownID = comparison == true
+      ? generateComparisonFilterDropdownID(filterKey)
+      : generateFilterDropdownID(filterKey);
+  var dropdown = html.querySelector('#${dropdownID}') as html.SelectElement;
   dropdown.disabled = true;
 }
 
