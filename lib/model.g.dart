@@ -85,6 +85,7 @@ class Chart {
   String title;
   String narrative;
   List<Field> fields;
+  List<String> colors;
 
   static Chart fromSnapshot(DocSnapshot doc, [Chart modelObj]) =>
       fromData(doc.data, modelObj)..docId = doc.id;
@@ -95,7 +96,8 @@ class Chart {
       ..type = ChartType.fromString(data['type'] as String)
       ..title = String_fromData(data['title'])
       ..narrative = String_fromData(data['narrative'])
-      ..fields = List_fromData<Field>(data['fields'], Field.fromData);
+      ..fields = List_fromData<Field>(data['fields'], Field.fromData)
+      ..colors = List_fromData<String>(data['colors'], String_fromData);
   }
 
   static void listen(DocStorage docStorage, ChartCollectionListener listener, String collectionRoot) =>
@@ -107,6 +109,7 @@ class Chart {
       if (title != null) 'title': title,
       if (narrative != null) 'narrative': narrative,
       if (fields != null) 'fields': fields.map((elem) => elem?.toData()).toList(),
+      if (colors != null) 'colors': colors,
     };
   }
 

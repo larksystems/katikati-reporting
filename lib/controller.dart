@@ -3,6 +3,7 @@ library controller;
 import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
+import 'package:dashboard/chart_helpers.dart' as chart_helper;
 import 'package:dashboard/logger.dart';
 
 Logger logger = Logger('controller.dart');
@@ -25,6 +26,12 @@ bool _dataNormalisationEnabled = false;
 Set<String> _activeFilters = {};
 Map<String, String> _filterValues = {};
 Map<String, String> _comparisonFilterValues = {};
+
+Map<String, String> get _activeFilterValues =>
+    {..._filterValues}..removeWhere((key, _) => !_activeFilters.contains(key));
+Map<String, String> get _activeComparisonFilterValues => {
+      ..._comparisonFilterValues
+    }..removeWhere((key, _) => !_activeFilters.contains(key));
 
 // Data states
 Map<String, Map<String, dynamic>> _allInteractions;
@@ -181,7 +188,8 @@ bool _interactionMatchesOperation(
       break;
     default:
       logger.error('No such operator: ${chartCol.field.operator}');
-      view.showAlert('Warning: Field operator ${chartCol.field.operator} listed in your config is not supported. Results may be misleading');
+      view.showAlert(
+          'Warning: Field operator ${chartCol.field.operator} listed in your config is not supported. Results may be misleading');
   }
   return false;
 }
@@ -194,18 +202,12 @@ void _computeChartBuckets(List<model.Chart> charts) {
     }
   }
 
-  // Consider only active filters from filter values
-  var activeFilterValues = {..._filterValues}
-    ..removeWhere((key, _) => !_activeFilters.contains(key));
-  var activeComparisonFilterValues = {..._comparisonFilterValues}
-    ..removeWhere((key, _) => !_activeFilters.contains(key));
-
   for (var interaction in _allInteractions.values) {
     // Check if this interaction falls within the active filter
     var addToPrimaryBucket =
-        _interactionMatchesFilters(interaction, activeFilterValues);
+        _interactionMatchesFilters(interaction, _activeFilterValues);
     var addToComparisonBucket =
-        _interactionMatchesFilters(interaction, activeComparisonFilterValues);
+        _interactionMatchesFilters(interaction, _activeComparisonFilterValues);
 
     // If the interaction doesnt fall in the active filters, continue
     if (!addToPrimaryBucket && !addToComparisonBucket) continue;
@@ -245,7 +247,23 @@ void handleNavToAnalysis() {
 
   view.renderFilterDropdowns(filterKeys, filterOptions, _dataComparisonEnabled);
 
-  _computeChartBuckets(_config.tabs[_selectedAnalysisTabIndex].charts);
+  var charts = _config.tabs[_selectedAnalysisTabIndex].charts;
+  _computeChartBuckets(charts);
+  for (var chart in charts) {
+    switch (chart.type) {
+      case model.ChartType.bar:
+        view.renderBarChart(
+            chart.title,
+            chart.narrative,
+            chart_helper.generateBarChartConfig(chart, _dataComparisonEnabled,
+                _activeFilterValues, _activeComparisonFilterValues));
+        break;
+      default:
+        logger.error('No such chart type ${chart.type}');
+        view.showAlert(
+            'Warning: Chart type ${chart.type} listed in your config is not supported.');
+    }
+  }
 }
 
 void handleNavToSettings() {
