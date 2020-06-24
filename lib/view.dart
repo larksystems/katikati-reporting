@@ -1,7 +1,6 @@
 import 'dart:html' as html;
 import 'controller.dart';
 import 'package:chartjs/chartjs.dart' as chartjs;
-import 'package:dashboard/utils.dart';
 
 const LOADING_MODAL_ID = 'loading-modal';
 
@@ -41,6 +40,12 @@ html.DivElement get filtersWrapper =>
     html.querySelector('#${FILTERS_WRAPPER_ID}');
 List<html.DivElement> get chartWrappers =>
     html.querySelectorAll('.${CHART_WRAPPER_CLASSNAME}');
+
+String generateFilterDropdownID(String key) => 'filter-dropdown-${key}';
+String generateComparisonFilterDropdownID(String key) =>
+    'comparison-filter-dropdown-${key}';
+String generateEnableCheckboxID(String key) => 'filter-option-${key}';
+String generateAnalyseTabID(String key) => 'analyse-tab-options-${key}';
 
 void init() {
   loginButton.onClick.listen((_) => command(UIAction.signinWithGoogle, null));
@@ -205,19 +210,20 @@ void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
   content.append(wrapper);
 }
 
-void enableFilterDropdown(String filterKey, {bool comparison}) {
+html.SelectElement _getFilterDropdown(String filterKey, {bool comparison}) {
   var dropdownID = comparison == true
       ? generateComparisonFilterDropdownID(filterKey)
       : generateFilterDropdownID(filterKey);
-  var dropdown = html.querySelector('#${dropdownID}') as html.SelectElement;
+  return html.querySelector('#${dropdownID}') as html.SelectElement;
+}
+
+void enableFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
   dropdown.disabled = false;
 }
 
 void disableFilterDropdown(String filterKey, {bool comparison}) {
-  var dropdownID = comparison == true
-      ? generateComparisonFilterDropdownID(filterKey)
-      : generateFilterDropdownID(filterKey);
-  var dropdown = html.querySelector('#${dropdownID}') as html.SelectElement;
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
   dropdown.disabled = true;
 }
 
