@@ -13,6 +13,8 @@ Map<String, model.Link> _navLinks = {
   'settings': model.Link('settings', 'Settings', handleNavToSettings)
 };
 
+const DEFAULT_FILTER_SELECT_VALUE = '__all';
+
 const UNABLE_TO_PARSE_CONFIG_ERROR_MSG =
     'Unable to parse "Config" to the required format';
 const UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG = 'Unable to fetch interactions';
@@ -243,19 +245,24 @@ void handleNavToAnalysis() {
 
 void _computeFilterDropdownsAndRender() {
   var filterKeys = _config.filters.map((filter) => filter.key).toList();
-  var selectedTab = _config.tabs[_selectedAnalysisTabIndex];
-  if (selectedTab.exclude_filters != null) {
-    filterKeys
-        .removeWhere((filter) => selectedTab.exclude_filters.contains(filter));
-  }
-
   var filterOptions = _uniqueFieldCategoryValues.map((key, setValues) {
     return MapEntry(
-        key, setValues.map((s) => s.toString()).toList()..add('__all'));
+        key,
+        setValues.map((s) => s.toString()).toList()
+          ..add(DEFAULT_FILTER_SELECT_VALUE));
   });
 
+  var initialFilterValues = {
+    for (var key in filterKeys) key: DEFAULT_FILTER_SELECT_VALUE
+  };
+
   view.renderFilterDropdowns(filterKeys, filterOptions, _activeFilters,
-      _filterValues, _comparisonFilterValues, _dataComparisonEnabled);
+      initialFilterValues, initialFilterValues, _dataComparisonEnabled);
+
+  var selectedTab = _config.tabs[_selectedAnalysisTabIndex];
+  for (var filterKey in selectedTab.exclude_filters ?? []) {
+    view.hideFilterRow(filterKey);
+  }
 }
 
 void _computeChartBucketsAndRender() {
@@ -284,6 +291,41 @@ void handleNavToSettings() {
   view.renderSettingsTab();
 }
 
+void _updateFiltersInView() {
+  var filterKeys = _config.filters.map((filter) => filter.key).toList();
+  var selectedTab = _config.tabs[_selectedAnalysisTabIndex];
+  var excludeKeys = selectedTab.exclude_filters ?? [];
+  for (var key in filterKeys) {
+    if (!_activeFilters.contains(key)) {
+      view.disableFilterOption(key);
+      view.disableFilterDropdown(key);
+      view.disableFilterDropdown(key, comparison: true);
+    } else {
+      view.enableFilterOption(key);
+      view.enableFilterDropdown(key);
+      view.enableFilterDropdown(key, comparison: true);
+    }
+
+    view.setFilterDropdownValue(
+        key, _filterValues[key] ?? DEFAULT_FILTER_SELECT_VALUE);
+    view.setFilterDropdownValue(
+        key, _comparisonFilterValues[key] ?? DEFAULT_FILTER_SELECT_VALUE,
+        comparison: true);
+
+    if (_dataComparisonEnabled) {
+      view.showFilterDropdown(key, comparison: true);
+    } else {
+      view.hideFilterDropdown(key, comparison: true);
+    }
+
+    if (excludeKeys.contains(key)) {
+      view.hideFilterRow(key);
+    } else {
+      view.showFilterRow(key);
+    }
+  }
+}
+
 // User actions
 void command(UIAction action, Data data) {
   switch (action) {
@@ -302,18 +344,16 @@ void command(UIAction action, Data data) {
       _activeFilters = {};
       _filterValues = {};
       _comparisonFilterValues = {};
-      view.removeFiltersWrapper();
+      _updateFiltersInView();
       view.removeAllChartWrappers();
-      _computeFilterDropdownsAndRender();
       _computeChartBucketsAndRender();
       logger.debug('Changed to analysis tab ${_selectedAnalysisTabIndex}');
       break;
     case UIAction.toggleDataComparison:
       var d = data as ToggleOptionEnabledData;
       _dataComparisonEnabled = d.enabled;
-      view.removeFiltersWrapper();
+      _updateFiltersInView();
       view.removeAllChartWrappers();
-      _computeFilterDropdownsAndRender();
       _computeChartBucketsAndRender();
       logger.debug('Data comparison changed to ${_dataComparisonEnabled}');
       break;

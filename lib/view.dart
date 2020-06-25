@@ -41,11 +41,12 @@ html.DivElement get filtersWrapper =>
 List<html.DivElement> get chartWrappers =>
     html.querySelectorAll('.${CHART_WRAPPER_CLASSNAME}');
 
-String generateFilterDropdownID(String key) => 'filter-dropdown-${key}';
-String generateComparisonFilterDropdownID(String key) =>
+String _generateFilterRowID(String key) => 'filter-row-${key}';
+String _generateFilterDropdownID(String key) => 'filter-dropdown-${key}';
+String _generateComparisonFilterDropdownID(String key) =>
     'comparison-filter-dropdown-${key}';
-String generateEnableCheckboxID(String key) => 'filter-option-${key}';
-String generateAnalyseTabID(String key) => 'analyse-tab-options-${key}';
+String _generateFilterCheckboxID(String key) => 'filter-option-${key}';
+String _generateAnalyseTabID(String key) => 'analyse-tab-options-${key}';
 
 void init() {
   loginButton.onClick.listen((_) => command(UIAction.signinWithGoogle, null));
@@ -140,8 +141,12 @@ void removeAllChartWrappers() {
   }
 }
 
-html.DivElement generateGridRowElement() {
-  return html.DivElement()..classes = ['row'];
+html.DivElement generateGridRowElement({String id}) {
+  var rowElement = html.DivElement()..classes = ['row'];
+  if (id != null) {
+    rowElement.id = id;
+  }
+  return rowElement;
 }
 
 html.DivElement generateGridLabelColumnElement() {
@@ -165,7 +170,7 @@ void renderAnalysisTabs(List<String> labels) {
     var radioOption = html.InputElement()
       ..type = 'radio'
       ..name = 'analyse-tab-options'
-      ..id = generateAnalyseTabID(i.toString())
+      ..id = _generateAnalyseTabID(i.toString())
       ..classes = ['form-check-input']
       ..checked = i == 0
       ..onChange.listen((e) {
@@ -173,7 +178,7 @@ void renderAnalysisTabs(List<String> labels) {
         command(UIAction.changeAnalysisTab, AnalysisTabChangeData(i));
       });
     var radioLabel = html.LabelElement()
-      ..htmlFor = generateAnalyseTabID(i.toString())
+      ..htmlFor = _generateAnalyseTabID(i.toString())
       ..classes = ['form-check-label']
       ..innerText = labels[i];
 
@@ -210,21 +215,83 @@ void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
   content.append(wrapper);
 }
 
+html.DivElement _getFilterRow(String filterKey) {
+  var filterRowID = _generateFilterRowID(filterKey);
+  return html.querySelector('#${filterRowID}') as html.DivElement;
+}
+
+void showFilterRow(String filterKey) {
+  var filterRow = _getFilterRow(filterKey);
+  if (filterRow.hidden != false) {
+    filterRow.hidden = false;
+  }
+}
+
+void hideFilterRow(String filterKey) {
+  var filterRow = _getFilterRow(filterKey);
+  if (filterRow.hidden != true) {
+    filterRow.hidden = true;
+  }
+}
+
 html.SelectElement _getFilterDropdown(String filterKey, {bool comparison}) {
   var dropdownID = comparison == true
-      ? generateComparisonFilterDropdownID(filterKey)
-      : generateFilterDropdownID(filterKey);
+      ? _generateComparisonFilterDropdownID(filterKey)
+      : _generateFilterDropdownID(filterKey);
   return html.querySelector('#${dropdownID}') as html.SelectElement;
 }
 
 void enableFilterDropdown(String filterKey, {bool comparison}) {
   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  dropdown.disabled = false;
+  if (dropdown.disabled != false) {
+    dropdown.disabled = false;
+  }
 }
 
 void disableFilterDropdown(String filterKey, {bool comparison}) {
   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  dropdown.disabled = true;
+  if (dropdown.disabled != true) {
+    dropdown.disabled = true;
+  }
+}
+
+void hideFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown.hidden != true) {
+    dropdown.hidden = true;
+  }
+}
+
+void showFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown.hidden != false) {
+    dropdown.hidden = false;
+  }
+}
+
+void setFilterDropdownValue(String filterKey, String value, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  dropdown.value = value;
+}
+
+html.CheckboxInputElement _getFilterOptionCheckbox(String filterKey) {
+  var filterCheckboxID = _generateFilterCheckboxID(filterKey);
+  return html.querySelector('#${filterCheckboxID}')
+      as html.CheckboxInputElement;
+}
+
+void enableFilterOption(String filterKey) {
+  var filterCheckbox = _getFilterOptionCheckbox(filterKey);
+  if (filterCheckbox.checked != true) {
+    filterCheckbox.checked = true;
+  }
+}
+
+void disableFilterOption(String filterKey) {
+  var filterCheckbox = _getFilterOptionCheckbox(filterKey);
+  if (filterCheckbox.checked != false) {
+    filterCheckbox.checked = false;
+  }
 }
 
 void renderFilterDropdowns(
@@ -239,12 +306,12 @@ void renderFilterDropdowns(
   var optionsCol = generateGridOptionsColumnElement();
 
   for (var key in filterKeys) {
-    var filterRow = generateGridRowElement();
+    var filterRow = generateGridRowElement(id: _generateFilterRowID(key));
     var checkboxCol = html.DivElement()..classes = ['col-3'];
     var filterCol = html.DivElement()..classes = ['col-3'];
 
     var checkboxWithLabel = _getCheckboxWithLabel(
-        generateEnableCheckboxID(key), key, activeKeys.contains(key),
+        _generateFilterCheckboxID(key), key, activeKeys.contains(key),
         (bool checked) {
       command(
           UIAction.toggleActiveFilter, ToggleActiveFilterData(key, checked));
@@ -252,9 +319,9 @@ void renderFilterDropdowns(
     checkboxCol.append(checkboxWithLabel);
 
     var filterDropdown = _getDropdown(
-        generateFilterDropdownID(key),
+        _generateFilterDropdownID(key),
         filterOptions[key].toList(),
-        initialFilterValues[key] ?? '__all',
+        initialFilterValues[key],
         !activeKeys.contains(key), (String value) {
       command(UIAction.setFilterValue, SetFilterValueData(key, value));
     });
@@ -268,9 +335,9 @@ void renderFilterDropdowns(
     var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
 
     var comparisonFilterDropdown = _getDropdown(
-        generateComparisonFilterDropdownID(key),
+        _generateComparisonFilterDropdownID(key),
         filterOptions[key].toList(),
-        initialFilterComparisonValues[key] ?? '__all',
+        initialFilterComparisonValues[key],
         !activeKeys.contains(key), (String value) {
       command(
           UIAction.setComparisonFilterValue, SetFilterValueData(key, value));
