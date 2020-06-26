@@ -5,7 +5,7 @@ String generateGeoMapID(String key) => 'geo-map-${key}';
 String generateGeoComparisonMapID(String key) => 'geo-map-comparison-${key}';
 
 MapboxMap generateMapboxMap(
-    dynamic mapData, String id, bool comparisonEnabled) {
+    String id, dynamic mapData, bool comparisonEnabled) {
   Mapbox.accessToken = constants.mapboxKey;
   return MapboxMap(
     MapOptions(

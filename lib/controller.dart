@@ -312,9 +312,8 @@ void _computeChartBucketsAndRender() {
   var charts = _config.tabs[_selectedAnalysisTabIndex].charts;
   _computeChartBuckets(charts);
 
-  for (var i = 0; i < charts.length; ++i) {
-    var chart = charts[i];
-    switch (charts[i].type) {
+  for (var chart in charts) {
+    switch (chart.type) {
       case model.ChartType.bar:
         view.renderBarChart(
             chart.title,
@@ -340,7 +339,6 @@ void _computeChartBucketsAndRender() {
         }
 
         view.renderGeoMap(
-          i.toString(),
           chart.title,
           chart.narrative,
           mapData,
