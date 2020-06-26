@@ -110,8 +110,8 @@ void init() async {
 void onLoginCompleted() async {
   view.showLoading();
 
-  await loadDataFromFirebase();
-  await loadGeoMaps();
+  await loadFirebaseData();
+  await loadGeoMapsData();
   _uniqueFieldCategoryValues =
       computeUniqFieldCategoryValues(_config.filters, _allInteractions);
   _selectedAnalysisTabIndex = 0;
@@ -126,7 +126,7 @@ void onLogoutCompleted() async {
   logger.debug('Delete all local data');
 }
 
-void loadDataFromFirebase() async {
+void loadFirebaseData() async {
   try {
     _configRaw = await fb.fetchConfig();
     _config = model.Config.fromData(_configRaw);
@@ -146,7 +146,7 @@ void loadDataFromFirebase() async {
   }
 }
 
-void loadGeoMaps() async {
+void loadGeoMapsData() async {
   for (var tab in _config.tabs) {
     for (var chart in tab.charts) {
       if (chart.type == model.ChartType.map) {
@@ -254,6 +254,14 @@ void _computeChartBuckets(List<model.Chart> charts) {
     var addToComparisonBucket =
         _interactionMatchesFilters(interaction, _activeComparisonFilterValues);
 
+    if (addToPrimaryBucket) {
+      ++_filterValuesCount;
+    }
+
+    if (addToComparisonBucket) {
+      ++_comparisonFilterValuesCount;
+    }
+
     // If the interaction doesnt fall in the active filters, continue
     if (!addToPrimaryBucket && !addToComparisonBucket) continue;
 
@@ -263,11 +271,9 @@ void _computeChartBuckets(List<model.Chart> charts) {
 
         if (addToPrimaryBucket) {
           ++chartCol.bucket[0];
-          ++_filterValuesCount;
         }
         if (addToComparisonBucket) {
           ++chartCol.bucket[1];
-          ++_comparisonFilterValuesCount;
         }
       }
     }
