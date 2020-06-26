@@ -1,4 +1,5 @@
 import 'dart:html' as html;
+import 'package:uuid/uuid.dart';
 import 'controller.dart';
 import 'package:chartjs/chartjs.dart' as chartjs;
 import 'package:mapbox_gl_dart/mapbox_gl_dart.dart';
@@ -23,6 +24,8 @@ const CHART_WRAPPER_CLASSNAME = 'chart';
 const MAPBOX_COL_CLASSNAME = 'mapbox-col';
 
 const CONTENT_ID = 'content';
+
+var uuid = Uuid();
 
 html.DivElement get loadingModal => html.querySelector('#${LOADING_MODAL_ID}');
 
@@ -362,7 +365,6 @@ void renderBarChart(
 }
 
 void renderGeoMap(
-    String id,
     String title,
     String narrative,
     dynamic mapData,
@@ -370,11 +372,12 @@ void renderGeoMap(
     Map<String, List<num>> mapComparisonFilterValues,
     bool comparisonEnabled,
     List<String> colors) {
+  var mapID = uuid.v4();
   var mapPlaceholder =
-      _generateGeoMapPlaceholder(title, narrative, id, comparisonEnabled);
+      _generateGeoMapPlaceholder(mapID, title, narrative, comparisonEnabled);
   content.append(mapPlaceholder);
 
-  var mapboxInstance = geomap_helpers.generateMapboxMap(mapData, id, false);
+  var mapboxInstance = geomap_helpers.generateMapboxMap(mapID, mapData, false);
   mapboxInstance.on(
       'load',
       (_) =>
@@ -382,7 +385,7 @@ void renderGeoMap(
 
   if (comparisonEnabled) {
     var mapboxComparisonInstance =
-        geomap_helpers.generateMapboxMap(mapData, id, true);
+        geomap_helpers.generateMapboxMap(mapID, mapData, true);
     mapboxComparisonInstance.on(
         'load',
         (_) => handleMapLoad(mapboxComparisonInstance, mapData,
@@ -459,7 +462,7 @@ html.DivElement _generateBarChart(
 }
 
 html.DivElement _generateGeoMapPlaceholder(
-    String title, String narrative, String id, bool comparisonEnabled) {
+    String id, String title, String narrative, bool comparisonEnabled) {
   var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];
 
   var titleElement = html.HeadingElement.h5()..text = title;

@@ -10,6 +10,7 @@ dependencies:
   chartjs:
     git: git@github.com:marianamarasoiu/chartjs.dart.git
   mapbox_gl_dart: ^0.1.4
+  uuid: 2.0.4
   codemirror: ^0.5.16+5.53.0
 
 dev_dependencies:
