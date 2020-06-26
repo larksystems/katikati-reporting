@@ -43,6 +43,7 @@ Map<String, String> get _activeComparisonFilterValues => {
 // Data states
 Map<String, Map<String, dynamic>> _allInteractions;
 Map<String, Set> _uniqueFieldCategoryValues;
+Map<String, dynamic> _configRaw;
 model.Config _config;
 
 // Actions
@@ -54,7 +55,8 @@ enum UIAction {
   toggleDataNormalisation,
   toggleActiveFilter,
   setFilterValue,
-  setComparisonFilterValue
+  setComparisonFilterValue,
+  saveConfigToFirebase
 }
 
 // Action data
@@ -85,6 +87,11 @@ class SetFilterValueData extends Data {
   String key;
   String value;
   SetFilterValueData(this.key, this.value);
+}
+
+class SaveConfigToFirebaseData extends Data {
+  String configRaw;
+  SaveConfigToFirebaseData(this.configRaw);
 }
 
 // Controller functions
@@ -121,7 +128,8 @@ void onLogoutCompleted() async {
 
 void loadDataFromFirebase() async {
   try {
-    _config = await fb.fetchConfig();
+    _configRaw = await fb.fetchConfig();
+    _config = model.Config.fromData(_configRaw);
   } catch (e) {
     view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
     logger.error(e);
@@ -354,8 +362,9 @@ void _computeChartBucketsAndRender() {
 
 void handleNavToSettings() {
   view.clearContentTab();
-  // todo: replace with actual contents for settings tab
-  view.renderSettingsTab();
+  var encoder = convert.JsonEncoder.withIndent('  ');
+  var configString = encoder.convert(_configRaw);
+  view.renderSettingsTab(configString);
 }
 
 void _updateFiltersInView() {
@@ -465,6 +474,17 @@ void command(UIAction action, Data data) {
           .debug('Set to comparison filter values, ${_comparisonFilterValues}');
       view.removeAllChartWrappers();
       _computeChartBucketsAndRender();
+      break;
+    case UIAction.saveConfigToFirebase:
+      var d = data as SaveConfigToFirebaseData;
+      var configRaw = d.configRaw;
+      try {
+        var configJSON = convert.jsonDecode(configRaw);
+        model.Config.fromData(configJSON);
+      } catch (e) {
+        view.showAlert('Your config doesn\'t fit the model, not saving!');
+        return;
+      }
       break;
     default:
   }

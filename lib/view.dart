@@ -3,6 +3,7 @@ import 'controller.dart';
 import 'package:chartjs/chartjs.dart' as chartjs;
 import 'package:mapbox_gl_dart/mapbox_gl_dart.dart';
 import 'package:dashboard/geomap_helpers.dart' as geomap_helpers;
+import 'package:codemirror/codemirror.dart' as code_mirror;
 
 const LOADING_MODAL_ID = 'loading-modal';
 
@@ -528,9 +529,27 @@ html.SelectElement _getDropdown(String id, List<String> options,
   return dropdownSelect;
 }
 
-void renderSettingsTab() {
-  clearContentTab();
-  content.append(html.DivElement()..innerText = 'Settings');
+void renderSettingsTab(String config) {
+  var wrapper = html.DivElement();
+  var textArea = html.TextAreaElement()
+    ..text = config
+    ..setAttribute('rows', '30');
+  var saveButton = html.ButtonElement()
+    ..classes = ['btn', 'btn-primary']
+    ..text = 'Update config';
+
+  wrapper.append(textArea);
+  wrapper.append(saveButton);
+  content.append(wrapper);
+
+  var editor = code_mirror.CodeMirror.fromTextArea(textArea, options: {
+    'mode': 'javascript',
+    'theme': 'default',
+    'lineNumbers': true,
+    'autoRefresh': true
+  });
+  editor.setSize(null, 600);
+  editor.focus();
 }
 
 void render404() {
