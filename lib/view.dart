@@ -22,6 +22,7 @@ const CARD_CLASSNAME = 'card';
 const CARD_BODY_CLASSNAME = 'card-body';
 const CHART_WRAPPER_CLASSNAME = 'chart';
 const MAPBOX_COL_CLASSNAME = 'mapbox-col';
+const CONFIG_SETTINGS_ALERT_ID = 'config-settings-alert';
 
 const CONTENT_ID = 'content';
 
@@ -47,6 +48,8 @@ html.DivElement get filtersWrapper =>
     html.querySelector('#${FILTERS_WRAPPER_ID}');
 List<html.DivElement> get chartWrappers =>
     html.querySelectorAll('.${CHART_WRAPPER_CLASSNAME}');
+html.DivElement get configSettingsAlert =>
+    html.querySelector('#${CONFIG_SETTINGS_ALERT_ID}');
 
 String _generateFilterRowID(String key) => 'filter-row-${key}';
 String _generateFilterDropdownID(String key) => 'filter-dropdown-${key}';
@@ -534,16 +537,12 @@ html.SelectElement _getDropdown(String id, List<String> options,
 
 void renderSettingsTab(String config) {
   var wrapper = html.DivElement();
+  content.append(wrapper);
+
   var textArea = html.TextAreaElement()
     ..text = config
     ..setAttribute('rows', '30');
-  var saveButton = html.ButtonElement()
-    ..classes = ['btn', 'btn-primary']
-    ..text = 'Update config';
-
   wrapper.append(textArea);
-  wrapper.append(saveButton);
-  content.append(wrapper);
 
   var editor = code_mirror.CodeMirror.fromTextArea(textArea, options: {
     'mode': 'javascript',
@@ -553,6 +552,35 @@ void renderSettingsTab(String config) {
   });
   editor.setSize(null, 600);
   editor.focus();
+
+  var alertElement = html.DivElement()
+    ..classes = ['alert']
+    ..id = CONFIG_SETTINGS_ALERT_ID
+    ..hidden = true;
+  wrapper.append(alertElement);
+
+  var saveButton = html.ButtonElement()
+    ..classes = ['btn', 'btn-primary']
+    ..text = 'Update config'
+    ..onClick.listen((e) {
+      var data = editor.getDoc().getValue();
+      command(UIAction.saveConfigToFirebase, SaveConfigToFirebaseData(data));
+    });
+  wrapper.append(saveButton);
+}
+
+void showConfigSettingsAlert(String message, bool isError) {
+  configSettingsAlert
+    ..text = message
+    ..classes.toggle('alert-danger', isError)
+    ..classes.toggle('alert-success', !isError)
+    ..hidden = false;
+}
+
+void hideConfigSettingsAlert() {
+  configSettingsAlert
+    ..text = ''
+    ..hidden = true;
 }
 
 void render404() {

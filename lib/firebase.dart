@@ -82,6 +82,12 @@ Future<Map<String, dynamic>> fetchConfig() async {
   return configSnapshot.data();
 }
 
+Future<Null> updateConfig(Map<String, dynamic> data) async {
+  var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
+  var configSnap = await chartsConfigRef.update(data: data);
+  return configSnap;
+}
+
 Future<Map<String, Map<String, dynamic>>> fetchInteractions(String path) async {
   if (path == null || path == '') {
     throw ArgumentError(

@@ -285,6 +285,11 @@ void _computeChartBuckets(List<model.Chart> charts) {
 // Render methods
 void handleNavToAnalysis() {
   view.clearContentTab();
+  _selectedAnalysisTabIndex = 0;
+  _activeFilters = {};
+  _filterValues = {};
+  _comparisonFilterValues = {};
+
   var tabLabels =
       _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
   view.renderAnalysisTabs(tabLabels);
@@ -407,7 +412,7 @@ void _updateFiltersInView() {
 }
 
 // User actions
-void command(UIAction action, Data data) {
+void command(UIAction action, Data data) async {
   switch (action) {
     case UIAction.signinWithGoogle:
       fb.signInWithGoogle();
@@ -482,14 +487,52 @@ void command(UIAction action, Data data) {
     case UIAction.saveConfigToFirebase:
       var d = data as SaveConfigToFirebaseData;
       var configRaw = d.configRaw;
+      var configJSON;
+      view.hideConfigSettingsAlert();
+
       try {
-        var configJSON = convert.jsonDecode(configRaw);
-        model.Config.fromData(configJSON);
+        configJSON = convert.jsonDecode(configRaw);
+        var config = model.Config.fromData(configJSON);
+        validateConfig(config);
       } catch (e) {
-        view.showAlert('Your config doesn\'t fit the model, not saving!');
+        if (e is StateError || e is FormatException) {
+          view.showConfigSettingsAlert(e.message, true);
+        } else {
+          view.showConfigSettingsAlert(e.toString(), true);
+        }
         return;
       }
+      await fb.updateConfig(configJSON);
+      view.showConfigSettingsAlert('Config saved successfully', false);
+      _configRaw = configJSON;
+      _config = model.Config.fromData(_configRaw);
       break;
     default:
   }
+}
+
+void validateConfig(model.Config config) {
+  if (config.data_paths == null) {
+    throw StateError('data_paths cannot be empty');
+  }
+
+  if (config.data_paths['interactions'] == null) {
+    throw StateError('data_paths > interactions cannot be empty');
+  }
+
+  if (config.filters == null) {
+    throw StateError('filters cannot be empty');
+  }
+
+  for (var filter in config.filters) {
+    if (filter.key == null) {
+      throw StateError('filters {key} cannot be empty');
+    }
+  }
+
+  if (config.tabs == null) {
+    throw StateError('tabs cannot be empty');
+  }
+
+  // todo: Add more?
 }
