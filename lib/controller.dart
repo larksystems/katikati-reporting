@@ -1,5 +1,7 @@
 library controller;
 
+import 'dart:convert' as convert;
+import 'dart:html' as html;
 import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
@@ -28,6 +30,9 @@ bool _dataNormalisationEnabled = false;
 Set<String> _activeFilters = {};
 Map<String, String> _filterValues = {};
 Map<String, String> _comparisonFilterValues = {};
+int _filterValuesCount = 0;
+int _comparisonFilterValuesCount = 0;
+Map<String, Map<model.GeoRegionLevel, dynamic>> _mapsGeoJSON = {};
 
 Map<String, String> get _activeFilterValues =>
     {..._filterValues}..removeWhere((key, _) => !_activeFilters.contains(key));
@@ -99,6 +104,7 @@ void onLoginCompleted() async {
   view.showLoading();
 
   await loadDataFromFirebase();
+  await loadGeoMaps();
   _uniqueFieldCategoryValues =
       computeUniqFieldCategoryValues(_config.filters, _allInteractions);
   _selectedAnalysisTabIndex = 0;
@@ -129,6 +135,32 @@ void loadDataFromFirebase() async {
     view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
     logger.error(e);
     rethrow;
+  }
+}
+
+void loadGeoMaps() async {
+  for (var tab in _config.tabs) {
+    for (var chart in tab.charts) {
+      if (chart.type == model.ChartType.map) {
+        var country = chart.geography.country;
+        var regionLevel = chart.geography.regionLevel;
+        var regionLevelStr = regionLevel.toString().split('.').last;
+        var mapPath = 'assets/maps/${country}/${regionLevelStr}.geojson';
+        var geostr;
+        try {
+          geostr = await html.HttpRequest.getString(mapPath);
+        } catch (e) {
+          view.showAlert(
+              'Failed to get geography map ${country}/${regionLevelStr}');
+          rethrow;
+        }
+
+        var geojson = convert.jsonDecode(geostr);
+
+        _mapsGeoJSON[country] = _mapsGeoJSON[country] ?? {};
+        _mapsGeoJSON[country][regionLevel] = geojson;
+      }
+    }
   }
 }
 
@@ -197,6 +229,9 @@ bool _interactionMatchesOperation(
 }
 
 void _computeChartBuckets(List<model.Chart> charts) {
+  _filterValuesCount = 0;
+  _comparisonFilterValuesCount = 0;
+
   // reset bucket to [filter(0), comparisonFilter(0)] for each chart
   for (var chart in charts) {
     for (var chartCol in chart.fields) {
@@ -220,9 +255,11 @@ void _computeChartBuckets(List<model.Chart> charts) {
 
         if (addToPrimaryBucket) {
           ++chartCol.bucket[0];
+          ++_filterValuesCount;
         }
         if (addToComparisonBucket) {
           ++chartCol.bucket[1];
+          ++_comparisonFilterValuesCount;
         }
       }
     }
@@ -268,14 +305,44 @@ void _computeFilterDropdownsAndRender() {
 void _computeChartBucketsAndRender() {
   var charts = _config.tabs[_selectedAnalysisTabIndex].charts;
   _computeChartBuckets(charts);
-  for (var chart in charts) {
-    switch (chart.type) {
+
+  for (var i = 0; i < charts.length; ++i) {
+    var chart = charts[i];
+    switch (charts[i].type) {
       case model.ChartType.bar:
         view.renderBarChart(
             chart.title,
             chart.narrative,
             chart_helper.generateBarChartConfig(chart, _dataComparisonEnabled,
                 _activeFilterValues, _activeComparisonFilterValues));
+        break;
+      case model.ChartType.map:
+        var mapData =
+            _mapsGeoJSON[chart.geography.country][chart.geography.regionLevel];
+        var mapValues = Map<String, List<num>>();
+        var mapComparisonValues = Map<String, List<num>>();
+        for (var field in chart.fields) {
+          var regionName = field.field.value.toString();
+          mapValues[regionName] = [
+            field.bucket[0],
+            field.bucket[0] / _filterValuesCount,
+          ];
+          mapComparisonValues[regionName] = [
+            field.bucket[1],
+            field.bucket[1] / _comparisonFilterValuesCount
+          ];
+        }
+
+        view.renderGeoMap(
+          i.toString(),
+          chart.title,
+          chart.narrative,
+          mapData,
+          mapValues,
+          mapComparisonValues,
+          _dataComparisonEnabled,
+          chart.colors ?? chart_helper.barChartDefaultColors,
+        );
         break;
       default:
         logger.error('No such chart type ${chart.type}');
