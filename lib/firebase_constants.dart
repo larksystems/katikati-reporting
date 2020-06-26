@@ -25,3 +25,6 @@ String get measurementId => _constants['measurementId'];
 List<String> get allowedEmailDomains =>
     _constants['allowedEmailDomains'].split('|');
 String get metadataPath => _constants['metadataPath'];
+
+String get mapboxKey => _constants['mapboxKey'];
+String get mapboxStyleURL => _constants['mapboxStyleURL'];
