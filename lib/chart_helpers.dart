@@ -51,7 +51,7 @@ ChartConfiguration generateBarChartConfig(
   var comparisonFilterData = List<int>();
 
   for (var chartCol in chart.fields) {
-    labels.add(chartCol.label);
+    labels.add(chartCol.label ?? chartCol.field.value);
     filterData.add(chartCol.bucket[0]);
     comparisonFilterData.add(chartCol.bucket[1]);
   }

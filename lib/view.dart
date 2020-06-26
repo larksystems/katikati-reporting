@@ -8,6 +8,7 @@ const LOGIN_MODAL_ID = 'login-modal';
 const LOGIN_EMAIL_DOMAINS_SPAN_ID = 'login-email-domains';
 const LOGIN_ERROR_ALERT_ID = 'login-error';
 const LOGIN_BUTTON_ID = 'login-button';
+const FILTERS_WRAPPER_ID = 'filters';
 
 const NAV_BRAND_ID = 'nav-brand';
 const NAV_LINKS_WRAPPER_ID = 'nav-links-wrapper';
@@ -15,6 +16,7 @@ const NAV_ITEM_CSS_CLASSNAME = 'nav-item';
 const ACTIVE_CSS_CLASSNAME = 'active';
 const CARD_CLASSNAME = 'card';
 const CARD_BODY_CLASSNAME = 'card-body';
+const CHART_WRAPPER_CLASSNAME = 'chart';
 
 const CONTENT_ID = 'content';
 
@@ -34,6 +36,17 @@ List<html.LIElement> get navLinks => html.querySelectorAll(
     'nav #${NAV_LINKS_WRAPPER_ID} .${NAV_ITEM_CSS_CLASSNAME}');
 
 html.DivElement get content => html.querySelector('#${CONTENT_ID}');
+html.DivElement get filtersWrapper =>
+    html.querySelector('#${FILTERS_WRAPPER_ID}');
+List<html.DivElement> get chartWrappers =>
+    html.querySelectorAll('.${CHART_WRAPPER_CLASSNAME}');
+
+String _generateFilterRowID(String key) => 'filter-row-${key}';
+String _generateFilterDropdownID(String key) => 'filter-dropdown-${key}';
+String _generateComparisonFilterDropdownID(String key) =>
+    'comparison-filter-dropdown-${key}';
+String _generateFilterCheckboxID(String key) => 'filter-option-${key}';
+String _generateAnalyseTabID(String key) => 'analyse-tab-options-${key}';
 
 void init() {
   loginButton.onClick.listen((_) => command(UIAction.signinWithGoogle, null));
@@ -107,8 +120,33 @@ void clearContentTab() {
   content.children.clear();
 }
 
-html.DivElement generateGridRowElement() {
-  return html.DivElement()..classes = ['row'];
+void removeFiltersWrapper() {
+  if (filtersWrapper == null) {
+    logger
+        .error('Trying to remove non-existant selector #${FILTERS_WRAPPER_ID}');
+    return;
+  }
+
+  filtersWrapper.remove();
+}
+
+void removeAllChartWrappers() {
+  for (var wrapper in chartWrappers) {
+    if (wrapper == null) {
+      logger.error(
+          'Trying to remove non-existant selector .${CHART_WRAPPER_CLASSNAME}');
+      continue;
+    }
+    wrapper.remove();
+  }
+}
+
+html.DivElement generateGridRowElement({String id}) {
+  var rowElement = html.DivElement()..classes = ['row'];
+  if (id != null) {
+    rowElement.id = id;
+  }
+  return rowElement;
 }
 
 html.DivElement generateGridLabelColumnElement() {
@@ -132,7 +170,7 @@ void renderAnalysisTabs(List<String> labels) {
     var radioOption = html.InputElement()
       ..type = 'radio'
       ..name = 'analyse-tab-options'
-      ..id = 'analyse-tab-options-${i}'
+      ..id = _generateAnalyseTabID(i.toString())
       ..classes = ['form-check-input']
       ..checked = i == 0
       ..onChange.listen((e) {
@@ -140,7 +178,7 @@ void renderAnalysisTabs(List<String> labels) {
         command(UIAction.changeAnalysisTab, AnalysisTabChangeData(i));
       });
     var radioLabel = html.LabelElement()
-      ..htmlFor = 'analyse-tab-options-${i}'
+      ..htmlFor = _generateAnalyseTabID(i.toString())
       ..classes = ['form-check-label']
       ..innerText = labels[i];
 
@@ -177,28 +215,114 @@ void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
   content.append(wrapper);
 }
 
+html.DivElement _getFilterRow(String filterKey) {
+  var filterRowID = _generateFilterRowID(filterKey);
+  return html.querySelector('#${filterRowID}') as html.DivElement;
+}
+
+void showFilterRow(String filterKey) {
+  var filterRow = _getFilterRow(filterKey);
+  if (filterRow.hidden != false) {
+    filterRow.hidden = false;
+  }
+}
+
+void hideFilterRow(String filterKey) {
+  var filterRow = _getFilterRow(filterKey);
+  if (filterRow.hidden != true) {
+    filterRow.hidden = true;
+  }
+}
+
+html.SelectElement _getFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdownID = comparison == true
+      ? _generateComparisonFilterDropdownID(filterKey)
+      : _generateFilterDropdownID(filterKey);
+  return html.querySelector('#${dropdownID}') as html.SelectElement;
+}
+
+void enableFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown.disabled != false) {
+    dropdown.disabled = false;
+  }
+}
+
+void disableFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown.disabled != true) {
+    dropdown.disabled = true;
+  }
+}
+
+void hideFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown.hidden != true) {
+    dropdown.hidden = true;
+  }
+}
+
+void showFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown.hidden != false) {
+    dropdown.hidden = false;
+  }
+}
+
+void setFilterDropdownValue(String filterKey, String value, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  dropdown.value = value;
+}
+
+html.CheckboxInputElement _getFilterOptionCheckbox(String filterKey) {
+  var filterCheckboxID = _generateFilterCheckboxID(filterKey);
+  return html.querySelector('#${filterCheckboxID}')
+      as html.CheckboxInputElement;
+}
+
+void enableFilterOption(String filterKey) {
+  var filterCheckbox = _getFilterOptionCheckbox(filterKey);
+  if (filterCheckbox.checked != true) {
+    filterCheckbox.checked = true;
+  }
+}
+
+void disableFilterOption(String filterKey) {
+  var filterCheckbox = _getFilterOptionCheckbox(filterKey);
+  if (filterCheckbox.checked != false) {
+    filterCheckbox.checked = false;
+  }
+}
+
 void renderFilterDropdowns(
     List<String> filterKeys,
     Map<String, List<String>> filterOptions,
+    Set<String> activeKeys,
+    Map<String, String> initialFilterValues,
+    Map<String, String> initialFilterComparisonValues,
     bool shouldRenderComparisonFilters) {
-  var wrapper = generateGridRowElement();
+  var wrapper = generateGridRowElement()..id = FILTERS_WRAPPER_ID;
   var labelCol = generateGridLabelColumnElement()..innerText = 'Filters';
   var optionsCol = generateGridOptionsColumnElement();
 
   for (var key in filterKeys) {
-    var filterRow = generateGridRowElement();
+    var filterRow = generateGridRowElement(id: _generateFilterRowID(key));
     var checkboxCol = html.DivElement()..classes = ['col-3'];
     var filterCol = html.DivElement()..classes = ['col-3'];
 
     var checkboxWithLabel = _getCheckboxWithLabel(
-        'filter-option-${key}', key, false, (bool checked) {
+        _generateFilterCheckboxID(key), key, activeKeys.contains(key),
+        (bool checked) {
       command(
           UIAction.toggleActiveFilter, ToggleActiveFilterData(key, checked));
     });
     checkboxCol.append(checkboxWithLabel);
 
-    var filterDropdown =
-        _getDropdown(filterOptions[key].toList(), '__all', (String value) {
+    var filterDropdown = _getDropdown(
+        _generateFilterDropdownID(key),
+        filterOptions[key].toList(),
+        initialFilterValues[key],
+        !activeKeys.contains(key), (String value) {
       command(UIAction.setFilterValue, SetFilterValueData(key, value));
     });
     filterCol.append(filterDropdown);
@@ -209,9 +333,12 @@ void renderFilterDropdowns(
 
     if (!shouldRenderComparisonFilters) continue;
     var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
-    // todo: remove __all hardcoding
-    var comparisonFilterDropdown =
-        _getDropdown(filterOptions[key].toList(), '__all', (String value) {
+
+    var comparisonFilterDropdown = _getDropdown(
+        _generateComparisonFilterDropdownID(key),
+        filterOptions[key].toList(),
+        initialFilterComparisonValues[key],
+        !activeKeys.contains(key), (String value) {
       command(
           UIAction.setComparisonFilterValue, SetFilterValueData(key, value));
     });
@@ -232,7 +359,7 @@ void renderBarChart(
 
 html.DivElement _generateBarChart(
     String title, String narrative, chartjs.ChartConfiguration chartConfig) {
-  var wrapper = html.DivElement();
+  var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];
 
   var titleElement = html.HeadingElement.h5()..text = title;
   var narrativeElement = html.ParagraphElement()..text = narrative;
@@ -272,10 +399,12 @@ html.DivElement _getCheckboxWithLabel(
   return checkboxWrapper;
 }
 
-html.SelectElement _getDropdown(
-    List<String> options, String selectedOption, Function(String) onChange) {
+html.SelectElement _getDropdown(String id, List<String> options,
+    String selectedOption, bool disabled, Function(String) onChange) {
   var dropdownSelect = html.SelectElement()
+    ..id = id
     ..classes = ['form-control']
+    ..disabled = disabled
     ..onChange.listen((e) => onChange((e.target as html.SelectElement).value));
 
   for (var option in options) {
