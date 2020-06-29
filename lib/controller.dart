@@ -512,6 +512,7 @@ void command(UIAction action, Data data) async {
 }
 
 void validateConfig(model.Config config) {
+  // Data paths
   if (config.data_paths == null) {
     throw StateError('data_paths cannot be empty');
   }
@@ -520,8 +521,9 @@ void validateConfig(model.Config config) {
     throw StateError('data_paths > interactions cannot be empty');
   }
 
+  // Filters
   if (config.filters == null) {
-    throw StateError('filters cannot be empty');
+    throw StateError('filters need to be an array');
   }
 
   for (var filter in config.filters) {
@@ -530,9 +532,31 @@ void validateConfig(model.Config config) {
     }
   }
 
+  // Tabs
   if (config.tabs == null) {
     throw StateError('tabs cannot be empty');
   }
 
-  // todo: Add more?
+  for (var tab in config.tabs) {
+    for (var chart in tab.charts) {
+      for (var field in chart.fields) {
+        if (field.field.key == null) {
+          throw StateError('Chart field cannot be empty');
+        }
+        if (field.field.value == null) {
+          throw StateError('Chart field value cannot be empty');
+        }
+        // no need to check for operator, as it is caught by enums
+      }
+
+      // geography map
+      if (chart.type == model.ChartType.map) {
+        if (chart.geography == null ||
+            chart.geography.country == null ||
+            chart.geography.regionLevel == null) {
+          throw StateError('Geography map not specified');
+        }
+      }
+    }
+  }
 }
