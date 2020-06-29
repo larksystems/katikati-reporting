@@ -539,17 +539,11 @@ void renderSettingsTab(String config) {
   var wrapper = html.DivElement();
   content.append(wrapper);
 
-  var textArea = html.TextAreaElement()
-    ..text = config
-    ..setAttribute('rows', '30');
+  var textArea = html.TextAreaElement()..text = config;
   wrapper.append(textArea);
 
-  var editor = code_mirror.CodeMirror.fromTextArea(textArea, options: {
-    'mode': 'javascript',
-    'theme': 'default',
-    'lineNumbers': true,
-    'autoRefresh': true
-  });
+  var editor = code_mirror.CodeMirror.fromTextArea(textArea,
+      options: {'mode': 'javascript', 'lineNumbers': true});
   editor.setSize(null, 600);
   editor.focus();
 
@@ -581,11 +575,6 @@ void hideConfigSettingsAlert() {
   configSettingsAlert
     ..text = ''
     ..hidden = true;
-}
-
-void render404() {
-  clearContentTab();
-  content.append(html.DivElement()..innerText = '404 page not found');
 }
 
 void showAlert(String message) {
