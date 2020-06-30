@@ -1,6 +1,10 @@
 import 'dart:html' as html;
+import 'package:uuid/uuid.dart';
 import 'controller.dart';
 import 'package:chartjs/chartjs.dart' as chartjs;
+import 'package:mapbox_gl_dart/mapbox_gl_dart.dart';
+import 'package:dashboard/geomap_helpers.dart' as geomap_helpers;
+import 'package:codemirror/codemirror.dart' as code_mirror;
 
 const LOADING_MODAL_ID = 'loading-modal';
 
@@ -17,8 +21,12 @@ const ACTIVE_CSS_CLASSNAME = 'active';
 const CARD_CLASSNAME = 'card';
 const CARD_BODY_CLASSNAME = 'card-body';
 const CHART_WRAPPER_CLASSNAME = 'chart';
+const MAPBOX_COL_CLASSNAME = 'mapbox-col';
+const CONFIG_SETTINGS_ALERT_ID = 'config-settings-alert';
 
 const CONTENT_ID = 'content';
+
+var uuid = Uuid();
 
 html.DivElement get loadingModal => html.querySelector('#${LOADING_MODAL_ID}');
 
@@ -40,6 +48,8 @@ html.DivElement get filtersWrapper =>
     html.querySelector('#${FILTERS_WRAPPER_ID}');
 List<html.DivElement> get chartWrappers =>
     html.querySelectorAll('.${CHART_WRAPPER_CLASSNAME}');
+html.DivElement get configSettingsAlert =>
+    html.querySelector('#${CONFIG_SETTINGS_ALERT_ID}');
 
 String _generateFilterRowID(String key) => 'filter-row-${key}';
 String _generateFilterDropdownID(String key) => 'filter-dropdown-${key}';
@@ -357,6 +367,81 @@ void renderBarChart(
   content.append(chart);
 }
 
+void renderGeoMap(
+    String title,
+    String narrative,
+    dynamic mapData,
+    Map<String, List<num>> mapFilterValues,
+    Map<String, List<num>> mapComparisonFilterValues,
+    bool comparisonEnabled,
+    List<String> colors) {
+  var mapID = uuid.v4();
+  var mapPlaceholder =
+      _generateGeoMapPlaceholder(mapID, title, narrative, comparisonEnabled);
+  content.append(mapPlaceholder);
+
+  var mapboxInstance = geomap_helpers.generateMapboxMap(mapID, mapData, false);
+  mapboxInstance.on(
+      'load',
+      (_) =>
+          handleMapLoad(mapboxInstance, mapData, mapFilterValues, colors[0]));
+
+  if (comparisonEnabled) {
+    var mapboxComparisonInstance =
+        geomap_helpers.generateMapboxMap(mapID, mapData, true);
+    mapboxComparisonInstance.on(
+        'load',
+        (_) => handleMapLoad(mapboxComparisonInstance, mapData,
+            mapComparisonFilterValues, colors[1]));
+  }
+}
+
+void handleMapLoad(MapboxMap mapInstance, dynamic mapData,
+    Map<String, List<num>> mapValues, String fillColor) {
+  for (var feature in mapData['features']) {
+    var regionID = feature['properties']['regId'];
+    var regionName = feature['properties']['regName'];
+    mapInstance.addSource(regionID, {'type': 'geojson', 'data': feature});
+
+    mapInstance.addLayer({
+      'id': 'border-${regionID}',
+      'type': 'line',
+      'source': '${regionID}',
+      'layout': {},
+      'paint': {'line-width': 1, 'line-color': '#888'}
+    });
+
+    mapInstance.addLayer({
+      'id': 'fill-${regionID}',
+      'type': 'fill',
+      'source': '${regionID}',
+      'layout': {},
+      'paint': {
+        'fill-color': fillColor,
+        'fill-opacity': (mapValues[regionID] ?? [0, 0])[1],
+      }
+    });
+
+    if (mapValues[regionID] == null) continue;
+
+    mapInstance.addLayer({
+      'id': 'label-${regionID}',
+      'type': 'symbol',
+      'source': '${regionID}',
+      'layout': {
+        'text-field': '${regionName} (${mapValues[regionID][0]})',
+        'text-size': 10,
+      },
+      'paint': {
+        'text-color': '#000000',
+        'text-halo-blur': 1,
+        'text-halo-color': '#FFF',
+        'text-halo-width': 2
+      },
+    });
+  }
+}
+
 html.DivElement _generateBarChart(
     String title, String narrative, chartjs.ChartConfiguration chartConfig) {
   var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];
@@ -376,6 +461,38 @@ html.DivElement _generateBarChart(
 
   chartjs.Chart(canvas, chartConfig);
 
+  return wrapper;
+}
+
+html.DivElement _generateGeoMapPlaceholder(
+    String id, String title, String narrative, bool comparisonEnabled) {
+  var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];
+
+  var titleElement = html.HeadingElement.h5()..text = title;
+  var narrativeElement = html.ParagraphElement()..text = narrative;
+  wrapper.append(titleElement);
+  wrapper.append(narrativeElement);
+
+  var card = html.DivElement()..classes = [CARD_CLASSNAME];
+  var cardBody = html.DivElement()..classes = [CARD_BODY_CLASSNAME];
+  card.append(cardBody);
+
+  var mapRow = generateGridRowElement();
+  var mapCol = html.DivElement()
+    ..classes = ['col', MAPBOX_COL_CLASSNAME]
+    ..id = geomap_helpers.generateGeoMapID(id);
+  mapRow.append(mapCol);
+
+  if (comparisonEnabled) {
+    var mapComparisonCol = html.DivElement()
+      ..classes = ['col', MAPBOX_COL_CLASSNAME]
+      ..id = geomap_helpers.generateGeoComparisonMapID(id);
+    mapRow.append(mapComparisonCol);
+  }
+
+  cardBody.append(mapRow);
+
+  wrapper.append(card);
   return wrapper;
 }
 
@@ -418,14 +535,48 @@ html.SelectElement _getDropdown(String id, List<String> options,
   return dropdownSelect;
 }
 
-void renderSettingsTab() {
-  clearContentTab();
-  content.append(html.DivElement()..innerText = 'Settings');
+void renderSettingsTab(String config) {
+  var wrapper = html.DivElement();
+  content.append(wrapper);
+
+  var textArea = html.TextAreaElement()..text = config;
+  wrapper.append(textArea);
+
+  var editor = code_mirror.CodeMirror.fromTextArea(textArea, options: {
+    'mode': {'name': 'javascript', 'json': true},
+    'lineNumbers': true
+  });
+  editor.setSize(null, 600);
+  editor.focus();
+
+  var alertElement = html.DivElement()
+    ..classes = ['alert']
+    ..id = CONFIG_SETTINGS_ALERT_ID
+    ..hidden = true;
+  wrapper.append(alertElement);
+
+  var saveButton = html.ButtonElement()
+    ..classes = ['btn', 'btn-primary']
+    ..text = 'Update config'
+    ..onClick.listen((e) {
+      var data = editor.getDoc().getValue();
+      command(UIAction.saveConfigToFirebase, SaveConfigToFirebaseData(data));
+    });
+  wrapper.append(saveButton);
 }
 
-void render404() {
-  clearContentTab();
-  content.append(html.DivElement()..innerText = '404 page not found');
+void showConfigSettingsAlert(String message, bool isError) {
+  configSettingsAlert
+    ..text = message
+    ..classes.toggle('alert-danger', isError)
+    ..classes.toggle('alert-success', !isError)
+    ..hidden = false;
+}
+
+void hideConfigSettingsAlert() {
+  configSettingsAlert
+    ..text = ''
+    ..hidden = true;
 }
 
 void showAlert(String message) {

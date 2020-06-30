@@ -1,5 +1,7 @@
 library controller;
 
+import 'dart:convert' as convert;
+import 'dart:html' as html;
 import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
@@ -28,6 +30,9 @@ bool _dataNormalisationEnabled = false;
 Set<String> _activeFilters = {};
 Map<String, String> _filterValues = {};
 Map<String, String> _comparisonFilterValues = {};
+int _filterValuesCount = 0;
+int _comparisonFilterValuesCount = 0;
+Map<String, Map<model.GeoRegionLevel, dynamic>> _mapsGeoJSON = {};
 
 Map<String, String> get _activeFilterValues =>
     {..._filterValues}..removeWhere((key, _) => !_activeFilters.contains(key));
@@ -38,6 +43,7 @@ Map<String, String> get _activeComparisonFilterValues => {
 // Data states
 Map<String, Map<String, dynamic>> _allInteractions;
 Map<String, Set> _uniqueFieldCategoryValues;
+Map<String, dynamic> _configRaw;
 model.Config _config;
 
 // Actions
@@ -49,7 +55,8 @@ enum UIAction {
   toggleDataNormalisation,
   toggleActiveFilter,
   setFilterValue,
-  setComparisonFilterValue
+  setComparisonFilterValue,
+  saveConfigToFirebase
 }
 
 // Action data
@@ -82,6 +89,11 @@ class SetFilterValueData extends Data {
   SetFilterValueData(this.key, this.value);
 }
 
+class SaveConfigToFirebaseData extends Data {
+  String configRaw;
+  SaveConfigToFirebaseData(this.configRaw);
+}
+
 // Controller functions
 void init() async {
   view.init();
@@ -98,7 +110,8 @@ void init() async {
 void onLoginCompleted() async {
   view.showLoading();
 
-  await loadDataFromFirebase();
+  await loadFirebaseData();
+  await loadGeoMapsData();
   _uniqueFieldCategoryValues =
       computeUniqFieldCategoryValues(_config.filters, _allInteractions);
   _selectedAnalysisTabIndex = 0;
@@ -113,9 +126,10 @@ void onLogoutCompleted() async {
   logger.debug('Delete all local data');
 }
 
-void loadDataFromFirebase() async {
+void loadFirebaseData() async {
   try {
-    _config = await fb.fetchConfig();
+    _configRaw = await fb.fetchConfig();
+    _config = model.Config.fromData(_configRaw);
   } catch (e) {
     view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
     logger.error(e);
@@ -129,6 +143,32 @@ void loadDataFromFirebase() async {
     view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
     logger.error(e);
     rethrow;
+  }
+}
+
+void loadGeoMapsData() async {
+  for (var tab in _config.tabs) {
+    for (var chart in tab.charts) {
+      if (chart.type == model.ChartType.map) {
+        var country = chart.geography.country;
+        var regionLevel = chart.geography.regionLevel;
+        var regionLevelStr = regionLevel.toString().split('.').last;
+        var mapPath = 'assets/maps/${country}/${regionLevelStr}.geojson';
+        var geostr;
+        try {
+          geostr = await html.HttpRequest.getString(mapPath);
+        } catch (e) {
+          view.showAlert(
+              'Failed to get geography map ${country}/${regionLevelStr}');
+          rethrow;
+        }
+
+        var geojson = convert.jsonDecode(geostr);
+
+        _mapsGeoJSON[country] = _mapsGeoJSON[country] ?? {};
+        _mapsGeoJSON[country][regionLevel] = geojson;
+      }
+    }
   }
 }
 
@@ -197,6 +237,9 @@ bool _interactionMatchesOperation(
 }
 
 void _computeChartBuckets(List<model.Chart> charts) {
+  _filterValuesCount = 0;
+  _comparisonFilterValuesCount = 0;
+
   // reset bucket to [filter(0), comparisonFilter(0)] for each chart
   for (var chart in charts) {
     for (var chartCol in chart.fields) {
@@ -210,6 +253,14 @@ void _computeChartBuckets(List<model.Chart> charts) {
         _interactionMatchesFilters(interaction, _activeFilterValues);
     var addToComparisonBucket =
         _interactionMatchesFilters(interaction, _activeComparisonFilterValues);
+
+    if (addToPrimaryBucket) {
+      ++_filterValuesCount;
+    }
+
+    if (addToComparisonBucket) {
+      ++_comparisonFilterValuesCount;
+    }
 
     // If the interaction doesnt fall in the active filters, continue
     if (!addToPrimaryBucket && !addToComparisonBucket) continue;
@@ -234,6 +285,11 @@ void _computeChartBuckets(List<model.Chart> charts) {
 // Render methods
 void handleNavToAnalysis() {
   view.clearContentTab();
+  _selectedAnalysisTabIndex = 0;
+  _activeFilters = {};
+  _filterValues = {};
+  _comparisonFilterValues = {};
+
   var tabLabels =
       _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
   view.renderAnalysisTabs(tabLabels);
@@ -268,6 +324,7 @@ void _computeFilterDropdownsAndRender() {
 void _computeChartBucketsAndRender() {
   var charts = _config.tabs[_selectedAnalysisTabIndex].charts;
   _computeChartBuckets(charts);
+
   for (var chart in charts) {
     switch (chart.type) {
       case model.ChartType.bar:
@@ -276,6 +333,33 @@ void _computeChartBucketsAndRender() {
             chart.narrative,
             chart_helper.generateBarChartConfig(chart, _dataComparisonEnabled,
                 _activeFilterValues, _activeComparisonFilterValues));
+        break;
+      case model.ChartType.map:
+        var mapData =
+            _mapsGeoJSON[chart.geography.country][chart.geography.regionLevel];
+        var mapValues = Map<String, List<num>>();
+        var mapComparisonValues = Map<String, List<num>>();
+        for (var field in chart.fields) {
+          var regionName = field.field.value.toString();
+          mapValues[regionName] = [
+            field.bucket[0],
+            field.bucket[0] / _filterValuesCount,
+          ];
+          mapComparisonValues[regionName] = [
+            field.bucket[1],
+            field.bucket[1] / _comparisonFilterValuesCount
+          ];
+        }
+
+        view.renderGeoMap(
+          chart.title,
+          chart.narrative,
+          mapData,
+          mapValues,
+          mapComparisonValues,
+          _dataComparisonEnabled,
+          chart.colors ?? chart_helper.barChartDefaultColors,
+        );
         break;
       default:
         logger.error('No such chart type ${chart.type}');
@@ -287,8 +371,9 @@ void _computeChartBucketsAndRender() {
 
 void handleNavToSettings() {
   view.clearContentTab();
-  // todo: replace with actual contents for settings tab
-  view.renderSettingsTab();
+  var encoder = convert.JsonEncoder.withIndent('  ');
+  var configString = encoder.convert(_configRaw);
+  view.renderSettingsTab(configString);
 }
 
 void _updateFiltersInView() {
@@ -327,7 +412,7 @@ void _updateFiltersInView() {
 }
 
 // User actions
-void command(UIAction action, Data data) {
+void command(UIAction action, Data data) async {
   switch (action) {
     case UIAction.signinWithGoogle:
       fb.signInWithGoogle();
@@ -399,6 +484,87 @@ void command(UIAction action, Data data) {
       view.removeAllChartWrappers();
       _computeChartBucketsAndRender();
       break;
+    case UIAction.saveConfigToFirebase:
+      var d = data as SaveConfigToFirebaseData;
+      var configRaw = d.configRaw;
+      var configJSON;
+      view.hideConfigSettingsAlert();
+
+      try {
+        configJSON = convert.jsonDecode(configRaw);
+        var config = model.Config.fromData(configJSON);
+        validateConfig(config);
+      } catch (e) {
+        if (e is StateError || e is FormatException) {
+          view.showConfigSettingsAlert(e.message, true);
+        } else {
+          view.showConfigSettingsAlert(e.toString(), true);
+        }
+        return;
+      }
+
+      try {
+        await fb.updateConfig(configJSON);
+      } catch (e) {
+        view.showAlert(e);
+        logger.error(e);
+        return;
+      }
+
+      view.showConfigSettingsAlert('Config saved successfully', false);
+      _configRaw = configJSON;
+      _config = model.Config.fromData(_configRaw);
+      break;
     default:
+  }
+}
+
+void validateConfig(model.Config config) {
+  // Data paths
+  if (config.data_paths == null) {
+    throw StateError('data_paths cannot be empty');
+  }
+
+  if (config.data_paths['interactions'] == null) {
+    throw StateError('data_paths > interactions cannot be empty');
+  }
+
+  // Filters
+  if (config.filters == null) {
+    throw StateError('filters need to be an array');
+  }
+
+  for (var filter in config.filters) {
+    if (filter.key == null) {
+      throw StateError('filters {key} cannot be empty');
+    }
+  }
+
+  // Tabs
+  if (config.tabs == null) {
+    throw StateError('tabs cannot be empty');
+  }
+
+  for (var tab in config.tabs) {
+    for (var chart in tab.charts) {
+      for (var field in chart.fields) {
+        if (field.field.key == null) {
+          throw StateError('Chart field cannot be empty');
+        }
+        if (field.field.value == null) {
+          throw StateError('Chart field value cannot be empty');
+        }
+        // no need to check for operator, as it is caught by enums
+      }
+
+      // geography map
+      if (chart.type == model.ChartType.map) {
+        if (chart.geography == null ||
+            chart.geography.country == null ||
+            chart.geography.regionLevel == null) {
+          throw StateError('Geography map not specified');
+        }
+      }
+    }
   }
 }

@@ -5,3 +5,16 @@
 #content {
   padding: 72px 0;
 }
+
+.mapbox-col {
+  height: 640px;
+}
+
+.mapboxgl-canvas {
+  max-width: calc(100% - 30px);
+  border: 1px solid #b3b3b3;
+}
+
+.CodeMirror {
+  border: 1px solid #000;
+}

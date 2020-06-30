@@ -86,6 +86,7 @@ class Chart {
   String narrative;
   List<Field> fields;
   List<String> colors;
+  Geography geography;
 
   static Chart fromSnapshot(DocSnapshot doc, [Chart modelObj]) =>
       fromData(doc.data, modelObj)..docId = doc.id;
@@ -97,7 +98,8 @@ class Chart {
       ..title = String_fromData(data['title'])
       ..narrative = String_fromData(data['narrative'])
       ..fields = List_fromData<Field>(data['fields'], Field.fromData)
-      ..colors = List_fromData<String>(data['colors'], String_fromData);
+      ..colors = List_fromData<String>(data['colors'], String_fromData)
+      ..geography = Geography.fromData(data['geography']);
   }
 
   static void listen(DocStorage docStorage, ChartCollectionListener listener, String collectionRoot) =>
@@ -110,6 +112,7 @@ class Chart {
       if (narrative != null) 'narrative': narrative,
       if (fields != null) 'fields': fields.map((elem) => elem?.toData()).toList(),
       if (colors != null) 'colors': colors,
+      if (geography != null) 'geography': geography.toData(),
     };
   }
 
@@ -234,6 +237,72 @@ typedef void FilterCollectionListener(
   List<Filter> modified,
   List<Filter> removed,
 );
+
+class Geography {
+  String docId;
+  String country;
+  GeoRegionLevel regionLevel;
+
+  static Geography fromSnapshot(DocSnapshot doc, [Geography modelObj]) =>
+      fromData(doc.data, modelObj)..docId = doc.id;
+
+  static Geography fromData(data, [Geography modelObj]) {
+    if (data == null) return null;
+    return (modelObj ?? Geography())
+      ..country = String_fromData(data['country'])
+      ..regionLevel = GeoRegionLevel.fromString(data['regionLevel'] as String);
+  }
+
+  static void listen(DocStorage docStorage, GeographyCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Geography>(docStorage, listener, collectionRoot, Geography.fromSnapshot);
+
+  Map<String, dynamic> toData() {
+    return {
+      if (country != null) 'country': country,
+      if (regionLevel != null) 'regionLevel': regionLevel.toString(),
+    };
+  }
+
+  String toString() => 'Geography [$docId]: ${toData().toString()}';
+}
+typedef void GeographyCollectionListener(
+  List<Geography> added,
+  List<Geography> modified,
+  List<Geography> removed,
+);
+
+class GeoRegionLevel {
+  static const city = GeoRegionLevel('city');
+  static const state = GeoRegionLevel('state');
+  static const country = GeoRegionLevel('country');
+
+  static const values = <GeoRegionLevel>[
+    city,
+    state,
+    country,
+  ];
+
+  static GeoRegionLevel fromString(String text, [GeoRegionLevel defaultValue = GeoRegionLevel.state]) {
+    if (GeoRegionLevel_fromStringOverride != null) {
+      var value = GeoRegionLevel_fromStringOverride(text);
+      if (value != null) return value;
+    }
+    if (text != null) {
+      const prefix = 'GeoRegionLevel.';
+      String valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
+      for (var value in values) {
+        if (value.name == valueName) return value;
+      }
+    }
+    log.warning('unknown GeoRegionLevel $text');
+    return defaultValue;
+  }
+
+  final String name;
+  const GeoRegionLevel(this.name);
+  String toString() => 'GeoRegionLevel.$name';
+}
+GeoRegionLevel Function(String text) GeoRegionLevel_fromStringOverride;
 
 class FieldOperator {
   static const equals = FieldOperator('equals');

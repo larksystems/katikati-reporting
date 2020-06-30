@@ -1,7 +1,6 @@
 import 'package:firebase/firebase.dart' as firebase;
 import 'package:dashboard/firebase_constants.dart' as fb_constants;
 import 'package:dashboard/view.dart' as view;
-import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/logger.dart';
 
 Logger logger = Logger('firebase.dart');
@@ -76,13 +75,17 @@ void _fbAuthChanged(
 }
 
 // Read data
-Future<model.Config> fetchConfig() async {
+Future<Map<String, dynamic>> fetchConfig() async {
   logger.debug('Fetching config from firebase ..');
   var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
   var configSnapshot = await chartsConfigRef.get();
-  var configData = configSnapshot.data();
+  return configSnapshot.data();
+}
 
-  return model.Config.fromData(configData);
+Future<Null> updateConfig(Map<String, dynamic> data) async {
+  var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
+  var configSnap = await chartsConfigRef.update(data: data);
+  return configSnap;
 }
 
 Future<Map<String, Map<String, dynamic>>> fetchInteractions(String path) async {
