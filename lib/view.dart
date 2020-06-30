@@ -18,6 +18,8 @@ const NAV_BRAND_ID = 'nav-brand';
 const NAV_LINKS_WRAPPER_ID = 'nav-links-wrapper';
 const NAV_ITEM_CSS_CLASSNAME = 'nav-item';
 const ACTIVE_CSS_CLASSNAME = 'active';
+const FILTER_ROW_CLASSNAME = 'filter-row';
+const FILTER_ROW_LABEL_CLASSNAME = 'filter-row-label';
 const CARD_CLASSNAME = 'card';
 const CARD_BODY_CLASSNAME = 'card-body';
 const CHART_WRAPPER_CLASSNAME = 'chart';
@@ -176,9 +178,10 @@ html.DivElement generateGridOptionsColumnElement() {
 }
 
 void renderAnalysisTabs(List<String> labels) {
-  var wrapper = generateGridRowElement(classes: ['filter-row']);
-  var labelCol = generateGridLabelColumnElement(classes: ['filter-row-label'])
-    ..innerText = 'Analyse';
+  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
+  var labelCol =
+      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
+        ..innerText = 'Analyse';
   var optionsCol = generateGridOptionsColumnElement();
 
   for (var i = 0; i < labels.length; ++i) {
@@ -210,9 +213,10 @@ void renderAnalysisTabs(List<String> labels) {
 }
 
 void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
-  var wrapper = generateGridRowElement(classes: ['filter-row']);
-  var labelCol = generateGridLabelColumnElement(classes: ['filter-row-label'])
-    ..innerText = 'Options';
+  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
+  var labelCol =
+      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
+        ..innerText = 'Options';
   var optionsCol = generateGridOptionsColumnElement();
 
   var comparisonCheckbox = _getCheckboxWithLabel(
@@ -319,10 +323,11 @@ void renderFilterDropdowns(
     Map<String, String> initialFilterValues,
     Map<String, String> initialFilterComparisonValues,
     bool shouldRenderComparisonFilters) {
-  var wrapper = generateGridRowElement(classes: ['filter-row'])
+  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME])
     ..id = FILTERS_WRAPPER_ID;
-  var labelCol = generateGridLabelColumnElement(classes: ['filter-row-label'])
-    ..innerText = 'Filters';
+  var labelCol =
+      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
+        ..innerText = 'Filters';
   var optionsCol = generateGridOptionsColumnElement();
 
   for (var key in filterKeys) {
