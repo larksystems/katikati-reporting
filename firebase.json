@@ -1,12 +1,17 @@
 {
   "database": {
-    "rules": "database.rules.json"
+    "rules": "deploy/database.rules.json"
   },
   "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
+    "rules": "deploy/firestore.rules",
+    "indexes": "deploy/firestore.indexes.json"
   },
   "hosting": {
-    "public": "build"
+    "public": "build",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
   }
 }
