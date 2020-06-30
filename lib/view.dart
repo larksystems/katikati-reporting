@@ -4,6 +4,7 @@ import 'controller.dart';
 import 'package:chartjs/chartjs.dart' as chartjs;
 import 'package:mapbox_gl_dart/mapbox_gl_dart.dart';
 import 'package:dashboard/geomap_helpers.dart' as geomap_helpers;
+import 'package:codemirror/codemirror.dart' as code_mirror;
 
 const LOADING_MODAL_ID = 'loading-modal';
 
@@ -21,6 +22,7 @@ const CARD_CLASSNAME = 'card';
 const CARD_BODY_CLASSNAME = 'card-body';
 const CHART_WRAPPER_CLASSNAME = 'chart';
 const MAPBOX_COL_CLASSNAME = 'mapbox-col';
+const CONFIG_SETTINGS_ALERT_ID = 'config-settings-alert';
 
 const CONTENT_ID = 'content';
 
@@ -46,6 +48,8 @@ html.DivElement get filtersWrapper =>
     html.querySelector('#${FILTERS_WRAPPER_ID}');
 List<html.DivElement> get chartWrappers =>
     html.querySelectorAll('.${CHART_WRAPPER_CLASSNAME}');
+html.DivElement get configSettingsAlert =>
+    html.querySelector('#${CONFIG_SETTINGS_ALERT_ID}');
 
 String _generateFilterRowID(String key) => 'filter-row-${key}';
 String _generateFilterDropdownID(String key) => 'filter-dropdown-${key}';
@@ -531,14 +535,48 @@ html.SelectElement _getDropdown(String id, List<String> options,
   return dropdownSelect;
 }
 
-void renderSettingsTab() {
-  clearContentTab();
-  content.append(html.DivElement()..innerText = 'Settings');
+void renderSettingsTab(String config) {
+  var wrapper = html.DivElement();
+  content.append(wrapper);
+
+  var textArea = html.TextAreaElement()..text = config;
+  wrapper.append(textArea);
+
+  var editor = code_mirror.CodeMirror.fromTextArea(textArea, options: {
+    'mode': {'name': 'javascript', 'json': true},
+    'lineNumbers': true
+  });
+  editor.setSize(null, 600);
+  editor.focus();
+
+  var alertElement = html.DivElement()
+    ..classes = ['alert']
+    ..id = CONFIG_SETTINGS_ALERT_ID
+    ..hidden = true;
+  wrapper.append(alertElement);
+
+  var saveButton = html.ButtonElement()
+    ..classes = ['btn', 'btn-primary']
+    ..text = 'Update config'
+    ..onClick.listen((e) {
+      var data = editor.getDoc().getValue();
+      command(UIAction.saveConfigToFirebase, SaveConfigToFirebaseData(data));
+    });
+  wrapper.append(saveButton);
 }
 
-void render404() {
-  clearContentTab();
-  content.append(html.DivElement()..innerText = '404 page not found');
+void showConfigSettingsAlert(String message, bool isError) {
+  configSettingsAlert
+    ..text = message
+    ..classes.toggle('alert-danger', isError)
+    ..classes.toggle('alert-success', !isError)
+    ..hidden = false;
+}
+
+void hideConfigSettingsAlert() {
+  configSettingsAlert
+    ..text = ''
+    ..hidden = true;
 }
 
 void showAlert(String message) {
