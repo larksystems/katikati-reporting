@@ -502,7 +502,15 @@ void command(UIAction action, Data data) async {
         }
         return;
       }
-      await fb.updateConfig(configJSON);
+
+      try {
+        await fb.updateConfig(configJSON);
+      } catch (e) {
+        view.showAlert(e);
+        logger.error(e);
+        return;
+      }
+
       view.showConfigSettingsAlert('Config saved successfully', false);
       _configRaw = configJSON;
       _config = model.Config.fromData(_configRaw);

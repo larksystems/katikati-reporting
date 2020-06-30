@@ -542,8 +542,10 @@ void renderSettingsTab(String config) {
   var textArea = html.TextAreaElement()..text = config;
   wrapper.append(textArea);
 
-  var editor = code_mirror.CodeMirror.fromTextArea(textArea,
-      options: {'mode': 'javascript', 'lineNumbers': true});
+  var editor = code_mirror.CodeMirror.fromTextArea(textArea, options: {
+    'mode': {'name': 'javascript', 'json': true},
+    'lineNumbers': true
+  });
   editor.setSize(null, 600);
   editor.focus();
 
