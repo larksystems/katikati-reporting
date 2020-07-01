@@ -465,7 +465,6 @@ void command(UIAction action, Data data) async {
       _dataNormalisationEnabled = d.enabled;
       logger
           .debug('Data normalisation changed to ${_dataNormalisationEnabled}');
-      // todo: handle for data normalisation
       view.removeAllChartWrappers();
       _computeChartBucketsAndRender();
       break;
