@@ -6,8 +6,8 @@ void main(List<String> arguments) async {
     throw ArgumentError('dart dev.dart <proj-name-from-project_config.json>');
   }
 
-  var baseConfigFile = File('deploy/base_config.json');
-  var projConfigFile = File('deploy/project_config.json');
+  var baseConfigFile = File('config/base_config.json');
+  var projConfigFile = File('config/project_config.json');
   if (!await baseConfigFile.exists() || !await projConfigFile.exists()) {
     throw ArgumentError('Config files not present');
   }

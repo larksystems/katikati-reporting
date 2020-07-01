@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 void main() async {
-  var baseConfigFile = File('deploy/base_config.json');
-  var projConfigFile = File('deploy/project_config.json');
+  var baseConfigFile = File('config/base_config.json');
+  var projConfigFile = File('config/project_config.json');
   if (!await baseConfigFile.exists() || !await projConfigFile.exists()) {
     throw ArgumentError('Config files not present');
   }
