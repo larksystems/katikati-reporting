@@ -22,9 +22,9 @@ ChartDataSets _generateBarChartDataset(
       data: data);
 }
 
-ChartOptions _generateBarChartOptions() {
-  // todo: Make labelString configurable after the normalisation is done
-  var labelString = 'Number of interactions';
+ChartOptions _generateBarChartOptions(bool dataNormalisationEnabled) {
+  var labelPrepend = dataNormalisationEnabled ? 'Percentage' : 'Number';
+  var labelString = '${labelPrepend} of interactions';
   var chartX = ChartXAxe()
     ..stacked = false
     ..barPercentage = 1;
@@ -33,9 +33,19 @@ ChartOptions _generateBarChartOptions() {
     ..stacked = false
     ..scaleLabel = ScaleTitleOptions(labelString: labelString, display: true)
     ..ticks = (LinearTickOptions()..min = 0);
+
+  var tooltipLabelCallback = (ChartTooltipItem tooltipItem, ChartData data) {
+    var xLabel = data.datasets[tooltipItem.datasetIndex].label;
+    var yLabel = tooltipItem.yLabel;
+    var append = dataNormalisationEnabled ? '%' : '';
+    return '${xLabel}: ${yLabel}${append}';
+  };
+
   return ChartOptions(
       responsive: true,
-      tooltips: ChartTooltipOptions(mode: 'index'),
+      tooltips: ChartTooltipOptions(
+          mode: 'index',
+          callbacks: ChartTooltipCallback(label: tooltipLabelCallback)),
       legend: ChartLegendOptions(
           position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
       scales: ChartScales(display: true, xAxes: [chartX], yAxes: [chartY]));
@@ -44,6 +54,7 @@ ChartOptions _generateBarChartOptions() {
 ChartConfiguration generateBarChartConfig(
     model.Chart chart,
     bool dataComparisonEnabled,
+    bool dataNormalisationEnabled,
     Map<String, String> activeFilterValues,
     Map<String, String> activeComparisonFilterValues) {
   var labels = [];
@@ -72,5 +83,7 @@ ChartConfiguration generateBarChartConfig(
 
   var dataset = ChartData(labels: labels, datasets: datasets);
   return ChartConfiguration(
-      type: 'bar', data: dataset, options: _generateBarChartOptions());
+      type: 'bar',
+      data: dataset,
+      options: _generateBarChartOptions(dataNormalisationEnabled));
 }
