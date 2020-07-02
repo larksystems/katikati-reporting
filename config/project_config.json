@@ -1,6 +1,6 @@
 {
   "covid19-som": {
     "metadataPath": "datasets/covid19-som/metadata/chart-config",
-    "allowedEmailDomains": "lark.systems|africasvoices.org"
+    "allowedEmailDomains": ["lark.systems", "africasvoices.org"]
   }
 }
