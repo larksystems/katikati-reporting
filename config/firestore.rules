@@ -10,6 +10,7 @@ service cloud.firestore {
     }
     match /{document=**} {
       allow read: if
+        request.auth != null &&
       	request.auth.token.email_verified &&
         (request.auth.token.email.matches(".*@africasvoices.org$") ||
         request.auth.token.email.matches(".*@lark.systems$"));
