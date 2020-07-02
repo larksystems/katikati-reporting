@@ -18,6 +18,8 @@ const NAV_BRAND_ID = 'nav-brand';
 const NAV_LINKS_WRAPPER_ID = 'nav-links-wrapper';
 const NAV_ITEM_CSS_CLASSNAME = 'nav-item';
 const ACTIVE_CSS_CLASSNAME = 'active';
+const FILTER_ROW_CLASSNAME = 'filter-row';
+const FILTER_ROW_LABEL_CLASSNAME = 'filter-row-label';
 const CARD_CLASSNAME = 'card';
 const CARD_BODY_CLASSNAME = 'card-body';
 const CHART_WRAPPER_CLASSNAME = 'chart';
@@ -151,17 +153,23 @@ void removeAllChartWrappers() {
   }
 }
 
-html.DivElement generateGridRowElement({String id}) {
-  var rowElement = html.DivElement()..classes = ['row'];
+html.DivElement generateGridRowElement({String id, List<String> classes}) {
+  var rowElement = html.DivElement()..classes = ['row', ...(classes ?? [])];
   if (id != null) {
     rowElement.id = id;
   }
   return rowElement;
 }
 
-html.DivElement generateGridLabelColumnElement() {
+html.DivElement generateGridLabelColumnElement({List<String> classes}) {
   return html.DivElement()
-    ..classes = ['col-lg-2', 'col-md-3', 'col-sm-12', 'col-xs-12'];
+    ..classes = [
+      'col-lg-2',
+      'col-md-3',
+      'col-sm-12',
+      'col-xs-12',
+      ...(classes ?? [])
+    ];
 }
 
 html.DivElement generateGridOptionsColumnElement() {
@@ -170,8 +178,10 @@ html.DivElement generateGridOptionsColumnElement() {
 }
 
 void renderAnalysisTabs(List<String> labels) {
-  var wrapper = generateGridRowElement();
-  var labelCol = generateGridLabelColumnElement()..innerText = 'Analyse';
+  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
+  var labelCol =
+      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
+        ..innerText = 'Analyse';
   var optionsCol = generateGridOptionsColumnElement();
 
   for (var i = 0; i < labels.length; ++i) {
@@ -203,8 +213,10 @@ void renderAnalysisTabs(List<String> labels) {
 }
 
 void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
-  var wrapper = generateGridRowElement();
-  var labelCol = generateGridLabelColumnElement()..innerText = 'Options';
+  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
+  var labelCol =
+      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
+        ..innerText = 'Options';
   var optionsCol = generateGridOptionsColumnElement();
 
   var comparisonCheckbox = _getCheckboxWithLabel(
@@ -311,8 +323,11 @@ void renderFilterDropdowns(
     Map<String, String> initialFilterValues,
     Map<String, String> initialFilterComparisonValues,
     bool shouldRenderComparisonFilters) {
-  var wrapper = generateGridRowElement()..id = FILTERS_WRAPPER_ID;
-  var labelCol = generateGridLabelColumnElement()..innerText = 'Filters';
+  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME])
+    ..id = FILTERS_WRAPPER_ID;
+  var labelCol =
+      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
+        ..innerText = 'Filters';
   var optionsCol = generateGridOptionsColumnElement();
 
   for (var key in filterKeys) {
