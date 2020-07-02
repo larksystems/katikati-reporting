@@ -444,13 +444,13 @@ void handleMapLoad(
 
     if (mapValues[regionID] == null) continue;
 
-    var valueAppend = normalisationEnabled ? '%' : '';
+    var suffix = normalisationEnabled ? '%' : '';
     mapInstance.addLayer({
       'id': 'label-${regionID}',
       'type': 'symbol',
       'source': '${regionID}',
       'layout': {
-        'text-field': '${regionName} (${mapValues[regionID][0]}${valueAppend})',
+        'text-field': '${regionName} (${mapValues[regionID][0]}${suffix})',
         'text-size': 10,
       },
       'paint': {

@@ -37,8 +37,8 @@ ChartOptions _generateBarChartOptions(bool dataNormalisationEnabled) {
   var tooltipLabelCallback = (ChartTooltipItem tooltipItem, ChartData data) {
     var xLabel = data.datasets[tooltipItem.datasetIndex].label;
     var yLabel = tooltipItem.yLabel;
-    var append = dataNormalisationEnabled ? '%' : '';
-    return '${xLabel}: ${yLabel}${append}';
+    var suffix = dataNormalisationEnabled ? '%' : '';
+    return '${xLabel}: ${yLabel}${suffix}';
   };
 
   return ChartOptions(

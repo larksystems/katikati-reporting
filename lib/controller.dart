@@ -358,13 +358,16 @@ void _computeChartBucketsAndRender() {
           var regionName = field.field.value.toString();
           var normalisationValue =
               _dataNormalisationEnabled ? 100 : _filterValuesCount;
+          var comparisonNormalisationValue =
+              _dataNormalisationEnabled ? 100 : _comparisonFilterValuesCount;
+
           mapValues[regionName] = [
             field.bucket[0],
             field.bucket[0] / normalisationValue,
           ];
           mapComparisonValues[regionName] = [
             field.bucket[1],
-            field.bucket[1] / normalisationValue
+            field.bucket[1] / comparisonNormalisationValue
           ];
         }
 
