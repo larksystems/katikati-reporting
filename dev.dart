@@ -10,7 +10,7 @@ Future<File> fetchConfigFile(String path, String type) async {
   return file;
 }
 
-void main(List<String> arguments) async {
+void main({List<String> arguments}) async {
   var baseConfigFile = await fetchConfigFile('config/base_config.json', 'base');
   var baseConfigRaw = await baseConfigFile.readAsString();
   Map<String, dynamic> baseConfig = jsonDecode(baseConfigRaw);
