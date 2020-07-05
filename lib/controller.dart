@@ -279,6 +279,17 @@ void _computeChartBuckets(List<model.Chart> charts) {
     }
   }
 
+  if (_dataNormalisationEnabled) {
+    for (var chart in charts) {
+      for (var chartCol in chart.fields) {
+        chartCol.bucket = [
+          (chartCol.bucket[0] * 100 / _filterValuesCount).truncate(),
+          (chartCol.bucket[1] * 100 / _comparisonFilterValuesCount).truncate()
+        ];
+      }
+    }
+  }
+
   logger.debug('Computed chart buckets ${charts}');
 }
 
@@ -331,8 +342,12 @@ void _computeChartBucketsAndRender() {
         view.renderBarChart(
             chart.title,
             chart.narrative,
-            chart_helper.generateBarChartConfig(chart, _dataComparisonEnabled,
-                _activeFilterValues, _activeComparisonFilterValues));
+            chart_helper.generateBarChartConfig(
+                chart,
+                _dataComparisonEnabled,
+                _dataNormalisationEnabled,
+                _activeFilterValues,
+                _activeComparisonFilterValues));
         break;
       case model.ChartType.map:
         var mapData =
@@ -341,13 +356,18 @@ void _computeChartBucketsAndRender() {
         var mapComparisonValues = Map<String, List<num>>();
         for (var field in chart.fields) {
           var regionName = field.field.value.toString();
+          var normalisationValue =
+              _dataNormalisationEnabled ? 100 : _filterValuesCount;
+          var comparisonNormalisationValue =
+              _dataNormalisationEnabled ? 100 : _comparisonFilterValuesCount;
+
           mapValues[regionName] = [
             field.bucket[0],
-            field.bucket[0] / _filterValuesCount,
+            field.bucket[0] / normalisationValue,
           ];
           mapComparisonValues[regionName] = [
             field.bucket[1],
-            field.bucket[1] / _comparisonFilterValuesCount
+            field.bucket[1] / comparisonNormalisationValue
           ];
         }
 
@@ -358,6 +378,7 @@ void _computeChartBucketsAndRender() {
           mapValues,
           mapComparisonValues,
           _dataComparisonEnabled,
+          _dataNormalisationEnabled,
           chart.colors ?? chart_helper.barChartDefaultColors,
         );
         break;
@@ -447,7 +468,8 @@ void command(UIAction action, Data data) async {
       _dataNormalisationEnabled = d.enabled;
       logger
           .debug('Data normalisation changed to ${_dataNormalisationEnabled}');
-      // todo: handle for data normalisation
+      view.removeAllChartWrappers();
+      _computeChartBucketsAndRender();
       break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;

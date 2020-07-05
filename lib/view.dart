@@ -389,6 +389,7 @@ void renderGeoMap(
     Map<String, List<num>> mapFilterValues,
     Map<String, List<num>> mapComparisonFilterValues,
     bool comparisonEnabled,
+    bool normalisationEnabled,
     List<String> colors) {
   var mapID = uuid.v4();
   var mapPlaceholder =
@@ -398,8 +399,8 @@ void renderGeoMap(
   var mapboxInstance = geomap_helpers.generateMapboxMap(mapID, mapData, false);
   mapboxInstance.on(
       'load',
-      (_) =>
-          handleMapLoad(mapboxInstance, mapData, mapFilterValues, colors[0]));
+      (_) => handleMapLoad(mapboxInstance, mapData, mapFilterValues,
+          normalisationEnabled, colors[0]));
 
   if (comparisonEnabled) {
     var mapboxComparisonInstance =
@@ -407,12 +408,16 @@ void renderGeoMap(
     mapboxComparisonInstance.on(
         'load',
         (_) => handleMapLoad(mapboxComparisonInstance, mapData,
-            mapComparisonFilterValues, colors[1]));
+            mapComparisonFilterValues, normalisationEnabled, colors[1]));
   }
 }
 
-void handleMapLoad(MapboxMap mapInstance, dynamic mapData,
-    Map<String, List<num>> mapValues, String fillColor) {
+void handleMapLoad(
+    MapboxMap mapInstance,
+    dynamic mapData,
+    Map<String, List<num>> mapValues,
+    bool normalisationEnabled,
+    String fillColor) {
   for (var feature in mapData['features']) {
     var regionID = feature['properties']['regId'];
     var regionName = feature['properties']['regName'];
@@ -439,12 +444,13 @@ void handleMapLoad(MapboxMap mapInstance, dynamic mapData,
 
     if (mapValues[regionID] == null) continue;
 
+    var suffix = normalisationEnabled ? '%' : '';
     mapInstance.addLayer({
       'id': 'label-${regionID}',
       'type': 'symbol',
       'source': '${regionID}',
       'layout': {
-        'text-field': '${regionName} (${mapValues[regionID][0]})',
+        'text-field': '${regionName} (${mapValues[regionID][0]}${suffix})',
         'text-size': 10,
       },
       'paint': {
