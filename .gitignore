@@ -12,3 +12,7 @@ doc/api/
 
 # Firebase constants
 **/firebase-constants.json
+**/constants.json
+
+firebase-debug.log
+.firebase

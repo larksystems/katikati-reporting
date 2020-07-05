@@ -102,8 +102,7 @@ void init() async {
     view.appendNavLink(n.pathname, n.label, _currentNavLink == n.pathname);
   });
 
-  await fb.init(
-      'assets/firebase-constants.json', onLoginCompleted, onLogoutCompleted);
+  await fb.init('assets/constants.json', onLoginCompleted, onLogoutCompleted);
 }
 
 // Login, logout, load data
