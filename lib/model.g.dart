@@ -128,7 +128,7 @@ class Field {
   String docId;
   String label;
   String tooltip;
-  List<int> bucket;
+  List<num> bucket;
   FieldOperation field;
 
   static Field fromSnapshot(DocSnapshot doc, [Field modelObj]) =>
@@ -139,7 +139,7 @@ class Field {
     return (modelObj ?? Field())
       ..label = String_fromData(data['label'])
       ..tooltip = String_fromData(data['tooltip'])
-      ..bucket = List_fromData<int>(data['bucket'], int_fromData)
+      ..bucket = List_fromData<num>(data['bucket'], num_fromData)
       ..field = FieldOperation.fromData(data['field']);
   }
 
@@ -405,6 +405,17 @@ int int_fromData(data) {
 }
 
 String String_fromData(data) => data?.toString();
+
+num num_fromData(data) {
+  if (data == null) return null;
+  if (data is num) return data;
+  if (data is String) {
+    var result = num.tryParse(data);
+    if (result is num) return result;
+  }
+  log.warning('unknown num value: ${data?.toString()}');
+  return null;
+}
 
 List<T> List_fromData<T>(dynamic data, T createModel(data)) =>
     (data as List)?.map<T>((elem) => createModel(elem))?.toList();

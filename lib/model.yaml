@@ -19,7 +19,7 @@ Chart:
 Field:
   label: "string" #optional
   tooltip: "string" #optional
-  bucket: "array int" #optional
+  bucket: "array num" #optional
   field: FieldOperation
 
 FieldOperation:

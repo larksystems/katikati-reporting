@@ -10,7 +10,7 @@ String _generateLegendLabelFromFilters(Map<String, String> filters) {
 }
 
 ChartDataSets _generateBarChartDataset(
-    String label, List<int> data, String barColor) {
+    String label, List<num> data, String barColor) {
   return ChartDataSets(
       label: label,
       fill: true,
@@ -58,8 +58,8 @@ ChartConfiguration generateBarChartConfig(
     Map<String, String> activeFilterValues,
     Map<String, String> activeComparisonFilterValues) {
   var labels = [];
-  var filterData = List<int>();
-  var comparisonFilterData = List<int>();
+  var filterData = List<num>();
+  var comparisonFilterData = List<num>();
 
   for (var chartCol in chart.fields) {
     labels.add(chartCol.label ?? chartCol.field.value);

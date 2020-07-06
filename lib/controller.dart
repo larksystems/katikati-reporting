@@ -281,9 +281,13 @@ void _computeChartBuckets(List<model.Chart> charts) {
   if (_dataNormalisationEnabled) {
     for (var chart in charts) {
       for (var chartCol in chart.fields) {
+        var filterValuesPercent = chartCol.bucket[0] * 100 / _filterValuesCount;
+        var comparisonFilterValuesPercent =
+            chartCol.bucket[1] * 100 / _comparisonFilterValuesCount;
+
         chartCol.bucket = [
-          (chartCol.bucket[0] * 100 / _filterValuesCount).truncate(),
-          (chartCol.bucket[1] * 100 / _comparisonFilterValuesCount).truncate()
+          num.parse(filterValuesPercent.toStringAsFixed(2)),
+          num.parse(comparisonFilterValuesPercent.toStringAsFixed(2))
         ];
       }
     }
