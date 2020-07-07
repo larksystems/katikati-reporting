@@ -6,6 +6,7 @@ import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
 import 'package:dashboard/chart_helpers.dart' as chart_helper;
+import 'package:dashboard/extensions.dart';
 import 'package:dashboard/logger.dart';
 
 Logger logger = Logger('controller.dart');
@@ -281,13 +282,13 @@ void _computeChartBuckets(List<model.Chart> charts) {
   if (_dataNormalisationEnabled) {
     for (var chart in charts) {
       for (var chartCol in chart.fields) {
-        var filterValuesPercent = chartCol.bucket[0] * 100 / _filterValuesCount;
-        var comparisonFilterValuesPercent =
+        num filterValuesPercent = chartCol.bucket[0] * 100 / _filterValuesCount;
+        num comparisonFilterValuesPercent =
             chartCol.bucket[1] * 100 / _comparisonFilterValuesCount;
 
         chartCol.bucket = [
-          num.parse(filterValuesPercent.toStringAsFixed(2)),
-          num.parse(comparisonFilterValuesPercent.toStringAsFixed(2))
+          filterValuesPercent.roundToDecimal(2),
+          comparisonFilterValuesPercent.roundToDecimal(2)
         ];
       }
     }
