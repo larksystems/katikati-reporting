@@ -27,7 +27,11 @@ ChartOptions _generateBarChartOptions(bool dataNormalisationEnabled) {
   var labelString = '${labelPrepend} of interactions';
   var chartX = ChartXAxe()
     ..stacked = false
-    ..barPercentage = 1;
+    ..barPercentage = 1
+    ..ticks = (LinearTickOptions()
+      ..autoSkip = false
+      ..minRotation = 0
+      ..maxRotation = 90);
 
   var chartY = ChartYAxe()
     ..stacked = false
