@@ -399,6 +399,7 @@ void handleNavToSettings() {
   var encoder = convert.JsonEncoder.withIndent('  ');
   var configString = encoder.convert(_configRaw);
   view.renderSettingsTab(configString);
+  view.renderUniqueFilterCategoryValues(_uniqueFieldCategoryValues);
 }
 
 void _updateFiltersInView() {
