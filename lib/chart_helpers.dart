@@ -1,3 +1,4 @@
+import 'dart:js';
 import 'package:dashboard/model.dart' as model;
 import 'package:chartjs/chartjs.dart';
 
@@ -45,7 +46,8 @@ ChartOptions _generateBarChartOptions(bool dataNormalisationEnabled) {
       responsive: true,
       tooltips: ChartTooltipOptions(
           mode: 'index',
-          callbacks: ChartTooltipCallback(label: tooltipLabelCallback)),
+          callbacks:
+              ChartTooltipCallback(label: allowInterop(tooltipLabelCallback))),
       legend: ChartLegendOptions(
           position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
       scales: ChartScales(display: true, xAxes: [chartX], yAxes: [chartY]));
