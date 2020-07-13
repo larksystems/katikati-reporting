@@ -25,7 +25,7 @@ const CARD_BODY_CLASSNAME = 'card-body';
 const CHART_WRAPPER_CLASSNAME = 'chart';
 const MAPBOX_COL_CLASSNAME = 'mapbox-col';
 const CONFIG_SETTINGS_ALERT_ID = 'config-settings-alert';
-const CONFIG_UNIQ_VALUES_WRAPPER_CLASSNAME = 'unique-values-wrapper';
+const CONFIG_UNIQUE_VALUES_WRAPPER_CLASSNAME = 'unique-values-wrapper';
 
 const CONTENT_ID = 'content';
 
@@ -589,7 +589,7 @@ void renderSettingsTab(String config) {
 
 void renderUniqueFilterCategoryValues(Map<String, Set> uniqueValues) {
   var wrapper = html.DivElement()
-    ..classes = [CONFIG_UNIQ_VALUES_WRAPPER_CLASSNAME];
+    ..classes = [CONFIG_UNIQUE_VALUES_WRAPPER_CLASSNAME];
   content.append(wrapper);
 
   var card = html.DivElement()..classes = ['card'];
