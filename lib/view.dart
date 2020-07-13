@@ -599,8 +599,19 @@ void renderUniqueFilterCategoryValues(Map<String, Set> uniqueValues) {
     var fieldCol = html.TableCellElement()..innerText = key;
     var valuesCol = html.TableCellElement()
       ..innerText = (value.toList()..sort()).join(', ');
+    var copyCol = html.TableCellElement();
+    var copyButton = html.ButtonElement()
+      ..classes = ['btn', 'btn-outline-secondary']
+      ..innerText = 'Copy chart config'
+      ..onClick.listen((_) {
+        command(UIAction.copyToClipboardChartConfig,
+            CopyToClipboardChartConfigData(key));
+      });
+    copyCol.append(copyButton);
+
     tableRow.append(fieldCol);
     tableRow.append(valuesCol);
+    tableRow.append(copyCol);
     table.append(tableRow);
   });
   card.append(table);
