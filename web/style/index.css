@@ -46,3 +46,11 @@ body {
 .CodeMirror {
   border: 1px solid #000;
 }
+
+.unique-values-wrapper {
+  margin-top: 32px;
+}
+
+.unique-values-wrapper td {
+  font-family: monospace;
+}

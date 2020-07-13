@@ -25,6 +25,7 @@ const CARD_BODY_CLASSNAME = 'card-body';
 const CHART_WRAPPER_CLASSNAME = 'chart';
 const MAPBOX_COL_CLASSNAME = 'mapbox-col';
 const CONFIG_SETTINGS_ALERT_ID = 'config-settings-alert';
+const CONFIG_UNIQUE_VALUES_WRAPPER_CLASSNAME = 'unique-values-wrapper';
 
 const CONTENT_ID = 'content';
 
@@ -584,6 +585,41 @@ void renderSettingsTab(String config) {
       command(UIAction.saveConfigToFirebase, SaveConfigToFirebaseData(data));
     });
   wrapper.append(saveButton);
+}
+
+void renderUniqueFilterCategoryValues(Map<String, Set> uniqueValues) {
+  var wrapper = html.DivElement()
+    ..classes = [CONFIG_UNIQUE_VALUES_WRAPPER_CLASSNAME];
+  content.append(wrapper);
+
+  var card = html.DivElement()..classes = ['card'];
+  var table = html.TableElement()..classes = ['table'];
+  uniqueValues.forEach((key, value) {
+    var tableRow = html.TableRowElement();
+    var fieldCol = html.TableCellElement()..innerText = key;
+    var valuesCol = html.TableCellElement()
+      ..innerText = (value.toList()..sort()).join(', ');
+    var copyCol = html.TableCellElement();
+    var copyButton = html.ButtonElement()
+      ..classes = ['btn', 'btn-outline-secondary']
+      ..innerText = 'Copy chart config'
+      ..onClick.listen((_) {
+        command(UIAction.copyToClipboardChartConfig,
+            CopyToClipboardChartConfigData(key));
+      });
+    copyCol.append(copyButton);
+
+    tableRow.append(fieldCol);
+    tableRow.append(valuesCol);
+    tableRow.append(copyCol);
+    table.append(tableRow);
+  });
+  card.append(table);
+
+  var title = html.HeadingElement.h5()
+    ..innerText = 'Unique values in the interactions';
+  wrapper.append(title);
+  wrapper.append(card);
 }
 
 void showConfigSettingsAlert(String message, bool isError) {

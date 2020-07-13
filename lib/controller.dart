@@ -57,7 +57,8 @@ enum UIAction {
   toggleActiveFilter,
   setFilterValue,
   setComparisonFilterValue,
-  saveConfigToFirebase
+  saveConfigToFirebase,
+  copyToClipboardChartConfig
 }
 
 // Action data
@@ -93,6 +94,11 @@ class SetFilterValueData extends Data {
 class SaveConfigToFirebaseData extends Data {
   String configRaw;
   SaveConfigToFirebaseData(this.configRaw);
+}
+
+class CopyToClipboardChartConfigData extends Data {
+  String key;
+  CopyToClipboardChartConfigData(this.key);
 }
 
 // Controller functions
@@ -399,6 +405,7 @@ void handleNavToSettings() {
   var encoder = convert.JsonEncoder.withIndent('  ');
   var configString = encoder.convert(_configRaw);
   view.renderSettingsTab(configString);
+  view.renderUniqueFilterCategoryValues(_uniqueFieldCategoryValues);
 }
 
 void _updateFiltersInView() {
@@ -541,6 +548,29 @@ void command(UIAction action, Data data) async {
       _configRaw = configJSON;
       _config = model.Config.fromData(_configRaw);
       break;
+    case UIAction.copyToClipboardChartConfig:
+      var d = data as CopyToClipboardChartConfigData;
+      var values = _uniqueFieldCategoryValues[d.key].toList();
+      var valuesConfig = values
+          .map((value) => model.Field()
+            ..label = value
+            ..field = (model.FieldOperation()
+              ..key = d.key
+              ..operator = model.FieldOperator.equals
+              ..value = value))
+          .toList();
+      var chartsConfig = model.Chart()
+        ..title = 'By ${d.key}'
+        ..narrative = ''
+        ..type = model.ChartType.bar
+        ..fields = valuesConfig;
+      var configStr = convert.jsonEncode(chartsConfig.toData()).toString();
+      // todo: replace this with @override toString() for enums
+      ['ChartType.', 'FieldOperator.'].forEach((findStr) {
+        configStr = configStr.replaceAll(findStr, '');
+      });
+      _copyToClipboard(configStr);
+      break;
     default:
   }
 }
@@ -593,4 +623,14 @@ void validateConfig(model.Config config) {
       }
     }
   }
+}
+
+void _copyToClipboard(String str) {
+  final textarea = html.TextAreaElement()
+    ..readOnly = true
+    ..value = str;
+  html.document.body.append(textarea);
+  textarea.select();
+  html.document.execCommand('copy');
+  textarea.remove();
 }
