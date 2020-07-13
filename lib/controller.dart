@@ -58,6 +58,7 @@ enum UIAction {
   setFilterValue,
   setComparisonFilterValue,
   saveConfigToFirebase,
+  copyToClipboardConfigSkeleton,
   copyToClipboardChartConfig
 }
 
@@ -404,8 +405,8 @@ void handleNavToSettings() {
   view.clearContentTab();
   var encoder = convert.JsonEncoder.withIndent('  ');
   var configString = encoder.convert(_configRaw);
-  view.renderSettingsTab(configString);
-  view.renderUniqueFilterCategoryValues(_uniqueFieldCategoryValues);
+  view.renderSettingsConfigEditor(configString);
+  view.renderSettingsConfigUtility(_uniqueFieldCategoryValues);
 }
 
 void _updateFiltersInView() {
@@ -547,6 +548,23 @@ void command(UIAction action, Data data) async {
       view.showConfigSettingsAlert('Config saved successfully', false);
       _configRaw = configJSON;
       _config = model.Config.fromData(_configRaw);
+      break;
+    case UIAction.copyToClipboardConfigSkeleton:
+      var config = model.Config()
+        ..data_paths = {'interactions': ''}
+        ..filters = _uniqueFieldCategoryValues.keys
+            .map((key) => model.Filter()
+              ..key = key
+              ..label = key)
+            .toList()
+        ..tabs = List<int>.generate(2, (i) => i)
+            .map((i) => model.Tab()
+              ..label = 'Tab $i'
+              ..exclude_filters = []
+              ..charts = [])
+            .toList();
+      var configStr = convert.jsonEncode(config.toData()).toString();
+      _copyToClipboard(configStr);
       break;
     case UIAction.copyToClipboardChartConfig:
       var d = data as CopyToClipboardChartConfigData;
