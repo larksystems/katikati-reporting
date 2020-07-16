@@ -82,6 +82,7 @@ typedef void TabCollectionListener(
 class Chart {
   String docId;
   ChartType type;
+  Timestamp timestamp;
   String title;
   String narrative;
   List<Field> fields;
@@ -95,6 +96,7 @@ class Chart {
     if (data == null) return null;
     return (modelObj ?? Chart())
       ..type = ChartType.fromString(data['type'] as String)
+      ..timestamp = Timestamp.fromData(data['timestamp'])
       ..title = String_fromData(data['title'])
       ..narrative = String_fromData(data['narrative'])
       ..fields = List_fromData<Field>(data['fields'], Field.fromData)
@@ -108,6 +110,7 @@ class Chart {
   Map<String, dynamic> toData() {
     return {
       if (type != null) 'type': type.toString(),
+      if (timestamp != null) 'timestamp': timestamp.toData(),
       if (title != null) 'title': title,
       if (narrative != null) 'narrative': narrative,
       if (fields != null) 'fields': fields.map((elem) => elem?.toData()).toList(),
@@ -124,11 +127,45 @@ typedef void ChartCollectionListener(
   List<Chart> removed,
 );
 
+class Timestamp {
+  String docId;
+  TimeAggregate aggregate;
+  String key;
+
+  static Timestamp fromSnapshot(DocSnapshot doc, [Timestamp modelObj]) =>
+      fromData(doc.data, modelObj)..docId = doc.id;
+
+  static Timestamp fromData(data, [Timestamp modelObj]) {
+    if (data == null) return null;
+    return (modelObj ?? Timestamp())
+      ..aggregate = TimeAggregate.fromString(data['aggregate'] as String)
+      ..key = String_fromData(data['key']);
+  }
+
+  static void listen(DocStorage docStorage, TimestampCollectionListener listener, String collectionRoot) =>
+      listenForUpdates<Timestamp>(docStorage, listener, collectionRoot, Timestamp.fromSnapshot);
+
+  Map<String, dynamic> toData() {
+    return {
+      if (aggregate != null) 'aggregate': aggregate.toString(),
+      if (key != null) 'key': key,
+    };
+  }
+
+  String toString() => 'Timestamp [$docId]: ${toData().toString()}';
+}
+typedef void TimestampCollectionListener(
+  List<Timestamp> added,
+  List<Timestamp> modified,
+  List<Timestamp> removed,
+);
+
 class Field {
   String docId;
   String label;
   String tooltip;
   List<num> bucket;
+  Map<String, num> time_bucket;
   FieldOperation field;
 
   static Field fromSnapshot(DocSnapshot doc, [Field modelObj]) =>
@@ -140,6 +177,7 @@ class Field {
       ..label = String_fromData(data['label'])
       ..tooltip = String_fromData(data['tooltip'])
       ..bucket = List_fromData<num>(data['bucket'], num_fromData)
+      ..time_bucket = Map_fromData<num>(data['time_bucket'], num_fromData)
       ..field = FieldOperation.fromData(data['field']);
   }
 
@@ -151,6 +189,7 @@ class Field {
       if (label != null) 'label': label,
       if (tooltip != null) 'tooltip': tooltip,
       if (bucket != null) 'bucket': bucket,
+      if (time_bucket != null) 'time_bucket': time_bucket,
       if (field != null) 'field': field.toData(),
     };
   }
@@ -341,11 +380,13 @@ class ChartType {
   static const bar = ChartType('bar');
   static const line = ChartType('line');
   static const map = ChartType('map');
+  static const time_series = ChartType('time_series');
 
   static const values = <ChartType>[
     bar,
     line,
     map,
+    time_series,
   ];
 
   static ChartType fromString(String text, [ChartType defaultValue = ChartType.bar]) {
@@ -369,6 +410,39 @@ class ChartType {
   String toString() => 'ChartType.$name';
 }
 ChartType Function(String text) ChartType_fromStringOverride;
+
+class TimeAggregate {
+  static const day = TimeAggregate('day');
+  static const hour = TimeAggregate('hour');
+  static const none = TimeAggregate('none');
+
+  static const values = <TimeAggregate>[
+    day,
+    hour,
+    none,
+  ];
+
+  static TimeAggregate fromString(String text, [TimeAggregate defaultValue = TimeAggregate.none]) {
+    if (TimeAggregate_fromStringOverride != null) {
+      var value = TimeAggregate_fromStringOverride(text);
+      if (value != null) return value;
+    }
+    if (text != null) {
+      const prefix = 'TimeAggregate.';
+      String valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
+      for (var value in values) {
+        if (value.name == valueName) return value;
+      }
+    }
+    log.warning('unknown TimeAggregate $text');
+    return defaultValue;
+  }
+
+  final String name;
+  const TimeAggregate(this.name);
+  String toString() => 'TimeAggregate.$name';
+}
+TimeAggregate Function(String text) TimeAggregate_fromStringOverride;
 
 // ======================================================================
 // Core firebase/yaml utilities

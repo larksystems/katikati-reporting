@@ -377,9 +377,9 @@ void renderFilterDropdowns(
   content.append(wrapper);
 }
 
-void renderBarChart(
+void renderChart(
     String title, String narrative, chartjs.ChartConfiguration chartConfig) {
-  var chart = _generateBarChart(title, narrative, chartConfig);
+  var chart = _generateChart(title, narrative, chartConfig);
   content.append(chart);
 }
 
@@ -464,7 +464,7 @@ void handleMapLoad(
   }
 }
 
-html.DivElement _generateBarChart(
+html.DivElement _generateChart(
     String title, String narrative, chartjs.ChartConfiguration chartConfig) {
   var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];
 
