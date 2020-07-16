@@ -48,9 +48,6 @@ Map<String, String> get _activeComparisonFilterValues => {
 Map<String, Map<String, dynamic>> _allInteractions;
 Map<String, Set> _uniqueFieldCategoryValues;
 Map<String, List<DateTime>> _allInteractionsDateRange;
-// todo: make this Map<String, Map<DateTime, num>> when Infrastructure permits
-Map<String, Map<String, num>> _allInteractionsDateBuckets =
-    {}; // "recorded_at" : { "01/01/2020": 0, "02/01/2020": 0 }
 Map<String, dynamic> _configRaw;
 model.Config _config;
 
@@ -289,13 +286,6 @@ void _computeChartBuckets(List<model.Chart> charts) {
             chart.timestamp.aggregate);
       }
     }
-    if (chart.type == model.ChartType.time_series) {
-      _allInteractionsDateBuckets[chart.timestamp.key] =
-          _generateEmptyDateTimeBuckets(
-              _allInteractionsDateRange[chart.timestamp.key][0],
-              _allInteractionsDateRange[chart.timestamp.key][1],
-              chart.timestamp.aggregate);
-    }
   }
 
   for (var interaction in _allInteractions.values) {
@@ -307,15 +297,6 @@ void _computeChartBuckets(List<model.Chart> charts) {
 
     if (addToPrimaryBucket) {
       ++_filterValuesCount;
-      for (var key in _allInteractionsDateBuckets.keys) {
-        for (var chart in charts) {
-          if (chart.type == model.ChartType.time_series) {
-            var dateTimeKey = _generateDateTimeKey(
-                interaction[key], chart.timestamp.aggregate);
-            _allInteractionsDateBuckets[key][dateTimeKey] += 1;
-          }
-        }
-      }
     }
 
     if (addToComparisonBucket) {
