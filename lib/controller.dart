@@ -31,6 +31,7 @@ var _currentNavLink = _navLinks['analyse'].pathname;
 int _selectedAnalysisTabIndex;
 bool _dataComparisonEnabled = true;
 bool _dataNormalisationEnabled = false;
+bool _stackTimeSeriesEnabled = true;
 Set<String> _activeFilters = {};
 Map<String, String> _filterValues = {};
 Map<String, String> _comparisonFilterValues = {};
@@ -60,6 +61,7 @@ enum UIAction {
   changeAnalysisTab,
   toggleDataComparison,
   toggleDataNormalisation,
+  toggleStackTimeseries,
   toggleActiveFilter,
   setFilterValue,
   setComparisonFilterValue,
@@ -424,7 +426,8 @@ void handleNavToAnalysis() {
   var tabLabels =
       _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
   view.renderAnalysisTabs(tabLabels);
-  view.renderChartOptions(_dataComparisonEnabled, _dataNormalisationEnabled);
+  view.renderChartOptions(_dataComparisonEnabled, _dataNormalisationEnabled,
+      _stackTimeSeriesEnabled);
 
   _computeFilterDropdownsAndRender();
   _computeChartBucketsAndRender();
@@ -474,7 +477,7 @@ void _computeChartBucketsAndRender() {
             chart.title,
             chart.narrative,
             chart_helper.generateTimeSeriesChartConfig(
-                chart, _dataNormalisationEnabled));
+                chart, _dataNormalisationEnabled, _stackTimeSeriesEnabled));
         break;
       case model.ChartType.map:
         var mapData =
@@ -596,6 +599,14 @@ void command(UIAction action, Data data) async {
       _dataNormalisationEnabled = d.enabled;
       logger
           .debug('Data normalisation changed to ${_dataNormalisationEnabled}');
+      view.removeAllChartWrappers();
+      _computeChartBucketsAndRender();
+      break;
+    case UIAction.toggleStackTimeseries:
+      var d = data as ToggleOptionEnabledData;
+      _stackTimeSeriesEnabled = d.enabled;
+      logger.debug(
+          'Stack time series chart changed to ${_stackTimeSeriesEnabled}');
       view.removeAllChartWrappers();
       _computeChartBucketsAndRender();
       break;
