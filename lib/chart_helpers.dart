@@ -169,6 +169,8 @@ ChartDataSets _generateTimeSeriesChartDataset(
       borderColor: lineColor,
       hoverBackgroundColor: lineColor,
       hoverBorderColor: lineColor,
+      pointHoverBackgroundColor: lineColor,
+      pointRadius: 2,
       borderWidth: 1,
       lineTension: 0,
       data: data);
@@ -176,7 +178,7 @@ ChartDataSets _generateTimeSeriesChartDataset(
 
 ChartConfiguration generateTimeSeriesChartConfig(
     model.Chart chart, bool dataNormalisationEnabled) {
-  var colors = chart.colors ?? lineChartDefaultColors;
+  var colors = (chart.colors ?? [])..addAll(lineChartDefaultColors);
   var datasets = chart.fields.asMap().entries.map((entry) {
     var index = entry.key;
     var field = entry.value;
