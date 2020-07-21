@@ -8,6 +8,7 @@ import 'package:dashboard/firebase.dart' as fb;
 import 'package:dashboard/chart_helpers.dart' as chart_helper;
 import 'package:dashboard/extensions.dart';
 import 'package:dashboard/logger.dart';
+import 'package:intl/intl.dart' as intl;
 
 Logger logger = Logger('controller.dart');
 
@@ -15,6 +16,8 @@ Map<String, model.Link> _navLinks = {
   'analyse': model.Link('analyse', 'Analyse', handleNavToAnalysis),
   'settings': model.Link('settings', 'Settings', handleNavToSettings)
 };
+
+var STANDARD_DATE_TIME_FORMAT = intl.DateFormat('yyyy-MM-dd HH:mm:ss');
 
 const DEFAULT_FILTER_SELECT_VALUE = '__all';
 
@@ -28,6 +31,7 @@ var _currentNavLink = _navLinks['analyse'].pathname;
 int _selectedAnalysisTabIndex;
 bool _dataComparisonEnabled = true;
 bool _dataNormalisationEnabled = false;
+bool _stackTimeSeriesEnabled = true;
 Set<String> _activeFilters = {};
 Map<String, String> _filterValues = {};
 Map<String, String> _comparisonFilterValues = {};
@@ -44,6 +48,9 @@ Map<String, String> get _activeComparisonFilterValues => {
 // Data states
 Map<String, Map<String, dynamic>> _allInteractions;
 Map<String, Set> _uniqueFieldCategoryValues;
+Map<String, List<DateTime>> _allInteractionsDateRange;
+Map<String, Map<model.TimeAggregate, Map<String, num>>>
+    _allInteractionDateBuckets;
 Map<String, dynamic> _configRaw;
 model.Config _config;
 
@@ -54,6 +61,7 @@ enum UIAction {
   changeAnalysisTab,
   toggleDataComparison,
   toggleDataNormalisation,
+  toggleStackTimeseries,
   toggleActiveFilter,
   setFilterValue,
   setComparisonFilterValue,
@@ -121,6 +129,7 @@ void onLoginCompleted() async {
   await loadGeoMapsData();
   _uniqueFieldCategoryValues =
       computeUniqFieldCategoryValues(_config.filters, _allInteractions);
+  _allInteractionsDateRange = computeDateRanges(_allInteractions);
   _selectedAnalysisTabIndex = 0;
 
   view.setNavlinkSelected(_currentNavLink);
@@ -199,6 +208,27 @@ Map<String, Set> computeUniqFieldCategoryValues(
   return uniqueFieldCategories;
 }
 
+Map<String, List<DateTime>> computeDateRanges(
+    Map<String, Map<String, dynamic>> interactions) {
+  var dateRanges = Map<String, List<DateTime>>();
+  interactions.forEach((_, interaction) {
+    interaction.keys.forEach((key) {
+      var value = interaction[key];
+      if (value is DateTime) {
+        dateRanges[key] = dateRanges[key] ?? [DateTime(2100), DateTime(1970)];
+        if (value.isBefore(dateRanges[key][0])) {
+          dateRanges[key][0] = value;
+        }
+        if (value.isAfter(dateRanges[key][1])) {
+          dateRanges[key][1] = value;
+        }
+      }
+    });
+  });
+  logger.debug('Computed date ranges for all interactions');
+  return dateRanges;
+}
+
 bool _interactionMatchesFilters(
     Map<String, dynamic> interaction, Map<String, String> filters) {
   for (var entry in filters.entries) {
@@ -247,10 +277,29 @@ void _computeChartBuckets(List<model.Chart> charts) {
   _filterValuesCount = 0;
   _comparisonFilterValuesCount = 0;
 
-  // reset bucket to [filter(0), comparisonFilter(0)] for each chart
+  // reset bucket to [filter(0), comparisonFilter(0)] for each chart col
+  // reset time_bucket to {"mm/dd/yyyy": 0} for time series chart col
+  // reset allInteractionDateBuckets (for normalising) to {"recorded_at": {day: {"mm/dd/yyyy": 0}}}
   for (var chart in charts) {
     for (var chartCol in chart.fields) {
       chartCol.bucket = [0, 0];
+      if (chart.type == model.ChartType.time_series) {
+        chartCol.time_bucket = _generateEmptyDateTimeBuckets(
+            _allInteractionsDateRange[chart.timestamp.key][0],
+            _allInteractionsDateRange[chart.timestamp.key][1],
+            chart.timestamp.aggregate);
+      }
+    }
+    if (chart.type == model.ChartType.time_series) {
+      var key = chart.timestamp.key;
+      var aggregate = chart.timestamp.aggregate;
+      _allInteractionDateBuckets = {};
+      _allInteractionDateBuckets[key] = {};
+      _allInteractionDateBuckets[key][aggregate] =
+          _generateEmptyDateTimeBuckets(
+              _allInteractionsDateRange[chart.timestamp.key][0],
+              _allInteractionsDateRange[chart.timestamp.key][1],
+              chart.timestamp.aggregate);
     }
   }
 
@@ -263,6 +312,14 @@ void _computeChartBuckets(List<model.Chart> charts) {
 
     if (addToPrimaryBucket) {
       ++_filterValuesCount;
+      for (var chart in charts) {
+        if (chart.type == model.ChartType.time_series) {
+          var key = chart.timestamp.key;
+          var aggregate = chart.timestamp.aggregate;
+          var timeStampKey = _generateDateTimeKey(interaction[key], aggregate);
+          _allInteractionDateBuckets[key][aggregate][timeStampKey] += 1;
+        }
+      }
     }
 
     if (addToComparisonBucket) {
@@ -278,6 +335,12 @@ void _computeChartBuckets(List<model.Chart> charts) {
 
         if (addToPrimaryBucket) {
           ++chartCol.bucket[0];
+          if (chart.type == model.ChartType.time_series) {
+            var dateTimeKey = _generateDateTimeKey(
+                interaction[chart.timestamp.key] as DateTime,
+                chart.timestamp.aggregate);
+            chartCol.time_bucket[dateTimeKey] += 1;
+          }
         }
         if (addToComparisonBucket) {
           ++chartCol.bucket[1];
@@ -297,11 +360,58 @@ void _computeChartBuckets(List<model.Chart> charts) {
           filterValuesPercent.roundToDecimal(2),
           comparisonFilterValuesPercent.roundToDecimal(2)
         ];
+
+        if (chart.type == model.ChartType.time_series) {
+          for (var datetime in chartCol.time_bucket.keys) {
+            chartCol.time_bucket[datetime] =
+                ((chartCol.time_bucket[datetime] * 100) /
+                        _allInteractionDateBuckets[chart.timestamp.key]
+                            [chart.timestamp.aggregate][datetime])
+                    .roundToDecimal(2);
+          }
+        }
       }
     }
   }
 
   logger.debug('Computed chart buckets ${charts}');
+}
+
+String _generateDateTimeKey(DateTime dateTime, model.TimeAggregate aggregate) {
+  switch (aggregate) {
+    case model.TimeAggregate.day:
+      dateTime = DateTime(dateTime.year, dateTime.month, dateTime.day, 0, 0, 0);
+      break;
+    case model.TimeAggregate.hour:
+      dateTime = DateTime(
+          dateTime.year, dateTime.month, dateTime.day, dateTime.hour, 0, 0);
+      break;
+    default:
+      logger.error('Time series chart aggregate ${aggregate} not handled');
+  }
+  return STANDARD_DATE_TIME_FORMAT.format(dateTime);
+}
+
+Map<String, num> _generateEmptyDateTimeBuckets(
+    DateTime start, DateTime end, model.TimeAggregate aggregate) {
+  var timeBucket = Map<String, num>();
+  var currentTime = DateTime(start.year, start.month, start.day, 0, 0, 0);
+  var endTime = DateTime(end.year, end.month, end.day, 23, 59, 59);
+  var durationToAdd;
+  switch (aggregate) {
+    case model.TimeAggregate.day:
+      durationToAdd = Duration(days: 1);
+      break;
+    case model.TimeAggregate.hour:
+      durationToAdd = Duration(hours: 1);
+      break;
+  }
+  while (currentTime.isBefore(endTime)) {
+    timeBucket[STANDARD_DATE_TIME_FORMAT.format(currentTime)] = 0;
+    currentTime = currentTime.add(durationToAdd);
+  }
+
+  return timeBucket;
 }
 
 // Render methods
@@ -315,7 +425,8 @@ void handleNavToAnalysis() {
   var tabLabels =
       _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
   view.renderAnalysisTabs(tabLabels);
-  view.renderChartOptions(_dataComparisonEnabled, _dataNormalisationEnabled);
+  view.renderChartOptions(_dataComparisonEnabled, _dataNormalisationEnabled,
+      _stackTimeSeriesEnabled);
 
   _computeFilterDropdownsAndRender();
   _computeChartBucketsAndRender();
@@ -350,7 +461,7 @@ void _computeChartBucketsAndRender() {
   for (var chart in charts) {
     switch (chart.type) {
       case model.ChartType.bar:
-        view.renderBarChart(
+        view.renderChart(
             chart.title,
             chart.narrative,
             chart_helper.generateBarChartConfig(
@@ -359,6 +470,13 @@ void _computeChartBucketsAndRender() {
                 _dataNormalisationEnabled,
                 _activeFilterValues,
                 _activeComparisonFilterValues));
+        break;
+      case model.ChartType.time_series:
+        view.renderChart(
+            chart.title,
+            chart.narrative,
+            chart_helper.generateTimeSeriesChartConfig(
+                chart, _dataNormalisationEnabled, _stackTimeSeriesEnabled));
         break;
       case model.ChartType.map:
         var mapData =
@@ -483,6 +601,14 @@ void command(UIAction action, Data data) async {
       view.removeAllChartWrappers();
       _computeChartBucketsAndRender();
       break;
+    case UIAction.toggleStackTimeseries:
+      var d = data as ToggleOptionEnabledData;
+      _stackTimeSeriesEnabled = d.enabled;
+      logger.debug(
+          'Stack time series chart changed to ${_stackTimeSeriesEnabled}');
+      view.removeAllChartWrappers();
+      _computeChartBucketsAndRender();
+      break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
       if (d.enabled) {
@@ -594,6 +720,7 @@ void command(UIAction action, Data data) async {
 }
 
 void validateConfig(model.Config config) {
+  // todo: validate time_series chart
   // Data paths
   if (config.data_paths == null) {
     throw StateError('data_paths cannot be empty');

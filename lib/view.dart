@@ -213,7 +213,8 @@ void renderAnalysisTabs(List<String> labels) {
   content.append(wrapper);
 }
 
-void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
+void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled,
+    bool stackTimeseriesEnabled) {
   var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
   var labelCol =
       generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
@@ -232,6 +233,14 @@ void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
     command(UIAction.toggleDataNormalisation, ToggleOptionEnabledData(checked));
   });
   optionsCol.append(normalisationCheckbox);
+
+  var stackTimeseriesCheckbox = _getCheckboxWithLabel(
+      'stack-timeseries',
+      'Stack time series',
+      stackTimeseriesEnabled,
+      (bool checked) => command(
+          UIAction.toggleStackTimeseries, ToggleOptionEnabledData(checked)));
+  optionsCol.append(stackTimeseriesCheckbox);
 
   wrapper.append(labelCol);
   wrapper.append(optionsCol);
@@ -377,9 +386,9 @@ void renderFilterDropdowns(
   content.append(wrapper);
 }
 
-void renderBarChart(
+void renderChart(
     String title, String narrative, chartjs.ChartConfiguration chartConfig) {
-  var chart = _generateBarChart(title, narrative, chartConfig);
+  var chart = _generateChart(title, narrative, chartConfig);
   content.append(chart);
 }
 
@@ -464,7 +473,7 @@ void handleMapLoad(
   }
 }
 
-html.DivElement _generateBarChart(
+html.DivElement _generateChart(
     String title, String narrative, chartjs.ChartConfiguration chartConfig) {
   var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];
 
