@@ -1,1000 +1,674 @@
 import 'dart:html' as html;
-import 'dart:math' as math;
-import 'dart:svg' as svg;
-import 'model.dart' as model;
-import 'utils.dart' as util;
-import 'package:covid/map.dart' as _map;
-import 'package:covid/controller.dart';
-import 'package:chartjs/chartjs.dart';
+import 'package:uuid/uuid.dart';
+import 'controller.dart';
+import 'package:chartjs/chartjs.dart' as chartjs;
+import 'package:mapbox_gl_dart/mapbox_gl_dart.dart';
+import 'package:dashboard/geomap_helpers.dart' as geomap_helpers;
+import 'package:codemirror/codemirror.dart' as code_mirror;
 
-List<html.Element> get _navLinks => html.querySelectorAll('.nav-item');
-List<html.DivElement> get _contents => html.querySelectorAll('.content');
+const LOADING_MODAL_ID = 'loading-modal';
 
-html.DivElement get loadingModal => html.querySelector('#loading-modal');
-html.DivElement get loginModal => html.querySelector('#login-modal');
-html.ButtonElement get loginButton => html.querySelector('#login-button');
-html.DivElement get loginError => html.querySelector('#login-error');
+const LOGIN_MODAL_ID = 'login-modal';
+const LOGIN_EMAIL_DOMAINS_SPAN_ID = 'login-email-domains';
+const LOGIN_ERROR_ALERT_ID = 'login-error';
+const LOGIN_BUTTON_ID = 'login-button';
+const FILTERS_WRAPPER_ID = 'filters';
 
-html.DivElement get timelineWrapper => html.querySelector('#messages-timeline');
-html.SelectElement get messagesSort =>
-    html.querySelector('#messages-sort-select');
+const NAV_BRAND_ID = 'nav-brand';
+const NAV_LINKS_WRAPPER_ID = 'nav-links-wrapper';
+const NAV_ITEM_CSS_CLASSNAME = 'nav-item';
+const ACTIVE_CSS_CLASSNAME = 'active';
+const FILTER_ROW_CLASSNAME = 'filter-row';
+const FILTER_ROW_LABEL_CLASSNAME = 'filter-row-label';
+const CARD_CLASSNAME = 'card';
+const CARD_BODY_CLASSNAME = 'card-body';
+const CHART_WRAPPER_CLASSNAME = 'chart';
+const MAPBOX_COL_CLASSNAME = 'mapbox-col';
+const CONFIG_SETTINGS_ALERT_ID = 'config-settings-alert';
+const CONFIG_UNIQUE_VALUES_WRAPPER_CLASSNAME = 'unique-values-wrapper';
 
-List<html.RadioButtonInputElement> get analyseChooser =>
-    html.querySelectorAll('.analyse-radio');
-html.CheckboxInputElement get enableCompare =>
-    html.querySelector('#interactions-compare');
-html.CheckboxInputElement get enableNormalise =>
-    html.querySelector('#interactions-normalise');
-html.DivElement get analyseThemeContent =>
-    html.querySelector('#analyse-themes-content');
-html.DivElement get analyseDemogContent =>
-    html.querySelector('#analyse-demographics-content');
-html.DivElement get analyseThemesFilterWrapper =>
-    html.querySelector('#analyse-themes-filter-wrapper');
-html.DivElement get analyseDemogFilterWrapper =>
-    html.querySelector('#analyse-demographics-filter-wrapper');
-html.DivElement get analyseDemogCompareWrapper =>
-    html.querySelector('#analyse-demographics-compare-wrapper');
+const CONTENT_ID = 'content';
 
-html.DivElement get responseClassificationGraphWrapper =>
-    html.querySelector('#analyse-themes-response-classification-graph');
-html.DivElement get responseThemeGraphWrapper =>
-    html.querySelector('#analyse-themes-response-theme-graph');
-html.DivElement get responseThemePracticeGraphWrapper =>
-    html.querySelector('#analyse-themes-response-practice-graph');
+var uuid = Uuid();
 
-html.DivElement get demogGenderGraphWrapper =>
-    html.querySelector('#analyse-demographics-gender-graph');
-html.DivElement get demogAgeGraphWrapper =>
-    html.querySelector('#analyse-demographics-age-graph');
-html.DivElement get demogIDPWrapper =>
-    html.querySelector('#analyse-demographics-idp-graph');
-html.DivElement get demogLangWrapper =>
-    html.querySelector('#analyse-demographics-language-graph');
+html.DivElement get loadingModal => html.querySelector('#${LOADING_MODAL_ID}');
 
-html.DivElement get demogMapWrapper =>
-    html.querySelector('#analyse-demographics-map');
-html.DivElement get demogMapCompareWrapper =>
-    html.querySelector('#analyse-demographics-map-compare');
+html.DivElement get loginModal => html.querySelector('#${LOGIN_MODAL_ID}');
+html.DivElement get loginEmailDomains =>
+    html.querySelector('#${LOGIN_EMAIL_DOMAINS_SPAN_ID}');
+html.DivElement get loginErrorAlert =>
+    html.querySelector('#${LOGIN_ERROR_ALERT_ID}');
+html.ButtonElement get loginButton => html.querySelector('#${LOGIN_BUTTON_ID}');
 
-html.DivElement get analyseMessagesFilterWrapper =>
-    html.querySelector('#analyse-filter-messages-wrapper');
-html.DivElement get analyseMessagesFilterCompareWrapper =>
-    html.querySelector('#analyse-filter-compare-messages-wrapper');
+html.SpanElement get navBrand => html.querySelector('nav #${NAV_BRAND_ID}');
+html.UListElement get navLinksWrapper =>
+    html.querySelector('nav #${NAV_LINKS_WRAPPER_ID}');
+List<html.LIElement> get navLinks => html.querySelectorAll(
+    'nav #${NAV_LINKS_WRAPPER_ID} .${NAV_ITEM_CSS_CLASSNAME}');
 
-class View {
-  Controller controller;
+html.DivElement get content => html.querySelector('#${CONTENT_ID}');
+html.DivElement get filtersWrapper =>
+    html.querySelector('#${FILTERS_WRAPPER_ID}');
+List<html.DivElement> get chartWrappers =>
+    html.querySelectorAll('.${CHART_WRAPPER_CLASSNAME}');
+html.DivElement get configSettingsAlert =>
+    html.querySelector('#${CONFIG_SETTINGS_ALERT_ID}');
 
-  View() {
-    _listenToNavbarChanges();
-    _listenToMessagesSort();
+String _generateFilterRowID(String key) => 'filter-row-${key}';
+String _generateFilterDropdownID(String key) => 'filter-dropdown-${key}';
+String _generateComparisonFilterDropdownID(String key) =>
+    'comparison-filter-dropdown-${key}';
+String _generateFilterCheckboxID(String key) => 'filter-option-${key}';
+String _generateAnalyseTabID(String key) => 'analyse-tab-options-${key}';
 
-    _listenToEnableCompare();
-    _listenToEnableNormalise();
-    _listenToAnalyseChooser();
+void init() {
+  loginButton.onClick.listen((_) => command(UIAction.signinWithGoogle, null));
+}
+
+// Loading
+void showLoading() {
+  loadingModal.hidden = false;
+}
+
+void hideLoading() {
+  loadingModal.hidden = true;
+}
+
+// Login modal
+void showLoginModal() {
+  loginModal.hidden = false;
+}
+
+void hideLoginModal() {
+  loginModal.hidden = true;
+}
+
+void setLoginDomains(List<String> domains) {
+  loginEmailDomains.innerText = domains.join(', ');
+}
+
+void enableLoginButton() {
+  loginButton.disabled = false;
+  loginButton.innerText = 'Sign in with Google';
+}
+
+void disableLoginButton() {
+  loginButton.disabled = true;
+  loginButton.innerText = 'Signing in ...';
+}
+
+void showLoginError(String message) {
+  loginErrorAlert.innerText = message;
+  loginErrorAlert.hidden = false;
+}
+
+void hideLoginError() {
+  loginErrorAlert.innerText = '';
+  loginErrorAlert.hidden = true;
+}
+
+// Nav bar
+void setNavBrand(String text) {
+  navBrand.innerText = text;
+}
+
+void appendNavLink(String pathname, String label, bool selected) {
+  var li = html.LIElement()
+    ..classes = [NAV_ITEM_CSS_CLASSNAME, if (selected) ACTIVE_CSS_CLASSNAME]
+    ..innerText = label
+    ..id = pathname
+    ..onClick
+        .listen((_) => command(UIAction.changeNavTab, NavChangeData(pathname)));
+  navLinksWrapper.append(li);
+}
+
+void setNavlinkSelected(String id) {
+  for (var link in navLinks) {
+    link.classes.toggle(ACTIVE_CSS_CLASSNAME, link.getAttribute('id') == id);
+  }
+}
+
+// Main content
+void clearContentTab() {
+  content.children.clear();
+}
+
+void removeFiltersWrapper() {
+  if (filtersWrapper == null) {
+    logger
+        .error('Trying to remove non-existant selector #${FILTERS_WRAPPER_ID}');
+    return;
   }
 
-  void _listenToNavbarChanges() {
-    _navLinks.forEach((link) {
-      link.onClick.listen((_) {
-        controller.chooseNavTab(link.getAttribute('id'));
-      });
-    });
-  }
+  filtersWrapper.remove();
+}
 
-  void _listenToMessagesSort() {
-    messagesSort.onChange.listen((e) {
-      var value = (e.currentTarget as html.SelectElement).value;
-      switch (value) {
-        case 'desc':
-          controller.sortMisinfoMessages();
-          break;
-        case 'asc':
-          controller.sortMisinfoMessages(desc: false);
-          break;
-        default:
-          logger.error('No such sort option');
-      }
-      controller.renderMisinfoMessages();
-    });
-  }
-
-  void _listenToEnableCompare() {
-    enableCompare.onChange.listen((e) {
-      var enabled = (e.target as html.CheckboxInputElement).checked;
-      controller.enableCompare(enabled);
-    });
-  }
-
-  void _listenToEnableNormalise() {
-    enableNormalise.onChange.listen((e) {
-      var enabled = (e.target as html.CheckboxInputElement).checked;
-      controller.enableNormalise(enabled);
-    });
-  }
-
-  void _listenToAnalyseChooser() {
-    analyseChooser.forEach((chooser) {
-      chooser.onChange.listen((e) {
-        var value = (e.currentTarget as html.RadioButtonInputElement).value;
-        switch (value) {
-          case 'themes':
-            controller.setInteractionTab('theme');
-            break;
-          case 'demographics':
-            controller.setInteractionTab('demog');
-            break;
-          default:
-            logger.error('No such analyse option');
-        }
-      });
-    });
-  }
-
-  void _updateNavbar() {
-    _navLinks.forEach((link) {
-      var id = link.getAttribute('id');
-      if (id == controller.visibleTabID) {
-        link.classes.toggle('active', true);
-      } else {
-        link.classes.remove('active');
-      }
-    });
-  }
-
-  void _updateContent() {
-    _contents.forEach((content) {
-      var id = content.getAttribute('data-tab');
-      if (id == controller.visibleTabID) {
-        content.attributes.remove('hidden');
-      } else {
-        content.attributes.addAll({'hidden': 'true'});
-      }
-    });
-  }
-
-  void showLoginModal() {
-    loginModal.removeAttribute('hidden');
-  }
-
-  void hideLoginModal() {
-    loginModal.setAttribute('hidden', 'true');
-  }
-
-  void showLoginError(String errorMessage) {
-    loginError
-      ..removeAttribute('hidden')
-      ..innerText = errorMessage;
-  }
-
-  void hideLoginError() {
-    loginError.setAttribute('hidden', 'true');
-  }
-
-  void showLoading() {
-    loadingModal.removeAttribute('hidden');
-  }
-
-  void hideLoading() {
-    loadingModal.setAttribute('hidden', 'true');
-  }
-
-  // Messages sort & timeline
-  html.DivElement _getMessageRow(model.Message message) {
-    var row = html.DivElement()..classes = ['row'];
-    var colLeft = html.DivElement()
-      ..classes = ['col-lg-2', 'col-md-6', 'col-6', 'timeline-col'];
-    var colRight = html.DivElement()
-      ..classes = ['col-lg-6', 'col-md-6', 'col-6'];
-
-    var messageBox = html.DivElement()..classes = ['message-box'];
-
-    var messageText = html.DivElement()..innerText = message.text;
-    messageBox.append(messageText);
-
-    if (message.translation != null) {
-      var translatedText = html.DivElement()
-        ..classes = ['message-translated']
-        ..innerText = message.translation;
-      messageBox.append(translatedText);
+void removeAllChartWrappers() {
+  for (var wrapper in chartWrappers) {
+    if (wrapper == null) {
+      logger.error(
+          'Trying to remove non-existant selector .${CHART_WRAPPER_CLASSNAME}');
+      continue;
     }
+    wrapper.remove();
+  }
+}
 
-    colRight.append(messageBox);
+html.DivElement generateGridRowElement({String id, List<String> classes}) {
+  var rowElement = html.DivElement()..classes = ['row', ...(classes ?? [])];
+  if (id != null) {
+    rowElement.id = id;
+  }
+  return rowElement;
+}
 
-    var timeBox = html.DivElement()
-      ..classes = ['message-time']
-      ..innerText = util.messageTimeFormat(message.received_at);
-    colLeft.append(timeBox);
+html.DivElement generateGridLabelColumnElement({List<String> classes}) {
+  return html.DivElement()
+    ..classes = [
+      'col-lg-2',
+      'col-md-3',
+      'col-sm-12',
+      'col-xs-12',
+      ...(classes ?? [])
+    ];
+}
 
-    return row..append(colLeft)..append(colRight);
+html.DivElement generateGridOptionsColumnElement() {
+  return html.DivElement()
+    ..classes = ['col-lg-10', 'col-md-9', 'col-sm-12', 'col-xs-12'];
+}
+
+void renderAnalysisTabs(List<String> labels) {
+  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
+  var labelCol =
+      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
+        ..innerText = 'Analyse';
+  var optionsCol = generateGridOptionsColumnElement();
+
+  for (var i = 0; i < labels.length; ++i) {
+    var radioWrapper = html.DivElement()
+      ..classes = ['form-check', 'form-check-inline'];
+    var radioOption = html.InputElement()
+      ..type = 'radio'
+      ..name = 'analyse-tab-options'
+      ..id = _generateAnalyseTabID(i.toString())
+      ..classes = ['form-check-input']
+      ..checked = i == 0
+      ..onChange.listen((e) {
+        if (!(e.target as html.RadioButtonInputElement).checked) return;
+        command(UIAction.changeAnalysisTab, AnalysisTabChangeData(i));
+      });
+    var radioLabel = html.LabelElement()
+      ..htmlFor = _generateAnalyseTabID(i.toString())
+      ..classes = ['form-check-label']
+      ..innerText = labels[i];
+
+    radioWrapper.append(radioOption);
+    radioWrapper.append(radioLabel);
+    optionsCol.append(radioWrapper);
   }
 
-  void setMessagesSortSelect(bool desc) {
-    messagesSort.value = desc ? 'desc' : 'asc';
+  wrapper.append(labelCol);
+  wrapper.append(optionsCol);
+  content.append(wrapper);
+}
+
+void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled,
+    bool stackTimeseriesEnabled) {
+  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
+  var labelCol =
+      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
+        ..innerText = 'Options';
+  var optionsCol = generateGridOptionsColumnElement();
+
+  var comparisonCheckbox = _getCheckboxWithLabel(
+      'comparison-option', 'Compare data', comparisonEnabled, (bool checked) {
+    command(UIAction.toggleDataComparison, ToggleOptionEnabledData(checked));
+  });
+  optionsCol.append(comparisonCheckbox);
+
+  var normalisationCheckbox = _getCheckboxWithLabel(
+      'normalisation-option', 'Normalise data', normalisationEnabled,
+      (bool checked) {
+    command(UIAction.toggleDataNormalisation, ToggleOptionEnabledData(checked));
+  });
+  optionsCol.append(normalisationCheckbox);
+
+  var stackTimeseriesCheckbox = _getCheckboxWithLabel(
+      'stack-timeseries',
+      'Stack time series',
+      stackTimeseriesEnabled,
+      (bool checked) => command(
+          UIAction.toggleStackTimeseries, ToggleOptionEnabledData(checked)));
+  optionsCol.append(stackTimeseriesCheckbox);
+
+  wrapper.append(labelCol);
+  wrapper.append(optionsCol);
+  content.append(wrapper);
+}
+
+html.DivElement _getFilterRow(String filterKey) {
+  var filterRowID = _generateFilterRowID(filterKey);
+  return html.querySelector('#${filterRowID}') as html.DivElement;
+}
+
+void showFilterRow(String filterKey) {
+  var filterRow = _getFilterRow(filterKey);
+  if (filterRow.hidden != false) {
+    filterRow.hidden = false;
   }
+}
 
-  void renderMessagesTimeline(List<model.Message> messages) {
-    timelineWrapper.children.clear();
-
-    var displayMessages = List<model.Message>.from(messages);
-    displayMessages.forEach((m) => {timelineWrapper.append(_getMessageRow(m))});
+void hideFilterRow(String filterKey) {
+  var filterRow = _getFilterRow(filterKey);
+  if (filterRow.hidden != true) {
+    filterRow.hidden = true;
   }
+}
 
-  // Interaction methods
-  void toggleInteractionTab(String tabID) {
-    switch (tabID) {
-      case 'theme':
-        analyseThemeContent.removeAttribute('hidden');
-        analyseDemogContent.setAttribute('hidden', 'true');
-        break;
-      case 'demog':
-        analyseDemogContent.removeAttribute('hidden');
-        analyseThemeContent.setAttribute('hidden', 'true');
-        break;
-      default:
-        logger.error('No such interaction tab to show');
-    }
+html.SelectElement _getFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdownID = comparison == true
+      ? _generateComparisonFilterDropdownID(filterKey)
+      : _generateFilterDropdownID(filterKey);
+  return html.querySelector('#${dropdownID}') as html.SelectElement;
+}
+
+void enableFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown.disabled != false) {
+    dropdown.disabled = false;
   }
+}
 
-  html.DivElement _getThemeFilterRow(
-      model.InteractionFilter filter,
-      Map<String, String> filterValues,
-      Map<String, String> filterCompareValues,
-      List<String> activeFilters,
-      bool isCompareEnabled) {
-    var row = html.DivElement()..classes = ['row'];
+void disableFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown.disabled != true) {
+    dropdown.disabled = true;
+  }
+}
+
+void hideFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown.hidden != true) {
+    dropdown.hidden = true;
+  }
+}
+
+void showFilterDropdown(String filterKey, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown.hidden != false) {
+    dropdown.hidden = false;
+  }
+}
+
+void setFilterDropdownValue(String filterKey, String value, {bool comparison}) {
+  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  dropdown.value = value;
+}
+
+html.CheckboxInputElement _getFilterOptionCheckbox(String filterKey) {
+  var filterCheckboxID = _generateFilterCheckboxID(filterKey);
+  return html.querySelector('#${filterCheckboxID}')
+      as html.CheckboxInputElement;
+}
+
+void enableFilterOption(String filterKey) {
+  var filterCheckbox = _getFilterOptionCheckbox(filterKey);
+  if (filterCheckbox.checked != true) {
+    filterCheckbox.checked = true;
+  }
+}
+
+void disableFilterOption(String filterKey) {
+  var filterCheckbox = _getFilterOptionCheckbox(filterKey);
+  if (filterCheckbox.checked != false) {
+    filterCheckbox.checked = false;
+  }
+}
+
+void renderFilterDropdowns(
+    List<String> filterKeys,
+    Map<String, List<String>> filterOptions,
+    Set<String> activeKeys,
+    Map<String, String> initialFilterValues,
+    Map<String, String> initialFilterComparisonValues,
+    bool shouldRenderComparisonFilters) {
+  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME])
+    ..id = FILTERS_WRAPPER_ID;
+  var labelCol =
+      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
+        ..innerText = 'Filters';
+  var optionsCol = generateGridOptionsColumnElement();
+
+  for (var key in filterKeys) {
+    var filterRow = generateGridRowElement(id: _generateFilterRowID(key));
     var checkboxCol = html.DivElement()..classes = ['col-3'];
-    var dropdownCol = html.DivElement()..classes = ['col-2'];
-    var compareCol = html.DivElement()..classes = ['col-2'];
+    var filterCol = html.DivElement()..classes = ['col-3'];
 
-    var label = html.LabelElement()
-      ..text = filter.label
-      ..htmlFor = filter.value;
-    var checkbox = html.CheckboxInputElement()
-      ..setAttribute('id', filter.value)
-      ..onChange.listen((e) {
-        if ((e.target as html.CheckboxInputElement).checked) {
-          controller.addToActiveFilters(filter.value);
-        } else {
-          controller.removeFromActiveFilters(filter.value);
-        }
-      });
-    checkboxCol..append(checkbox)..append(label);
+    var checkboxWithLabel = _getCheckboxWithLabel(
+        _generateFilterCheckboxID(key), key, activeKeys.contains(key),
+        (bool checked) {
+      command(
+          UIAction.toggleActiveFilter, ToggleActiveFilterData(key, checked));
+    });
+    checkboxCol.append(checkboxWithLabel);
 
-    var dropdown = html.SelectElement()
-      ..classes = ['form-control']
-      ..setAttribute('disabled', 'true')
-      ..onChange.listen((e) {
-        var value = (e.target as html.SelectElement).value;
-        controller.setFilterValue(filter.value, value);
-      });
+    var filterDropdown = _getDropdown(
+        _generateFilterDropdownID(key),
+        filterOptions[key].toList(),
+        initialFilterValues[key],
+        !activeKeys.contains(key), (String value) {
+      command(UIAction.setFilterValue, SetFilterValueData(key, value));
+    });
+    filterCol.append(filterDropdown);
 
-    var compare = html.SelectElement()
-      ..classes = ['form-control']
-      ..setAttribute('value', 'all')
-      ..setAttribute('disabled', 'true')
-      ..onChange.listen((e) {
-        var value = (e.target as html.SelectElement).value;
-        controller.setFilterCompareValue(filter.value, value);
-      });
+    filterRow.append(checkboxCol);
+    filterRow.append(filterCol);
+    optionsCol.append(filterRow);
 
-    filter.options.forEach((o) {
-      var option = html.OptionElement()
-        ..setAttribute('value', o.value)
-        ..appendText(o.label);
-      if (o.value == filterValues[filter.value]) {
-        option.setAttribute('selected', 'true');
-      } else if (filterValues[filter.value] == null && o.value == 'all') {
-        option.setAttribute('selected', 'true');
-      }
-      dropdown.append(option);
+    if (!shouldRenderComparisonFilters) continue;
+    var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
+
+    var comparisonFilterDropdown = _getDropdown(
+        _generateComparisonFilterDropdownID(key),
+        filterOptions[key].toList(),
+        initialFilterComparisonValues[key],
+        !activeKeys.contains(key), (String value) {
+      command(
+          UIAction.setComparisonFilterValue, SetFilterValueData(key, value));
+    });
+    comparisonFilterCol.append(comparisonFilterDropdown);
+    filterRow.append(comparisonFilterCol);
+  }
+
+  wrapper.append(labelCol);
+  wrapper.append(optionsCol);
+  content.append(wrapper);
+}
+
+void renderChart(
+    String title, String narrative, chartjs.ChartConfiguration chartConfig) {
+  var chart = _generateChart(title, narrative, chartConfig);
+  content.append(chart);
+}
+
+void renderGeoMap(
+    String title,
+    String narrative,
+    dynamic mapData,
+    Map<String, List<num>> mapFilterValues,
+    Map<String, List<num>> mapComparisonFilterValues,
+    bool comparisonEnabled,
+    bool normalisationEnabled,
+    List<String> colors) {
+  var mapID = uuid.v4();
+  var mapPlaceholder =
+      _generateGeoMapPlaceholder(mapID, title, narrative, comparisonEnabled);
+  content.append(mapPlaceholder);
+
+  var mapboxInstance = geomap_helpers.generateMapboxMap(mapID, mapData, false);
+  mapboxInstance.on(
+      'load',
+      (_) => handleMapLoad(mapboxInstance, mapData, mapFilterValues,
+          normalisationEnabled, colors[0]));
+
+  if (comparisonEnabled) {
+    var mapboxComparisonInstance =
+        geomap_helpers.generateMapboxMap(mapID, mapData, true);
+    mapboxComparisonInstance.on(
+        'load',
+        (_) => handleMapLoad(mapboxComparisonInstance, mapData,
+            mapComparisonFilterValues, normalisationEnabled, colors[1]));
+  }
+}
+
+void handleMapLoad(
+    MapboxMap mapInstance,
+    dynamic mapData,
+    Map<String, List<num>> mapValues,
+    bool normalisationEnabled,
+    String fillColor) {
+  for (var feature in mapData['features']) {
+    var regionID = feature['properties']['regId'];
+    var regionName = feature['properties']['regName'];
+    mapInstance.addSource(regionID, {'type': 'geojson', 'data': feature});
+
+    mapInstance.addLayer({
+      'id': 'border-${regionID}',
+      'type': 'line',
+      'source': '${regionID}',
+      'layout': {},
+      'paint': {'line-width': 1, 'line-color': '#888'}
     });
 
-    filter.options.forEach((o) {
-      var option = html.OptionElement()
-        ..setAttribute('value', o.value)
-        ..appendText(o.label);
-      if (o.value == filterCompareValues[filter.value]) {
-        option.setAttribute('selected', 'true');
-      } else if (filterCompareValues[filter.value] == null &&
-          o.value == 'all') {
-        option.setAttribute('selected', 'true');
-      }
-      compare.append(option);
-    });
-
-    dropdownCol.append(dropdown);
-    compareCol.append(compare);
-
-    if (activeFilters.contains(filter.value)) {
-      checkbox.setAttribute('checked', 'true');
-      dropdown.removeAttribute('disabled');
-
-      if (isCompareEnabled) {
-        compare.removeAttribute('disabled');
-      }
-    }
-
-    row..append(checkboxCol)..append(dropdownCol)..append(compareCol);
-    return row;
-  }
-
-  html.SpanElement _getFilterABLabel(String id) {
-    var wrapper = html.SpanElement();
-    var box = html.SpanElement()
-      ..innerText = '▣ '
-      ..style.color = util.metadata[id].color;
-    var label = html.SpanElement()..innerText = util.metadata[id].label;
-    return wrapper..append(box)..append(label);
-  }
-
-  void renderInteractionThemeFilters(
-      List<model.InteractionFilter> filters,
-      Map<String, String> filterValues,
-      Map<String, String> filterCompareValues,
-      List<String> activeFilters,
-      bool isCompareEnabled) {
-    analyseThemesFilterWrapper.children.clear();
-
-    var row = html.DivElement();
-    row
-      ..classes = ['row']
-      ..append(html.DivElement()..classes = ['col-3'])
-      ..append(html.DivElement()
-        ..classes = ['col-2']
-        ..append(_getFilterABLabel('a')))
-      ..append(html.DivElement()
-        ..classes = ['col-2']
-        ..append(_getFilterABLabel('b')));
-    analyseThemesFilterWrapper.append(row);
-
-    filters.forEach((f) {
-      analyseThemesFilterWrapper.append(_getThemeFilterRow(f, filterValues,
-          filterCompareValues, activeFilters, isCompareEnabled));
-    });
-  }
-
-  html.DivElement _getDemogFilterRow(model.InteractionFilter filter,
-      Map<String, String> filterValues, List<String> activeFilters) {
-    var row = html.DivElement()..classes = ['row'];
-    var checkboxCol = html.DivElement()..classes = ['col-3'];
-    var dropdownCol = html.DivElement()..classes = ['col-2'];
-
-    var label = html.LabelElement()
-      ..text = filter.label
-      ..htmlFor = 'demog_' + filter.value;
-    var checkbox = html.CheckboxInputElement()
-      ..setAttribute('id', 'demog_' + filter.value)
-      ..onChange.listen((e) {
-        if ((e.target as html.CheckboxInputElement).checked) {
-          controller.addToActiveFilters(filter.value);
-        } else {
-          controller.removeFromActiveFilters(filter.value);
-        }
-      });
-    checkboxCol..append(checkbox)..append(label);
-
-    var dropdown = html.SelectElement()
-      ..setAttribute('disabled', 'true')
-      ..classes = ['form-control']
-      ..onChange.listen((e) {
-        var value = (e.target as html.SelectElement).value;
-        controller.setFilterValue(filter.value, value);
-        controller.setFilterCompareValue(filter.value, value);
-      });
-
-    filter.options.forEach((o) {
-      var option = html.OptionElement()
-        ..setAttribute('value', o.value)
-        ..appendText(o.label);
-      if (o.value == filterValues[filter.value]) {
-        option.setAttribute('selected', 'true');
-      } else if (filterValues[filter.value] == null && o.value == 'all') {
-        option.setAttribute('selected', 'true');
-      }
-      dropdown.append(option);
-    });
-    dropdownCol.append(dropdown);
-
-    if (activeFilters.contains(filter.value)) {
-      dropdown.removeAttribute('disabled');
-      checkbox.setAttribute('checked', 'true');
-    }
-
-    row..append(checkboxCol)..append(dropdownCol);
-    return row;
-  }
-
-  void renderInteractionDemogFilters(List<model.InteractionFilter> filters,
-      Map<String, String> filterValues, List<String> activeFilters) {
-    analyseDemogFilterWrapper.children.clear();
-
-    filters.forEach((f) {
-      analyseDemogFilterWrapper
-          .append(_getDemogFilterRow(f, filterValues, activeFilters));
-    });
-  }
-
-  void renderInteractionDemogThemes(List<model.Option> themes,
-      bool isCompareEnabled, String theme, String compareTheme) {
-    analyseDemogCompareWrapper.children.clear();
-
-    var row = html.DivElement()..classes = ['row'];
-    var dropdownCol = html.DivElement()..classes = ['col-2'];
-    var compareCol = html.DivElement()..classes = ['col-2'];
-
-    var dropdown = html.SelectElement()
-      ..classes = ['form-control']
-      ..onChange.listen((e) {
-        var value = (e.target as html.SelectElement).value;
-        controller.setFilterValue('theme', value);
-      });
-
-    themes.forEach((o) {
-      var option = html.OptionElement()
-        ..setAttribute('value', o.value)
-        ..appendText(o.label);
-      if (theme == o.value) {
-        option.setAttribute('selected', 'true');
-      }
-      dropdown.append(option);
-    });
-
-    var compare = html.SelectElement()
-      ..classes = ['form-control']
-      ..setAttribute('disabled', 'true')
-      ..onChange.listen((e) {
-        var value = (e.target as html.SelectElement).value;
-        controller.setFilterCompareValue('theme', value);
-      });
-
-    themes.forEach((o) {
-      var option = html.OptionElement()
-        ..setAttribute('value', o.value)
-        ..appendText(o.label);
-      if (o.value == compareTheme) {
-        option.setAttribute('selected', 'true');
-      }
-      compare.append(option);
-    });
-
-    if (isCompareEnabled) {
-      compare.removeAttribute('disabled');
-    }
-
-    dropdownCol.append(dropdown);
-    compareCol.append(compare);
-
-    row..append(dropdownCol)..append(compareCol);
-
-    analyseDemogCompareWrapper.append(row);
-  }
-
-  ChartOptions _generateChartOptions({bool isNormaliseEnabled = false}) {
-    var labelString =
-        (isNormaliseEnabled ? 'Percentage' : 'Number') + ' of interactions';
-    var chartY = ChartYAxe(
-        stacked: false,
-        scaleLabel: ScaleTitleOptions(labelString: labelString, display: true));
-    chartY.ticks = TickOptions(min: 0);
-
-    return ChartOptions(
-        responsive: true,
-        animation: ChartAnimationOptions(duration: 0),
-        tooltips: ChartTooltipOptions(mode: 'index'),
-        legend: ChartLegendOptions(
-            position: 'bottom', labels: ChartLegendLabelOptions(boxWidth: 12)),
-        scales: ChartScales(
-            display: true,
-            xAxes: [ChartXAxe(stacked: false)],
-            yAxes: [chartY]));
-  }
-
-  ChartDataSets _getDataset(String key, List data,
-      {String forceColor, String forceLabel}) {
-    var metadata = util.metadata[key];
-    if (!util.metadata.containsKey(key)) {
-      metadata = util.MetaData(forceColor ?? '#000000', key);
-    }
-
-    if (forceColor != null) {
-      metadata = util.MetaData(forceColor, metadata.label);
-    }
-
-    if (forceLabel != null) {
-      metadata = util.MetaData(metadata.color, forceLabel);
-    }
-
-    return ChartDataSets(
-        label: metadata.label,
-        lineTension: 0,
-        fill: true,
-        backgroundColor: metadata.background,
-        borderColor: metadata.color,
-        hoverBackgroundColor: metadata.color,
-        hoverBorderColor: metadata.color,
-        pointBackgroundColor: metadata.color,
-        pointRadius: 2,
-        borderWidth: 1,
-        data: data);
-  }
-
-  String _generateLabelFromFilters(
-      Map<String, String> filterValues, List<String> activeFilters) {
-    var label = [];
-    filterValues.forEach((k, v) {
-      if (v != 'all' && activeFilters.contains(k)) {
-        label.add(util.metadata[v] == null ? v : util.metadata[v].label);
+    mapInstance.addLayer({
+      'id': 'fill-${regionID}',
+      'type': 'fill',
+      'source': '${regionID}',
+      'layout': {},
+      'paint': {
+        'fill-color': fillColor,
+        'fill-opacity': (mapValues[regionID] ?? [0, 0])[1],
       }
     });
 
-    return label.isEmpty ? 'All interactions' : label.join(', ');
-  }
+    if (mapValues[regionID] == null) continue;
 
-  void _renderThemeChart(
-      List<String> themeIDs,
-      List<model.Interaction> interactions,
-      List<model.Interaction> compareInteractions,
-      html.DivElement wrapper,
-      bool isCompareEnabled,
-      bool isNormaliseEnabled,
-      Map<String, String> filterValues,
-      Map<String, String> filterCompareValues,
-      List<String> activeFilters) {
-    var buckets = {
-      for (var t in themeIDs..sort((a, b) => a.compareTo(b)))
-        t: model.Bucket(0, 0)
-    };
-
-    for (var interaction in interactions) {
-      interaction.themes
-          .forEach((t) => buckets[t] != null ? ++buckets[t].count : null);
-    }
-
-    for (var interaction in compareInteractions) {
-      interaction.themes
-          .forEach((t) => buckets[t] != null ? ++buckets[t].compare : null);
-    }
-
-    List<num> aDataset = [];
-    List<num> bDataset = [];
-
-    buckets.forEach((_, value) {
-      aDataset.add(value.count);
-      bDataset.add(value.compare);
+    var suffix = normalisationEnabled ? '%' : '';
+    mapInstance.addLayer({
+      'id': 'label-${regionID}',
+      'type': 'symbol',
+      'source': '${regionID}',
+      'layout': {
+        'text-field': '${regionName} (${mapValues[regionID][0]}${suffix})',
+        'text-size': 10,
+      },
+      'paint': {
+        'text-color': '#000000',
+        'text-halo-blur': 1,
+        'text-halo-color': '#FFF',
+        'text-halo-width': 2
+      },
     });
+  }
+}
 
-    if (isNormaliseEnabled) {
-      aDataset = _getNormalisedPercent(aDataset, interactions.length);
-      bDataset = _getNormalisedPercent(bDataset, compareInteractions.length);
-    }
+html.DivElement _generateChart(
+    String title, String narrative, chartjs.ChartConfiguration chartConfig) {
+  var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];
 
-    var dataSets = <ChartDataSets>[
-      _getDataset('a', aDataset,
-          forceLabel: _generateLabelFromFilters(filterValues, activeFilters))
-    ];
-    if (isCompareEnabled) {
-      dataSets.add(_getDataset('b', bDataset,
-          forceLabel:
-              _generateLabelFromFilters(filterCompareValues, activeFilters)));
-    }
+  var titleElement = html.HeadingElement.h5()..text = title;
+  var narrativeElement = html.ParagraphElement()..text = narrative;
+  wrapper.append(titleElement);
+  wrapper.append(narrativeElement);
 
-    var chartData = LinearChartData(
-        labels: buckets.keys.map((k) {
-          return util.metadata[k] == null ? k : util.metadata[k].label;
-        }).toList(),
-        datasets: dataSets);
+  var card = html.DivElement()..classes = [CARD_CLASSNAME];
+  var cardBody = html.DivElement()..classes = [CARD_BODY_CLASSNAME];
+  card.append(cardBody);
 
-    var config = ChartConfiguration(
-        type: 'bar',
-        data: chartData,
-        options: _generateChartOptions(isNormaliseEnabled: isNormaliseEnabled));
+  var canvas = html.CanvasElement();
+  cardBody.append(canvas);
+  wrapper.append(card);
 
-    wrapper.children.clear();
-    var canvas = html.CanvasElement();
-    wrapper.append(canvas);
-    Chart(canvas, config);
+  chartjs.Chart(canvas, chartConfig);
+
+  return wrapper;
+}
+
+html.DivElement _generateGeoMapPlaceholder(
+    String id, String title, String narrative, bool comparisonEnabled) {
+  var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];
+
+  var titleElement = html.HeadingElement.h5()..text = title;
+  var narrativeElement = html.ParagraphElement()..text = narrative;
+  wrapper.append(titleElement);
+  wrapper.append(narrativeElement);
+
+  var card = html.DivElement()..classes = [CARD_CLASSNAME];
+  var cardBody = html.DivElement()..classes = [CARD_BODY_CLASSNAME];
+  card.append(cardBody);
+
+  var mapRow = generateGridRowElement();
+  var mapCol = html.DivElement()
+    ..classes = ['col', MAPBOX_COL_CLASSNAME]
+    ..id = geomap_helpers.generateGeoMapID(id);
+  mapRow.append(mapCol);
+
+  if (comparisonEnabled) {
+    var mapComparisonCol = html.DivElement()
+      ..classes = ['col', MAPBOX_COL_CLASSNAME]
+      ..id = geomap_helpers.generateGeoComparisonMapID(id);
+    mapRow.append(mapComparisonCol);
   }
 
-  void renderThemeGraphs(
-      List<model.Interaction> interactions,
-      List<model.Interaction> compareInteractions,
-      bool isCompareEnabled,
-      bool isNormaliseEnabled,
-      List<String> themeIDs,
-      Map<String, String> filterValues,
-      Map<String, String> filterCompareValues,
-      List<String> activeFilters) {
-    logger.log('Rendering graphs for themes');
+  cardBody.append(mapRow);
 
-    var classThemesIDs = [
-      'attitude',
-      'behaviour',
-      'knowledge',
-      'statement',
-      'question'
-    ];
-    _renderThemeChart(
-        classThemesIDs,
-        interactions,
-        compareInteractions,
-        responseClassificationGraphWrapper,
-        isCompareEnabled,
-        isNormaliseEnabled,
-        filterValues,
-        filterCompareValues,
-        activeFilters);
+  wrapper.append(card);
+  return wrapper;
+}
 
-    var practiceThemesIDs = [
-      'right_practice_general_follow_advice',
-      'right_practice_distancing_isolation_quarantine',
-      'right_practice_hygiene',
-      'right_practice_multiple',
-      'religion_practice',
-      'religion_guidance',
-      'religion_hope_and_fate',
-      'rumour_misinfo_therapies_cures',
-      'rumour_misinfo_cause_misunderstood',
-      'stigma_hostility_rejection_anger',
-    ];
-    _renderThemeChart(
-        practiceThemesIDs,
-        interactions,
-        compareInteractions,
-        responseThemePracticeGraphWrapper,
-        isCompareEnabled,
-        isNormaliseEnabled,
-        filterValues,
-        filterCompareValues,
-        activeFilters);
+html.DivElement _getCheckboxWithLabel(
+    String id, String label, bool checked, Function(bool) onChange) {
+  var checkboxWrapper = html.DivElement()
+    ..classes = ['form-check', 'form-check-inline'];
+  var checkboxOption = html.InputElement()
+    ..type = 'checkbox'
+    ..id = id
+    ..classes = ['form-check-input']
+    ..checked = checked
+    ..onChange.listen(
+        (e) => onChange((e.target as html.CheckboxInputElement).checked));
+  var checkboxLabel = html.LabelElement()
+    ..htmlFor = id
+    ..classes = ['form-check-label']
+    ..innerText = label;
+  checkboxWrapper.append(checkboxOption);
+  checkboxWrapper.append(checkboxLabel);
+  return checkboxWrapper;
+}
 
-    var filteredThemeIDs = List<String>.from(themeIDs);
-    for (var theme in classThemesIDs) {
-      filteredThemeIDs.remove(theme);
-    }
-    for (var theme in practiceThemesIDs) {
-      filteredThemeIDs.remove(theme);
-    }
-    filteredThemeIDs.remove('all');
+html.SelectElement _getDropdown(String id, List<String> options,
+    String selectedOption, bool disabled, Function(String) onChange) {
+  var dropdownSelect = html.SelectElement()
+    ..id = id
+    ..classes = ['form-control']
+    ..disabled = disabled
+    ..onChange.listen((e) => onChange((e.target as html.SelectElement).value));
 
-    _renderThemeChart(
-        filteredThemeIDs,
-        interactions,
-        compareInteractions,
-        responseThemeGraphWrapper,
-        isCompareEnabled,
-        isNormaliseEnabled,
-        filterValues,
-        filterCompareValues,
-        activeFilters);
+  for (var option in options) {
+    var dropdownOption = html.OptionElement()
+      ..value = option
+      ..selected = option == selectedOption
+      ..text = option;
+    dropdownSelect.append(dropdownOption);
   }
 
-  void _renderDemogGenderGraph(
-      String type,
-      List<model.Interaction> interactions,
-      List<model.Interaction> compareInteractions,
-      html.DivElement wrapper,
-      bool isCompareEnabled,
-      bool isNormaliseEnabled,
-      List<model.InteractionFilter> filters,
-      Map<String, String> filterValues,
-      Map<String, String> filterCompareValues) {
-    var filter = filters.firstWhere((f) => f.value == type);
-    var buckets = {};
-    for (var f in filter.options..sort((a, b) => a.label.compareTo(b.label))) {
-      if (f.value != 'all') {
-        buckets[f.value] = model.Bucket(0, 0);
-      }
-    }
+  return dropdownSelect;
+}
 
-    for (var interaction in interactions) {
-      switch (type) {
-        case 'gender':
-          ++buckets[interaction.gender].count;
-          break;
-        case 'age':
-          ++buckets[interaction.age_bucket].count;
-          break;
-        case 'idp_status':
-          ++buckets[interaction.idp_status].count;
-          break;
-        case 'household_language':
-          ++buckets[interaction.household_language].count;
-          break;
-        default:
-          logger.error('No such interaction to count');
-      }
-    }
+void renderSettingsConfigEditor(String config) {
+  var wrapper = html.DivElement();
+  content.append(wrapper);
 
-    for (var interaction in compareInteractions) {
-      switch (type) {
-        case 'gender':
-          ++buckets[interaction.gender].compare;
-          break;
-        case 'age':
-          ++buckets[interaction.age_bucket].compare;
-          break;
-        case 'idp_status':
-          ++buckets[interaction.idp_status].compare;
-          break;
-        case 'household_language':
-          ++buckets[interaction.household_language].compare;
-          break;
-        default:
-          logger.error('No such interaction to count');
-      }
-    }
+  var textArea = html.TextAreaElement()..text = config;
+  wrapper.append(textArea);
 
-    List<num> aDataset = [];
-    List<num> bDataset = [];
+  var editor = code_mirror.CodeMirror.fromTextArea(textArea, options: {
+    'mode': {'name': 'javascript', 'json': true},
+    'lineNumbers': true
+  });
+  editor.setSize(null, 600);
+  editor.focus();
 
-    buckets.forEach((_, value) {
-      aDataset.add(value.count);
-      bDataset.add(value.compare);
+  var alertElement = html.DivElement()
+    ..classes = ['alert']
+    ..id = CONFIG_SETTINGS_ALERT_ID
+    ..hidden = true;
+  wrapper.append(alertElement);
+
+  var saveButton = html.ButtonElement()
+    ..classes = ['btn', 'btn-primary']
+    ..text = 'Update config'
+    ..onClick.listen((e) {
+      var data = editor.getDoc().getValue();
+      command(UIAction.saveConfigToFirebase, SaveConfigToFirebaseData(data));
     });
+  wrapper.append(saveButton);
+}
 
-    if (isNormaliseEnabled) {
-      aDataset = _getNormalisedPercent(aDataset, interactions.length);
-      bDataset = _getNormalisedPercent(bDataset, compareInteractions.length);
-    }
+void renderSettingsConfigUtility(Map<String, Set> uniqueValues) {
+  var wrapper = html.DivElement()
+    ..classes = [CONFIG_UNIQUE_VALUES_WRAPPER_CLASSNAME];
+  content.append(wrapper);
 
-    var dataSets = <ChartDataSets>[
-      _getDataset(filterValues['theme'], aDataset,
-          forceColor: util.metadata['a'].color)
-    ];
-    if (isCompareEnabled) {
-      dataSets.add(_getDataset(filterCompareValues['theme'], bDataset,
-          forceColor: util.metadata['b'].color));
-    }
+  var skeletonHeader = html.HeadingElement.h5()
+    ..text = 'Step 1: Skeleton of config';
+  var skeletonCopyButton = html.ButtonElement()
+    ..classes = ['btn', 'btn-outline-secondary']
+    ..innerText = 'Copy config skeleton'
+    ..onClick
+        .listen((_) => command(UIAction.copyToClipboardConfigSkeleton, null));
+  var skeletonInstructions = html.OListElement()..type = 'a';
+  [
+    'Fill <code>interactions</code> under data_paths',
+    'Optionally fill <code>label</code> for each of the filters',
+    'Fill <code>label</code> for each of the tabs',
+    'Fill <code>exclude_filters: ["filter_key"]</code> for each of the tabs'
+  ].forEach(
+      (i) => skeletonInstructions.append(html.LIElement()..innerHtml = i));
+  wrapper.append(skeletonHeader);
+  wrapper.append(skeletonCopyButton);
+  wrapper.append(skeletonInstructions);
 
-    var chartData = LinearChartData(
-        labels: buckets.keys.map((k) {
-          return util.metadata[k] == null ? k : util.metadata[k].label;
-        }).toList(),
-        datasets: dataSets);
+  var chartConfigTitle = html.HeadingElement.h5()
+    ..innerText = 'Step 2: Chart config / tabs > charts: []';
+  var chartConfigInstructions = html.OListElement()..type = 'a';
+  [
+    'Optionally fill <code>label</code> for each of the field keys',
+    'Optionally delete the unwanted fields from the chart config (esp. for themes)',
+    'Optionally edit the chart type (defaults to bar)'
+  ].forEach(
+      (i) => chartConfigInstructions.append(html.LIElement()..innerHtml = i));
+  var chartConfigTable = html.TableElement()
+    ..classes = ['table', 'table-bordered'];
+  uniqueValues.forEach((key, value) {
+    var tableRow = html.TableRowElement();
+    var fieldCol = html.TableCellElement()..innerText = key;
+    var valuesCol = html.TableCellElement()
+      ..innerText = (value.toList()..sort()).join(', ');
+    var copyCol = html.TableCellElement();
+    var copyButton = html.ButtonElement()
+      ..classes = ['btn', 'btn-outline-secondary']
+      ..innerText = 'Copy chart config'
+      ..onClick.listen((_) => command(UIAction.copyToClipboardChartConfig,
+          CopyToClipboardChartConfigData(key)));
+    copyCol.append(copyButton);
 
-    var config = ChartConfiguration(
-        type: 'bar',
-        data: chartData,
-        options: _generateChartOptions(isNormaliseEnabled: isNormaliseEnabled));
+    tableRow.append(fieldCol);
+    tableRow.append(valuesCol);
+    tableRow.append(copyCol);
+    chartConfigTable.append(tableRow);
+  });
 
-    wrapper.children.clear();
-    var canvas = html.CanvasElement();
-    wrapper.append(canvas);
-    Chart(canvas, config);
-  }
+  wrapper.append(chartConfigTitle);
+  wrapper.append(chartConfigInstructions);
+  wrapper.append(chartConfigTable);
+}
 
-  void renderDemogGraphs(
-      List<model.Interaction> interactions,
-      List<model.Interaction> compareInteractions,
-      bool isCompareEnabled,
-      bool isNormaliseEnabled,
-      List<model.InteractionFilter> filters,
-      Map<String, String> filterValues,
-      Map<String, String> filterCompareValues) {
-    logger.log('Rendering graphs for demographics');
+void showConfigSettingsAlert(String message, bool isError) {
+  configSettingsAlert
+    ..text = message
+    ..classes.toggle('alert-danger', isError)
+    ..classes.toggle('alert-success', !isError)
+    ..hidden = false;
+}
 
-    _renderDemogGenderGraph(
-        'gender',
-        interactions,
-        compareInteractions,
-        demogGenderGraphWrapper,
-        isCompareEnabled,
-        isNormaliseEnabled,
-        filters,
-        filterValues,
-        filterCompareValues);
-    _renderDemogGenderGraph(
-        'age',
-        interactions,
-        compareInteractions,
-        demogAgeGraphWrapper,
-        isCompareEnabled,
-        isNormaliseEnabled,
-        filters,
-        filterValues,
-        filterCompareValues);
-    _renderDemogGenderGraph(
-        'idp_status',
-        interactions,
-        compareInteractions,
-        demogIDPWrapper,
-        isCompareEnabled,
-        isNormaliseEnabled,
-        filters,
-        filterValues,
-        filterCompareValues);
-    _renderDemogGenderGraph(
-        'household_language',
-        interactions,
-        compareInteractions,
-        demogLangWrapper,
-        isCompareEnabled,
-        isNormaliseEnabled,
-        filters,
-        filterValues,
-        filterCompareValues);
-    _renderDemogMap(interactions, compareInteractions, isCompareEnabled,
-        isNormaliseEnabled, filters, filterValues, filterCompareValues);
-  }
+void hideConfigSettingsAlert() {
+  configSettingsAlert
+    ..text = ''
+    ..hidden = true;
+}
 
-  svg.SvgSvgElement _getSomaliaMap(Map<String, num> buckets, num max,
-      String color, bool isNormaliseEnabled) {
-    var img = svg.SvgSvgElement()
-      ..setAttribute('viewBox', _map.somalia['viewbox'])
-      ..setAttribute('style', 'enable-background: ${_map.somalia["viewbox"]}');
-
-    var regionsGroup = svg.GElement()..setAttribute('id', 'regions');
-    var labelsGroup = svg.GElement()..setAttribute('id', 'labels');
-
-    (_map.somalia['regions'] as Map<String, dynamic>).forEach((k, region) {
-      var regionPath = svg.PathElement()
-        ..classes = ['map-region']
-        ..setAttribute('fill', color)
-        ..setAttribute('stroke', color)
-        ..setAttribute('d', region['path'])
-        ..setAttribute('fill-opacity', (buckets[k] / max).toString());
-      regionsGroup.append(regionPath);
-
-      var text = svg.TextElement()
-        ..classes = ['map-label']
-        ..setAttribute('transform', 'matrix(1 0 0 1 ${region["label-pos"]})')
-        ..appendText(region['name'] +
-            '(' +
-            buckets[k].toString() +
-            (isNormaliseEnabled ? '%' : '') +
-            ')');
-
-      if (region['line'] != null) {
-        var pts = region['line'].toString().split(',');
-        var line = svg.LineElement()
-          ..classes = ['map-line']
-          ..setAttribute('x1', pts[0])
-          ..setAttribute('y1', pts[1])
-          ..setAttribute('x2', pts[2])
-          ..setAttribute('y2', pts[3]);
-        labelsGroup.append(line);
-      }
-
-      labelsGroup.append(text);
-    });
-
-    return img..append(regionsGroup)..append(labelsGroup);
-  }
-
-  void _renderDemogMap(
-      List<model.Interaction> interactions,
-      List<model.Interaction> compareInteractions,
-      bool isCompareEnabled,
-      bool isNormalisedEnabled,
-      List<model.InteractionFilter> filters,
-      Map<String, String> filterValues,
-      Map<String, String> filterCompareValues) async {
-    demogMapWrapper.children.clear();
-    demogMapCompareWrapper.children.clear();
-    var filter = filters.firstWhere((f) => f.value == 'location_region');
-
-    var buckets = {for (var t in filter.options) t.value: model.Bucket(0, 0)};
-    for (var interaction in interactions) {
-      ++buckets[interaction.location_region].count;
-    }
-
-    var counts = buckets.map((k, v) {
-      var value = isNormalisedEnabled
-          ? util.trucateDecimal(v.count / interactions.length * 100, 2)
-          : v.count;
-      return MapEntry(k, value);
-    });
-
-    var mapToShow = _getSomaliaMap(counts, counts.values.reduce(math.max),
-        util.metadata['a'].color, isNormalisedEnabled);
-    demogMapWrapper.append(mapToShow);
-
-    if (!isCompareEnabled) return;
-
-    for (var interaction in compareInteractions) {
-      ++buckets[interaction.location_region].compare;
-    }
-
-    var compareCounts = buckets.map((k, v) {
-      var value = isNormalisedEnabled
-          ? util.trucateDecimal(v.compare / compareInteractions.length * 100, 2)
-          : v.compare;
-      return MapEntry(k, value);
-    });
-
-    var compMapToShow = _getSomaliaMap(
-        compareCounts,
-        compareCounts.values.reduce(math.max),
-        util.metadata['b'].color,
-        isNormalisedEnabled);
-    demogMapCompareWrapper.append(compMapToShow);
-  }
-
-  List<num> _getNormalisedPercent(List<num> values, int count) {
-    return values
-        .map((value) => util.trucateDecimal((value / count) * 100, 2))
-        .toList();
-  }
-
-  html.DivElement _getAnalyseMessageView(model.InteractionMessage message) {
-    var row = html.DivElement();
-
-    var wrapper = html.DivElement()..classes = ['message-box'];
-    var text = html.DivElement()..appendText(message.text);
-
-    wrapper.append(text);
-    if (message.translated_text != '') {
-      var translated = html.DivElement()
-        ..classes = ['message-translated']
-        ..appendText(message.translated_text);
-      wrapper.append(translated);
-    }
-
-    var metaWrapper = html.DivElement();
-
-    if (message.recorded_at != null) {
-      var recorded = html.SpanElement()
-        ..classes = ['message-time']
-        ..style.marginRight = '18px'
-        ..appendText(util.messageTimeFormat(message.recorded_at));
-      metaWrapper.append(recorded);
-    }
-
-    if (message.theme != null) {
-      var theme = html.SpanElement()
-        ..classes = ['message-time']
-        ..appendText(message.theme);
-      metaWrapper.append(theme);
-    }
-
-    if (message.recorded_at != null || message.theme != null) {
-      wrapper.append(metaWrapper);
-    }
-
-    return row..append(wrapper);
-  }
-
-  void renderAnalyseMessages(List<model.Interaction> interactions,
-      List<model.Interaction> compareInteractions, bool isCompareEnabled) {
-    analyseMessagesFilterWrapper.children.clear();
-    analyseMessagesFilterCompareWrapper.children.clear();
-
-    var count = 0;
-    for (var i in interactions) {
-      for (var m in i.messages) {
-        if (m.is_featured) {
-          ++count;
-          analyseMessagesFilterWrapper.append(_getAnalyseMessageView(m));
-        }
-      }
-    }
-    if (count == 0) {
-      analyseMessagesFilterWrapper.append(html.DivElement()
-        ..appendText('No messages')
-        ..style.opacity = '0.5');
-    }
-
-    if (!isCompareEnabled) return;
-
-    count = 0;
-    for (var i in compareInteractions) {
-      for (var m in i.messages) {
-        if (m.is_featured) {
-          ++count;
-          analyseMessagesFilterCompareWrapper.append(_getAnalyseMessageView(m));
-        }
-      }
-    }
-    if (count == 0) {
-      analyseMessagesFilterCompareWrapper.append(html.DivElement()
-        ..appendText('No messages')
-        ..style.opacity = '0.5');
-    }
-  }
-
-  void render() {
-    _updateNavbar();
-    _updateContent();
-  }
+void showAlert(String message) {
+  html.window.alert('Error: ${message}');
 }

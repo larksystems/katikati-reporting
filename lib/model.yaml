@@ -1,0 +1,78 @@
+Config:
+  data_paths: "map string"
+  filters: "array Filter"
+  tabs: "array Tab"
+
+Tab:
+  label: "string"
+  exclude_filters: "array string" #optional
+  charts: "array Chart"
+
+Chart:
+  type: ChartType
+  timestamp: "Timestamp" #optional
+  title: "string" #optional
+  narrative: "string" #optional
+  fields: "array Field"
+  colors: "array string" #optional
+  geography: "Geography" #optional
+
+Timestamp:
+  aggregate: "TimeAggregate"
+  key: "string"
+
+Field:
+  label: "string" #optional
+  tooltip: "string" #optional
+  bucket: "array num" #computed
+  # todo: make this Map<DateTime, num> when Infrastructure permits
+  time_bucket: "map num" #computed
+  field: FieldOperation
+
+FieldOperation:
+  key: "string"
+  operator: FieldOperator
+  value: "dynamic"
+
+Filter:
+  key: "string"
+  label: "string" #optional
+  tooltip: "string" #optional
+  exclude_values: "array dynamic" #optional
+
+Geography:
+  country: "string"
+  regionLevel: GeoRegionLevel
+
+GeoRegionLevel:
+  dartType: "enum"
+  defaultValue: "state"
+  dartValues:
+    - city
+    - state
+    - country
+
+FieldOperator:
+  dartType: "enum"
+  defaultValue: "equals"
+  dartValues:
+    - equals
+    - contains
+    - not_contains
+
+ChartType:
+  dartType: "enum"
+  defaultValue: "bar"
+  dartValues:
+    - bar
+    - line
+    - map
+    - time_series
+
+TimeAggregate:
+  dartType: "enum"
+  defaultValue: "none"
+  dartValues:
+    - day
+    - hour
+    - none

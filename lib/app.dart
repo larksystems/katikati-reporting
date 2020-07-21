@@ -1,16 +1,5 @@
-import 'controller.dart';
-import 'view.dart';
-import 'logger.dart';
+import 'controller.dart' as controller;
 
-Logger logger = Logger('app.dart');
-
-class App {
-  Controller controller;
-  View view;
-
-  App() {
-    view = View();
-    controller = Controller('show-interactions', view);
-    view.controller = controller;
-  }
+void init() {
+  controller.init();
 }

@@ -1,0 +1,56 @@
+@import "./bootstrap.min.css";
+@import "./nav.css";
+@import "./modal.css";
+
+:disabled {
+  cursor: not-allowed;
+}
+
+body {
+  background-color: #f3f3f3;
+}
+
+#content {
+  padding: 72px 0;
+}
+
+#filters {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.filter-row {
+  padding: 12px 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: none;
+}
+
+.filter-row-label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.9em;
+}
+
+.chart {
+  margin-top: 24px;
+}
+
+.mapbox-col {
+  height: 640px;
+}
+
+.mapboxgl-canvas {
+  max-width: calc(100% - 30px);
+  border: 1px solid #b3b3b3;
+}
+
+.CodeMirror {
+  border: 1px solid #000;
+}
+
+.unique-values-wrapper {
+  margin-top: 32px;
+}
+
+.unique-values-wrapper td {
+  font-family: monospace;
+}
