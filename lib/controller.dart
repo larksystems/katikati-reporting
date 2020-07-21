@@ -8,7 +8,7 @@ import 'package:dashboard/firebase.dart' as fb;
 import 'package:dashboard/chart_helpers.dart' as chart_helper;
 import 'package:dashboard/extensions.dart';
 import 'package:dashboard/logger.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' as intl;
 
 Logger logger = Logger('controller.dart');
 
@@ -17,7 +17,7 @@ Map<String, model.Link> _navLinks = {
   'settings': model.Link('settings', 'Settings', handleNavToSettings)
 };
 
-var STANDARD_DATE_TIME_FORMAT = DateFormat('yyyy-MM-dd HH:mm:ss');
+var STANDARD_DATE_TIME_FORMAT = intl.DateFormat('yyyy-MM-dd HH:mm:ss');
 
 const DEFAULT_FILTER_SELECT_VALUE = '__all';
 

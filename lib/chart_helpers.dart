@@ -1,7 +1,7 @@
 import 'dart:js';
 import 'package:dashboard/model.dart' as model;
 import 'package:chartjs/chartjs.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' as intl;
 
 const barChartDefaultColors = ['#ef5350', '#07acc1'];
 const lineChartDefaultColors = [
@@ -200,10 +200,10 @@ ChartConfiguration generateTimeSeriesChartConfig(model.Chart chart,
             var date = DateTime.parse(key);
             switch (chart.timestamp.aggregate) {
               case model.TimeAggregate.day:
-                return DateFormat('dd MMM').format(date);
+                return intl.DateFormat('dd MMM').format(date);
               case model.TimeAggregate.hour:
               default:
-                return DateFormat('dd MMM h:mm a').format(date);
+                return intl.DateFormat('dd MMM h:mm a').format(date);
             }
           }).toList(),
           datasets: datasets),
