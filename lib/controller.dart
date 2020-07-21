@@ -31,6 +31,7 @@ var _currentNavLink = _navLinks['analyse'].pathname;
 int _selectedAnalysisTabIndex;
 bool _dataComparisonEnabled = true;
 bool _dataNormalisationEnabled = false;
+bool _stackTimeSeriesEnabled = true;
 Set<String> _activeFilters = {};
 Map<String, String> _filterValues = {};
 Map<String, String> _comparisonFilterValues = {};
@@ -48,6 +49,8 @@ Map<String, String> get _activeComparisonFilterValues => {
 Map<String, Map<String, dynamic>> _allInteractions;
 Map<String, Set> _uniqueFieldCategoryValues;
 Map<String, List<DateTime>> _allInteractionsDateRange;
+Map<String, Map<model.TimeAggregate, Map<String, num>>>
+    _allInteractionDateBuckets;
 Map<String, dynamic> _configRaw;
 model.Config _config;
 
@@ -58,6 +61,7 @@ enum UIAction {
   changeAnalysisTab,
   toggleDataComparison,
   toggleDataNormalisation,
+  toggleStackTimeseries,
   toggleActiveFilter,
   setFilterValue,
   setComparisonFilterValue,
@@ -275,7 +279,7 @@ void _computeChartBuckets(List<model.Chart> charts) {
 
   // reset bucket to [filter(0), comparisonFilter(0)] for each chart col
   // reset time_bucket to {"mm/dd/yyyy": 0} for time series chart col
-  // reset allInteractionDateBuckets (for normalising) to {"recorded_at": {"mm/dd/yyyy": 0}}
+  // reset allInteractionDateBuckets (for normalising) to {"recorded_at": {day: {"mm/dd/yyyy": 0}}}
   for (var chart in charts) {
     for (var chartCol in chart.fields) {
       chartCol.bucket = [0, 0];
@@ -285,6 +289,17 @@ void _computeChartBuckets(List<model.Chart> charts) {
             _allInteractionsDateRange[chart.timestamp.key][1],
             chart.timestamp.aggregate);
       }
+    }
+    if (chart.type == model.ChartType.time_series) {
+      var key = chart.timestamp.key;
+      var aggregate = chart.timestamp.aggregate;
+      _allInteractionDateBuckets = {};
+      _allInteractionDateBuckets[key] = {};
+      _allInteractionDateBuckets[key][aggregate] =
+          _generateEmptyDateTimeBuckets(
+              _allInteractionsDateRange[chart.timestamp.key][0],
+              _allInteractionsDateRange[chart.timestamp.key][1],
+              chart.timestamp.aggregate);
     }
   }
 
@@ -297,6 +312,14 @@ void _computeChartBuckets(List<model.Chart> charts) {
 
     if (addToPrimaryBucket) {
       ++_filterValuesCount;
+      for (var chart in charts) {
+        if (chart.type == model.ChartType.time_series) {
+          var key = chart.timestamp.key;
+          var aggregate = chart.timestamp.aggregate;
+          var timeStampKey = _generateDateTimeKey(interaction[key], aggregate);
+          _allInteractionDateBuckets[key][aggregate][timeStampKey] += 1;
+        }
+      }
     }
 
     if (addToComparisonBucket) {
@@ -338,7 +361,15 @@ void _computeChartBuckets(List<model.Chart> charts) {
           comparisonFilterValuesPercent.roundToDecimal(2)
         ];
 
-        // todo: handle normalisation of time series charts
+        if (chart.type == model.ChartType.time_series) {
+          for (var datetime in chartCol.time_bucket.keys) {
+            chartCol.time_bucket[datetime] =
+                ((chartCol.time_bucket[datetime] * 100) /
+                        _allInteractionDateBuckets[chart.timestamp.key]
+                            [chart.timestamp.aggregate][datetime])
+                    .roundToDecimal(2);
+          }
+        }
       }
     }
   }
@@ -394,7 +425,8 @@ void handleNavToAnalysis() {
   var tabLabels =
       _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
   view.renderAnalysisTabs(tabLabels);
-  view.renderChartOptions(_dataComparisonEnabled, _dataNormalisationEnabled);
+  view.renderChartOptions(_dataComparisonEnabled, _dataNormalisationEnabled,
+      _stackTimeSeriesEnabled);
 
   _computeFilterDropdownsAndRender();
   _computeChartBucketsAndRender();
@@ -444,7 +476,7 @@ void _computeChartBucketsAndRender() {
             chart.title,
             chart.narrative,
             chart_helper.generateTimeSeriesChartConfig(
-                chart, _dataNormalisationEnabled));
+                chart, _dataNormalisationEnabled, _stackTimeSeriesEnabled));
         break;
       case model.ChartType.map:
         var mapData =
@@ -566,6 +598,14 @@ void command(UIAction action, Data data) async {
       _dataNormalisationEnabled = d.enabled;
       logger
           .debug('Data normalisation changed to ${_dataNormalisationEnabled}');
+      view.removeAllChartWrappers();
+      _computeChartBucketsAndRender();
+      break;
+    case UIAction.toggleStackTimeseries:
+      var d = data as ToggleOptionEnabledData;
+      _stackTimeSeriesEnabled = d.enabled;
+      logger.debug(
+          'Stack time series chart changed to ${_stackTimeSeriesEnabled}');
       view.removeAllChartWrappers();
       _computeChartBucketsAndRender();
       break;

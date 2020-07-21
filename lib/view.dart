@@ -213,7 +213,8 @@ void renderAnalysisTabs(List<String> labels) {
   content.append(wrapper);
 }
 
-void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
+void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled,
+    bool stackTimeseriesEnabled) {
   var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
   var labelCol =
       generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
@@ -232,6 +233,14 @@ void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled) {
     command(UIAction.toggleDataNormalisation, ToggleOptionEnabledData(checked));
   });
   optionsCol.append(normalisationCheckbox);
+
+  var stackTimeseriesCheckbox = _getCheckboxWithLabel(
+      'stack-timeseries',
+      'Stack time series',
+      stackTimeseriesEnabled,
+      (bool checked) => command(
+          UIAction.toggleStackTimeseries, ToggleOptionEnabledData(checked)));
+  optionsCol.append(stackTimeseriesCheckbox);
 
   wrapper.append(labelCol);
   wrapper.append(optionsCol);
