@@ -128,7 +128,8 @@ ChartConfiguration generateBarChartConfig(
       options: _generateBarChartOptions(dataNormalisationEnabled));
 }
 
-ChartOptions _generateTimeSeriesChartOptions(bool dataNormalisationEnabled) {
+ChartOptions _generateTimeSeriesChartOptions(
+    bool dataNormalisationEnabled, bool stackTimeseriesEnabled) {
   var labelPrepend = dataNormalisationEnabled ? 'Percentage' : 'Number';
   var labelString = '${labelPrepend} of interactions';
   var chartX = ChartXAxe()
@@ -138,9 +139,12 @@ ChartOptions _generateTimeSeriesChartOptions(bool dataNormalisationEnabled) {
       ..maxRotation = 90);
 
   var chartY = ChartYAxe()
-    ..stacked = false
+    ..stacked = stackTimeseriesEnabled
     ..scaleLabel = ScaleTitleOptions(labelString: labelString, display: true)
     ..ticks = (LinearTickOptions()..min = 0);
+  if (dataNormalisationEnabled) {
+    chartY.ticks.max = 100;
+  }
 
   var tooltipLabelCallback = (ChartTooltipItem tooltipItem, ChartData data) {
     var xLabel = data.datasets[tooltipItem.datasetIndex].label;
@@ -161,27 +165,32 @@ ChartOptions _generateTimeSeriesChartOptions(bool dataNormalisationEnabled) {
 }
 
 ChartDataSets _generateTimeSeriesChartDataset(
-    String label, List<num> data, String lineColor) {
+    String label, List<num> data, String lineColor, dynamic filled) {
   return ChartDataSets(
       label: label,
-      fill: false,
-      backgroundColor: lineColor + 'aa',
+      fill: filled,
+      backgroundColor: lineColor + '55',
       borderColor: lineColor,
       hoverBackgroundColor: lineColor,
       hoverBorderColor: lineColor,
+      pointHoverBackgroundColor: lineColor,
+      pointRadius: 2,
       borderWidth: 1,
       lineTension: 0,
       data: data);
 }
 
-ChartConfiguration generateTimeSeriesChartConfig(
-    model.Chart chart, bool dataNormalisationEnabled) {
-  var colors = chart.colors ?? lineChartDefaultColors;
+ChartConfiguration generateTimeSeriesChartConfig(model.Chart chart,
+    bool dataNormalisationEnabled, bool stackTimeseriesEnabled) {
+  var colors = (chart.colors ?? [])..addAll(lineChartDefaultColors);
   var datasets = chart.fields.asMap().entries.map((entry) {
     var index = entry.key;
     var field = entry.value;
-    return _generateTimeSeriesChartDataset(field.label ?? field.field,
-        field.time_bucket.values.toList(), colors[index]);
+    return _generateTimeSeriesChartDataset(
+        field.label ?? field.field,
+        field.time_bucket.values.toList(),
+        colors[index],
+        stackTimeseriesEnabled ? (index == 0 ? 'origin' : '-1') : false);
   }).toList();
 
   return ChartConfiguration(
@@ -199,5 +208,6 @@ ChartConfiguration generateTimeSeriesChartConfig(
             }
           }).toList(),
           datasets: datasets),
-      options: _generateTimeSeriesChartOptions(dataNormalisationEnabled));
+      options: _generateTimeSeriesChartOptions(
+          dataNormalisationEnabled, stackTimeseriesEnabled));
 }
