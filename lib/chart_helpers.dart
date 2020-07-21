@@ -49,7 +49,7 @@ ChartDataSets _generateBarChartDataset(
   return ChartDataSets(
       label: label,
       fill: true,
-      backgroundColor: barColor + 'aa',
+      backgroundColor: '${barColor}aa',
       borderColor: barColor,
       hoverBackgroundColor: barColor,
       hoverBorderColor: barColor,
@@ -165,7 +165,7 @@ ChartDataSets _generateTimeSeriesChartDataset(
   return ChartDataSets(
       label: label,
       fill: false,
-      backgroundColor: lineColor + 'aa',
+      backgroundColor: '${lineColor}aa',
       borderColor: lineColor,
       hoverBackgroundColor: lineColor,
       hoverBorderColor: lineColor,
@@ -193,7 +193,6 @@ ChartConfiguration generateTimeSeriesChartConfig(
               case model.TimeAggregate.day:
                 return DateFormat('dd MMM').format(date);
               case model.TimeAggregate.hour:
-                return DateFormat('dd MMM h:mm a').format(date);
               default:
                 return DateFormat('dd MMM h:mm a').format(date);
             }

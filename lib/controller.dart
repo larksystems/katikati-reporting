@@ -374,7 +374,6 @@ Map<String, num> _generateEmptyDateTimeBuckets(
     case model.TimeAggregate.hour:
       durationToAdd = Duration(hours: 1);
       break;
-    default:
   }
   while (currentTime.isBefore(endTime)) {
     timeBucket[STANDARD_DATE_TIME_FORMAT.format(currentTime)] = 0;
