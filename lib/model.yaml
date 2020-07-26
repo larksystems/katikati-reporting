@@ -16,6 +16,7 @@ Chart:
   fields: "array Field"
   colors: "array string" #optional
   geography: "Geography" #optional
+  data: "dynamic" #optional
 
 Timestamp:
   aggregate: "TimeAggregate"
@@ -68,6 +69,7 @@ ChartType:
     - line
     - map
     - time_series
+    - funnel
 
 TimeAggregate:
   dartType: "enum"

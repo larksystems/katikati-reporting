@@ -24,6 +24,7 @@ const DEFAULT_FILTER_SELECT_VALUE = '__all';
 const UNABLE_TO_PARSE_CONFIG_ERROR_MSG =
     'Unable to parse "Config" to the required format';
 const UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG = 'Unable to fetch interactions';
+const UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG = 'Unable to fetch survey status';
 
 var _currentNavLink = _navLinks['analyse'].pathname;
 
@@ -53,6 +54,8 @@ Map<String, Map<model.TimeAggregate, Map<String, num>>>
     _allInteractionDateBuckets;
 Map<String, dynamic> _configRaw;
 model.Config _config;
+
+Map<String, Map<String, dynamic>> _surveyStatus;
 
 // Actions
 enum UIAction {
@@ -157,6 +160,15 @@ void loadFirebaseData() async {
         await fb.fetchInteractions(_config.data_paths['interactions']);
   } catch (e) {
     view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
+    logger.error(e);
+    rethrow;
+  }
+
+  try {
+    _surveyStatus =
+        await fb.fetchSurveyStatus(_config.data_paths['survey_status']);
+  } catch (e) {
+    view.showAlert(UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG);
     logger.error(e);
     rethrow;
   }
@@ -300,6 +312,12 @@ void _computeChartBuckets(List<model.Chart> charts) {
               _allInteractionsDateRange[chart.timestamp.key][0],
               _allInteractionsDateRange[chart.timestamp.key][1],
               chart.timestamp.aggregate);
+    } else if (chart.type == model.ChartType.funnel) {
+      var data = _surveyStatus[chart.fields.first.field.value]
+          [chart.fields.first.field.key];
+      chart.data = (data as List)
+          .map((d) => model.FunnelData(d['label'], d['value']))
+          .toList();
     }
   }
 
@@ -510,6 +528,13 @@ void _computeChartBucketsAndRender() {
           _dataNormalisationEnabled,
           chart.colors ?? chart_helper.barChartDefaultColors,
         );
+        break;
+      case model.ChartType.funnel:
+        var funnelChartConfig = model.FunnelChartConfig(
+            isParied: true,
+            data: chart.data,
+            colors: chart_helper.lineChartDefaultColors);
+        view.renderFunnelChart(chart.title, chart.narrative, funnelChartConfig);
         break;
       default:
         logger.error('No such chart type ${chart.type}');

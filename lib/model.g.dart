@@ -88,6 +88,7 @@ class Chart {
   List<Field> fields;
   List<String> colors;
   Geography geography;
+  dynamic data;
 
   static Chart fromSnapshot(DocSnapshot doc, [Chart modelObj]) =>
       fromData(doc.data, modelObj)..docId = doc.id;
@@ -101,7 +102,8 @@ class Chart {
       ..narrative = String_fromData(data['narrative'])
       ..fields = List_fromData<Field>(data['fields'], Field.fromData)
       ..colors = List_fromData<String>(data['colors'], String_fromData)
-      ..geography = Geography.fromData(data['geography']);
+      ..geography = Geography.fromData(data['geography'])
+      ..data = data['data'];
   }
 
   static void listen(DocStorage docStorage, ChartCollectionListener listener, String collectionRoot) =>
@@ -116,6 +118,7 @@ class Chart {
       if (fields != null) 'fields': fields.map((elem) => elem?.toData()).toList(),
       if (colors != null) 'colors': colors,
       if (geography != null) 'geography': geography.toData(),
+      if (data != null) 'data': data,
     };
   }
 
@@ -381,12 +384,14 @@ class ChartType {
   static const line = ChartType('line');
   static const map = ChartType('map');
   static const time_series = ChartType('time_series');
+  static const funnel = ChartType('funnel');
 
   static const values = <ChartType>[
     bar,
     line,
     map,
     time_series,
+    funnel,
   ];
 
   static ChartType fromString(String text, [ChartType defaultValue = ChartType.bar]) {
