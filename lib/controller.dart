@@ -8,12 +8,14 @@ import 'package:dashboard/firebase.dart' as fb;
 import 'package:dashboard/chart_helpers.dart' as chart_helper;
 import 'package:dashboard/extensions.dart';
 import 'package:dashboard/logger.dart';
+import 'package:firebase/firestore.dart';
 import 'package:intl/intl.dart' as intl;
 
 Logger logger = Logger('controller.dart');
 
 Map<String, model.Link> _navLinks = {
-  'analyse': model.Link('analyse', 'Analyse', handleNavToAnalysis),
+  'analyse': model.Link(
+      'analyse', 'Analyse', () => handleNavToAnalysis(maintainFilters: false)),
   'settings': model.Link('settings', 'Settings', handleNavToSettings)
 };
 
@@ -29,7 +31,7 @@ const UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG = 'Unable to fetch survey status';
 var _currentNavLink = _navLinks['analyse'].pathname;
 
 // UI States
-int _selectedAnalysisTabIndex;
+int _selectedAnalysisTabIndex = 0;
 bool _dataComparisonEnabled = true;
 bool _dataNormalisationEnabled = false;
 bool _stackTimeSeriesEnabled = true;
@@ -128,50 +130,78 @@ void init() async {
 void onLoginCompleted() async {
   view.showLoading();
 
-  await loadFirebaseData();
-  await loadGeoMapsData();
+  fb.listenToConfig((DocumentSnapshot documentSnapshot) async {
+    _configRaw = documentSnapshot.data();
+    _config = model.Config.fromData(_configRaw);
+
+    await loadGeoMapsData();
+    _handleInteractionsChanges();
+    _handleSurveyStatusChanges();
+  }, (error) {
+    view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
+    logger.error(error.toString());
+  });
+}
+
+void _handleInteractionsChanges() {
+  var interactionsPath = _config.data_paths['interactions'];
+  if (interactionsPath != null) {
+    fb.listenToInteractions(interactionsPath, (QuerySnapshot querySnapshot) {
+      var interactionsMap = Map<String, Map<String, dynamic>>();
+      querySnapshot.forEach((doc) {
+        interactionsMap[doc.id] = doc.data();
+      });
+      _allInteractions = interactionsMap;
+      _handleDataChanges();
+    }, (error) {
+      view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
+      logger.error(error.toString());
+    });
+  }
+}
+
+void _handleSurveyStatusChanges() {
+  var surveyStatusPath = _config.data_paths['survey_status'];
+  if (surveyStatusPath != null) {
+    fb.listenToSurveyStatus(surveyStatusPath, (QuerySnapshot querySnapshot) {
+      var statusMap = Map<String, Map<String, dynamic>>();
+      querySnapshot.forEach((doc) {
+        statusMap[doc.id] = doc.data();
+      });
+      _surveyStatus = statusMap;
+      _handleDataChanges();
+    }, (error) {
+      view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
+      logger.error(error.toString());
+    });
+  }
+}
+
+void _handleDataChanges() {
+  if (_allInteractions == null) return;
+  if (_configRaw == null) return;
+  if (_config.data_paths['survey_status'] != null && _surveyStatus == null) {
+    return;
+  }
+
+  view.hideLoading();
+
   _uniqueFieldCategoryValues =
       computeUniqFieldCategoryValues(_config.filters, _allInteractions);
   _allInteractionsDateRange = computeDateRanges(_allInteractions);
-  _selectedAnalysisTabIndex = 0;
 
   view.setNavlinkSelected(_currentNavLink);
-  _navLinks[_currentNavLink].render();
+  if (_navLinks[_currentNavLink].pathname == 'settings') {
+    handleNavToSettings();
+  } else if (_navLinks[_currentNavLink].pathname == 'analyse') {
+    handleNavToAnalysis(maintainFilters: true);
+  }
 
   view.hideLoading();
 }
 
 void onLogoutCompleted() async {
   logger.debug('Delete all local data');
-}
-
-void loadFirebaseData() async {
-  try {
-    _configRaw = await fb.fetchConfig();
-    _config = model.Config.fromData(_configRaw);
-  } catch (e) {
-    view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
-    logger.error(e);
-    rethrow;
-  }
-
-  try {
-    _allInteractions =
-        await fb.fetchInteractions(_config.data_paths['interactions']);
-  } catch (e) {
-    view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
-    logger.error(e);
-    rethrow;
-  }
-
-  try {
-    _surveyStatus =
-        await fb.fetchSurveyStatus(_config.data_paths['survey_status']);
-  } catch (e) {
-    view.showAlert(UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG);
-    logger.error(e);
-    rethrow;
-  }
 }
 
 void loadGeoMapsData() async {
@@ -433,16 +463,19 @@ Map<String, num> _generateEmptyDateTimeBuckets(
 }
 
 // Render methods
-void handleNavToAnalysis() {
+void handleNavToAnalysis({bool maintainFilters}) {
   view.clearContentTab();
-  _selectedAnalysisTabIndex = 0;
-  _activeFilters = {};
-  _filterValues = {};
-  _comparisonFilterValues = {};
+
+  if (maintainFilters != true) {
+    _selectedAnalysisTabIndex = 0;
+    _activeFilters = {};
+    _filterValues = {};
+    _comparisonFilterValues = {};
+  }
 
   var tabLabels =
       _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
-  view.renderAnalysisTabs(tabLabels);
+  view.renderAnalysisTabs(tabLabels, _selectedAnalysisTabIndex);
   view.renderChartOptions(_dataComparisonEnabled, _dataNormalisationEnabled,
       _stackTimeSeriesEnabled);
 
@@ -605,6 +638,7 @@ void command(UIAction action, Data data) async {
       _activeFilters = {};
       _filterValues = {};
       _comparisonFilterValues = {};
+      print(_dataComparisonEnabled);
       _updateFiltersInView();
       view.removeAllChartWrappers();
       _computeChartBucketsAndRender();

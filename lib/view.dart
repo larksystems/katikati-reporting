@@ -180,7 +180,7 @@ html.DivElement generateGridOptionsColumnElement() {
     ..classes = ['col-lg-10', 'col-md-9', 'col-sm-12', 'col-xs-12'];
 }
 
-void renderAnalysisTabs(List<String> labels) {
+void renderAnalysisTabs(List<String> labels, int selectedIndex) {
   var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
   var labelCol =
       generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
@@ -195,7 +195,7 @@ void renderAnalysisTabs(List<String> labels) {
       ..name = 'analyse-tab-options'
       ..id = _generateAnalyseTabID(i.toString())
       ..classes = ['form-check-input']
-      ..checked = i == 0
+      ..checked = i == selectedIndex
       ..onChange.listen((e) {
         if (!(e.target as html.RadioButtonInputElement).checked) return;
         command(UIAction.changeAnalysisTab, AnalysisTabChangeData(i));
@@ -277,6 +277,9 @@ html.SelectElement _getFilterDropdown(String filterKey, {bool comparison}) {
 
 void enableFilterDropdown(String filterKey, {bool comparison}) {
   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown == null) {
+    return;
+  }
   if (dropdown.disabled != false) {
     dropdown.disabled = false;
   }
@@ -284,6 +287,9 @@ void enableFilterDropdown(String filterKey, {bool comparison}) {
 
 void disableFilterDropdown(String filterKey, {bool comparison}) {
   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown == null) {
+    return;
+  }
   if (dropdown.disabled != true) {
     dropdown.disabled = true;
   }
@@ -291,6 +297,9 @@ void disableFilterDropdown(String filterKey, {bool comparison}) {
 
 void hideFilterDropdown(String filterKey, {bool comparison}) {
   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown == null) {
+    return;
+  }
   if (dropdown.hidden != true) {
     dropdown.hidden = true;
   }
@@ -298,6 +307,9 @@ void hideFilterDropdown(String filterKey, {bool comparison}) {
 
 void showFilterDropdown(String filterKey, {bool comparison}) {
   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown == null) {
+    return;
+  }
   if (dropdown.hidden != false) {
     dropdown.hidden = false;
   }
@@ -305,6 +317,9 @@ void showFilterDropdown(String filterKey, {bool comparison}) {
 
 void setFilterDropdownValue(String filterKey, String value, {bool comparison}) {
   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+  if (dropdown == null) {
+    return;
+  }
   dropdown.value = value;
 }
 
