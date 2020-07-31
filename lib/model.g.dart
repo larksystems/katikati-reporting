@@ -35,9 +35,10 @@ class Config {
     };
   }
 
+  @override
   String toString() => 'Config [$docId]: ${toData().toString()}';
 }
-typedef void ConfigCollectionListener(
+typedef ConfigCollectionListener = void Function(
   List<Config> added,
   List<Config> modified,
   List<Config> removed,
@@ -71,9 +72,10 @@ class Tab {
     };
   }
 
+  @override
   String toString() => 'Tab [$docId]: ${toData().toString()}';
 }
-typedef void TabCollectionListener(
+typedef TabCollectionListener = void Function(
   List<Tab> added,
   List<Tab> modified,
   List<Tab> removed,
@@ -122,9 +124,10 @@ class Chart {
     };
   }
 
+  @override
   String toString() => 'Chart [$docId]: ${toData().toString()}';
 }
-typedef void ChartCollectionListener(
+typedef ChartCollectionListener = void Function(
   List<Chart> added,
   List<Chart> modified,
   List<Chart> removed,
@@ -155,9 +158,10 @@ class Timestamp {
     };
   }
 
+  @override
   String toString() => 'Timestamp [$docId]: ${toData().toString()}';
 }
-typedef void TimestampCollectionListener(
+typedef TimestampCollectionListener = void Function(
   List<Timestamp> added,
   List<Timestamp> modified,
   List<Timestamp> removed,
@@ -197,9 +201,10 @@ class Field {
     };
   }
 
+  @override
   String toString() => 'Field [$docId]: ${toData().toString()}';
 }
-typedef void FieldCollectionListener(
+typedef FieldCollectionListener = void Function(
   List<Field> added,
   List<Field> modified,
   List<Field> removed,
@@ -233,9 +238,10 @@ class FieldOperation {
     };
   }
 
+  @override
   String toString() => 'FieldOperation [$docId]: ${toData().toString()}';
 }
-typedef void FieldOperationCollectionListener(
+typedef FieldOperationCollectionListener = void Function(
   List<FieldOperation> added,
   List<FieldOperation> modified,
   List<FieldOperation> removed,
@@ -272,9 +278,10 @@ class Filter {
     };
   }
 
+  @override
   String toString() => 'Filter [$docId]: ${toData().toString()}';
 }
-typedef void FilterCollectionListener(
+typedef FilterCollectionListener = void Function(
   List<Filter> added,
   List<Filter> modified,
   List<Filter> removed,
@@ -305,9 +312,10 @@ class Geography {
     };
   }
 
+  @override
   String toString() => 'Geography [$docId]: ${toData().toString()}';
 }
-typedef void GeographyCollectionListener(
+typedef GeographyCollectionListener = void Function(
   List<Geography> added,
   List<Geography> modified,
   List<Geography> removed,
@@ -331,7 +339,7 @@ class GeoRegionLevel {
     }
     if (text != null) {
       const prefix = 'GeoRegionLevel.';
-      String valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
+      var valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
       for (var value in values) {
         if (value.name == valueName) return value;
       }
@@ -342,6 +350,8 @@ class GeoRegionLevel {
 
   final String name;
   const GeoRegionLevel(this.name);
+
+  @override
   String toString() => 'GeoRegionLevel.$name';
 }
 GeoRegionLevel Function(String text) GeoRegionLevel_fromStringOverride;
@@ -364,7 +374,7 @@ class FieldOperator {
     }
     if (text != null) {
       const prefix = 'FieldOperator.';
-      String valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
+      var valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
       for (var value in values) {
         if (value.name == valueName) return value;
       }
@@ -375,6 +385,8 @@ class FieldOperator {
 
   final String name;
   const FieldOperator(this.name);
+
+  @override
   String toString() => 'FieldOperator.$name';
 }
 FieldOperator Function(String text) FieldOperator_fromStringOverride;
@@ -401,7 +413,7 @@ class ChartType {
     }
     if (text != null) {
       const prefix = 'ChartType.';
-      String valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
+      var valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
       for (var value in values) {
         if (value.name == valueName) return value;
       }
@@ -412,6 +424,8 @@ class ChartType {
 
   final String name;
   const ChartType(this.name);
+
+  @override
   String toString() => 'ChartType.$name';
 }
 ChartType Function(String text) ChartType_fromStringOverride;
@@ -434,7 +448,7 @@ class TimeAggregate {
     }
     if (text != null) {
       const prefix = 'TimeAggregate.';
-      String valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
+      var valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
       for (var value in values) {
         if (value.name == valueName) return value;
       }
@@ -445,6 +459,8 @@ class TimeAggregate {
 
   final String name;
   const TimeAggregate(this.name);
+
+  @override
   String toString() => 'TimeAggregate.$name';
 }
 TimeAggregate Function(String text) TimeAggregate_fromStringOverride;
@@ -507,16 +523,16 @@ Set<T> Set_fromData<T>(dynamic data, T createModel(data)) =>
 
 StreamSubscription<List<DocSnapshot>> listenForUpdates<T>(
     DocStorage docStorage,
-    void listener(List<T> added, List<T> modified, List<T> removed),
+    void Function(List<T> added, List<T> modified, List<T> removed) listener,
     String collectionRoot,
-    T createModel(DocSnapshot doc),
+    T Function(DocSnapshot doc) createModel,
     ) {
   log.verbose('Loading from $collectionRoot');
   log.verbose('Query root: $collectionRoot');
   return docStorage.onChange(collectionRoot).listen((List<DocSnapshot> snapshots) {
-    List<T> added = [];
-    List<T> modified = [];
-    List<T> removed = [];
+    var added = <T>[];
+    var modified = <T>[];
+    var removed = <T>[];
     log.verbose("Starting processing ${snapshots.length} changes.");
     for (var snapshot in snapshots) {
       log.verbose('Processing ${snapshot.id}');
