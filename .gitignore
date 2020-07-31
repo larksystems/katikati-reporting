@@ -10,6 +10,11 @@ build/
 # Directory created by dartdoc
 doc/api/
 
+# Ignore IntelliJ project files
+*.iml
+tool/.idea/
+tool/__pycache__/
+
 # Firebase constants
 **/firebase-constants.json
 **/constants.json
