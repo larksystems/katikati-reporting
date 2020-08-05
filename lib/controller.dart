@@ -24,6 +24,9 @@ const DEFAULT_FILTER_SELECT_VALUE = '__all';
 const UNABLE_TO_PARSE_CONFIG_ERROR_MSG =
     'Unable to parse "Config" to the required format';
 const UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG = 'Unable to fetch interactions';
+const UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG =
+    'Unable to fetch message status';
+const UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG = 'Unable to fetch survey status';
 
 var _currentNavLink = _navLinks['analyse'].pathname;
 
@@ -45,14 +48,20 @@ Map<String, String> get _activeComparisonFilterValues => {
       ..._comparisonFilterValues
     }..removeWhere((key, _) => !_activeFilters.contains(key));
 
-// Data states
+// Data
 Map<String, Map<String, dynamic>> _allInteractions;
+Map<String, Map<String, dynamic>> _messageStatus;
+Map<String, Map<String, dynamic>> _surveyStatus;
+Map<String, Map<String, Set>> _uniqFieldCategoryValues;
+
 Map<String, Set> _uniqueFieldCategoryValues;
 Map<String, List<DateTime>> _allInteractionsDateRange;
 Map<String, Map<model.TimeAggregate, Map<String, num>>>
     _allInteractionDateBuckets;
 Map<String, dynamic> _configRaw;
 model.Config _config;
+
+List<model.ComputedChart> _computedCharts;
 
 // Actions
 enum UIAction {
@@ -127,9 +136,12 @@ void onLoginCompleted() async {
 
   await loadFirebaseData();
   await loadGeoMapsData();
-  _uniqueFieldCategoryValues =
-      computeUniqFieldCategoryValues(_config.filters, _allInteractions);
-  _allInteractionsDateRange = computeDateRanges(_allInteractions);
+
+  // // todo: make this more generic
+  // _uniqueFieldCategoryValues =
+  //     computeUniqFieldCategoryValues(_config.filters, _allInteractions);
+  // // todo: make this more generic
+  // _allInteractionsDateRange = computeDateRanges(_allInteractions);
   _selectedAnalysisTabIndex = 0;
 
   view.setNavlinkSelected(_currentNavLink);
@@ -152,13 +164,37 @@ void loadFirebaseData() async {
     rethrow;
   }
 
-  try {
-    _allInteractions =
-        await fb.fetchInteractions(_config.data_paths['interactions']);
-  } catch (e) {
-    view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
-    logger.error(e);
-    rethrow;
+  var interactionsPath = _config.data_paths['interactions'];
+  if (interactionsPath != null) {
+    try {
+      _allInteractions = await fb.fetchInteractions(interactionsPath);
+    } catch (e) {
+      view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
+      logger.error(e);
+      rethrow;
+    }
+  }
+
+  var messageStatusPath = _config.data_paths['message_status'];
+  if (messageStatusPath != null) {
+    try {
+      _messageStatus = await fb.fetchMessageStats(messageStatusPath);
+    } catch (e) {
+      view.showAlert(UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG);
+      logger.error(e);
+      rethrow;
+    }
+  }
+
+  var surveyStatusPath = _config.data_paths['survey_status'];
+  if (surveyStatusPath != null) {
+    try {
+      _surveyStatus = await fb.fetchSurveyStats(surveyStatusPath);
+    } catch (e) {
+      view.showAlert(UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG);
+      logger.error(e);
+      rethrow;
+    }
   }
 }
 
@@ -245,42 +281,68 @@ bool _interactionMatchesFilters(
   return true;
 }
 
-bool _interactionMatchesOperation(
-    Map<String, dynamic> interaction, model.Field chartCol) {
-  switch (chartCol.field.operator) {
-    case model.FieldOperator.equals:
-      if (interaction[chartCol.field.key] == chartCol.field.value) {
-        return true;
-      }
-      break;
-    case model.FieldOperator.contains:
-      if ((interaction[chartCol.field.key] as List)
-          .contains(chartCol.field.value)) {
-        return true;
-      }
-      break;
-    case model.FieldOperator.not_contains:
-      if (!(interaction[chartCol.field.key] as List)
-          .contains(chartCol.field.value)) {
-        return true;
-      }
-      break;
-    default:
-      logger.error('No such operator: ${chartCol.field.operator}');
-      view.showAlert(
-          'Warning: Field operator ${chartCol.field.operator} listed in your config is not supported. Results may be misleading');
-  }
-  return false;
-}
+// bool _interactionMatchesOperation(
+//     Map<String, dynamic> interaction, model.Field chartCol) {
+//   switch (chartCol.field.operator) {
+//     case model.FieldOperator.equals:
+//       if (interaction[chartCol.field.key] == chartCol.field.value) {
+//         return true;
+//       }
+//       break;
+//     case model.FieldOperator.contains:
+//       if ((interaction[chartCol.field.key] as List)
+//           .contains(chartCol.field.value)) {
+//         return true;
+//       }
+//       break;
+//     case model.FieldOperator.not_contains:
+//       if (!(interaction[chartCol.field.key] as List)
+//           .contains(chartCol.field.value)) {
+//         return true;
+//       }
+//       break;
+//     default:
+//       logger.error('No such operator: ${chartCol.field.operator}');
+//       view.showAlert(
+//           'Warning: Field operator ${chartCol.field.operator} listed in your config is not supported. Results may be misleading');
+//   }
+//   return false;
+// }
 
 void _computeChartBuckets(List<model.Chart> charts) {
-  _filterValuesCount = 0;
-  _comparisonFilterValuesCount = 0;
+  // todo: make this interaction normalisation value [0, 0]
+  // _filterValuesCount = 0;
+  // _comparisonFilterValuesCount = 0;
+
+  _computedCharts = [];
 
   // reset bucket to [filter(0), comparisonFilter(0)] for each chart col
   // reset time_bucket to {"mm/dd/yyyy": 0} for time series chart col
   // reset allInteractionDateBuckets (for normalising) to {"recorded_at": {day: {"mm/dd/yyyy": 0}}}
   for (var chart in charts) {
+    switch (chart.type) {
+      case model.ChartType.bar:
+        var labels = chart.fields.map((c) => c.field.key).toList();
+        var buckets = chart.fields.map((e) => [0, 0]).toList();
+        var computedBarChart = model.ComputedBarChart(chart.data_path,
+            chart.title, chart.narrative, chart.colors, labels, buckets);
+        _computedCharts.add(computedBarChart);
+        break;
+      case model.ChartType.time_series:
+        var series = chart.fields.map((c) => c.field.key).toList();
+        switch (chart.data_path) {
+          case model.DataPath.interactions:
+            break;
+          case model.DataPath.messageStats:
+            break;
+          case model.DataPath.surveyStatus:
+            break;
+          default:
+        }
+        break;
+      default:
+        throw Exception('${chart.type} not implemented');
+    }
     for (var chartCol in chart.fields) {
       chartCol.bucket = [0, 0];
       if (chart.type == model.ChartType.time_series) {
@@ -433,7 +495,9 @@ void handleNavToAnalysis() {
 }
 
 void _computeFilterDropdownsAndRender() {
-  var filterKeys = _config.filters.map((filter) => filter.key).toList();
+  var filterKeys = _config.tabs[_selectedAnalysisTabIndex].filters
+      .map((e) => e.key)
+      .toList();
   var filterOptions = _uniqueFieldCategoryValues.map((key, setValues) {
     return MapEntry(
         key,
