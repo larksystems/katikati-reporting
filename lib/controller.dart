@@ -56,6 +56,7 @@ Map<String, dynamic> _configRaw;
 model.Config _config;
 
 Map<String, Map<String, dynamic>> _surveyStatus;
+Map<String, Map<String, dynamic>> _messageStats;
 
 // Actions
 enum UIAction {
@@ -167,6 +168,15 @@ void loadFirebaseData() async {
   try {
     _surveyStatus =
         await fb.fetchSurveyStatus(_config.data_paths['survey_status']);
+  } catch (e) {
+    view.showAlert(UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG);
+    logger.error(e);
+    rethrow;
+  }
+
+  try {
+    _messageStats =
+        await fb.fetchMessageStats(_config.data_paths['message_stats']);
   } catch (e) {
     view.showAlert(UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG);
     logger.error(e);
@@ -542,6 +552,34 @@ void _computeChartBucketsAndRender() {
             'Warning: Chart type ${chart.type} listed in your config is not supported.');
     }
   }
+
+  if (_selectedAnalysisTabIndex != 0) return;
+
+  var fields = [
+    'auto_messages_out_count',
+    'non_auto_messages_out_count',
+    'messages_in_count',
+    'messages_out_count'
+  ].map((key) {
+    var timeBucket =
+        _messageStats.map((k, value) => MapEntry(k, value[key] as num));
+    return model.Field()
+      ..time_bucket = timeBucket
+      ..label = key;
+  }).toList();
+
+  print(fields);
+
+  var _chart = model.Chart()
+    ..timestamp = model.Timestamp()
+    ..fields = fields;
+  _chart.timestamp
+    ..key = ''
+    ..aggregate = model.TimeAggregate.day;
+
+  var _tempConfig = chart_helper.generateTimeSeriesChartConfig(
+      _chart, _dataNormalisationEnabled, _stackTimeSeriesEnabled);
+  view.renderChart('Message stats', '', _tempConfig);
 }
 
 void handleNavToSettings() {

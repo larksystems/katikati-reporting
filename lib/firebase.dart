@@ -127,3 +127,23 @@ Future<Map<String, Map<String, dynamic>>> fetchSurveyStatus(String path) async {
 
   return statusMap;
 }
+
+Future<Map<String, Map<String, dynamic>>> fetchMessageStats(String path) async {
+  if (path == null || path == '') {
+    throw ArgumentError(
+        'Path for fetching message stats cannot be empty or null');
+  }
+
+  logger.debug('Fetching message stats from firebase ..');
+
+  var messageStatsRef = firebase.firestore().collection(path);
+  var messageStatsSnapshot = await messageStatsRef.get();
+  logger.debug('Fetched ${messageStatsSnapshot.size} survey status');
+
+  var statusMap = Map<String, Map<String, dynamic>>();
+  messageStatsSnapshot.forEach((doc) {
+    statusMap[doc.id] = doc.data();
+  });
+
+  return statusMap;
+}
