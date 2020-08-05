@@ -555,12 +555,7 @@ void _computeChartBucketsAndRender() {
 
   if (_selectedAnalysisTabIndex != 0) return;
 
-  var fields = [
-    'auto_messages_out_count',
-    'non_auto_messages_out_count',
-    'messages_in_count',
-    'messages_out_count'
-  ].map((key) {
+  var fields = ['messages_out_count', 'messages_in_count'].map((key) {
     var timeBucket =
         _messageStats.map((k, value) => MapEntry(k, value[key] as num));
     return model.Field()
@@ -571,6 +566,7 @@ void _computeChartBucketsAndRender() {
   print(fields);
 
   var _chart = model.Chart()
+    ..colors = ['#303F9F', '#4DB6AC']
     ..timestamp = model.Timestamp()
     ..fields = fields;
   _chart.timestamp
@@ -580,6 +576,29 @@ void _computeChartBucketsAndRender() {
   var _tempConfig = chart_helper.generateTimeSeriesChartConfig(
       _chart, _dataNormalisationEnabled, _stackTimeSeriesEnabled);
   view.renderChart('Message stats', '', _tempConfig);
+
+  fields =
+      ['auto_messages_out_count', 'non_auto_messages_out_count'].map((key) {
+    var timeBucket =
+        _messageStats.map((k, value) => MapEntry(k, value[key] as num));
+    return model.Field()
+      ..time_bucket = timeBucket
+      ..label = key;
+  }).toList();
+
+  print(fields);
+
+  _chart = model.Chart()
+    ..colors = ['#1565C0', '#2196F3']
+    ..timestamp = model.Timestamp()
+    ..fields = fields;
+  _chart.timestamp
+    ..key = ''
+    ..aggregate = model.TimeAggregate.day;
+
+  _tempConfig = chart_helper.generateTimeSeriesChartConfig(
+      _chart, _dataNormalisationEnabled, _stackTimeSeriesEnabled);
+  view.renderChart('Out messages split', '', _tempConfig);
 }
 
 void handleNavToSettings() {
