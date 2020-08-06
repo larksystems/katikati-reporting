@@ -935,3 +935,12 @@ abstract class DocPubSubUpdate {
   /// Callers should catch and handle IOException.
   Future<void> publishDocRemove(String collectionName, List<String> docIds, Map<String, List<dynamic>> removals);
 }
+
+class ValueException implements Exception {
+  String message;
+
+  ValueException(this.message);
+
+  @override
+  String toString() => 'ValueException: $message';
+}
