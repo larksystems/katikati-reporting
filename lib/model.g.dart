@@ -24,6 +24,20 @@ class Config {
       ..tabs = List_fromData<Tab>(data['tabs'], Tab.fromData);
   }
 
+  static Config required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static Config notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
+  }
+
   static void listen(DocStorage docStorage, ConfigCollectionListener listener, String collectionRoot) =>
       listenForUpdates<Config>(docStorage, listener, collectionRoot, Config.fromSnapshot);
 
@@ -59,6 +73,20 @@ class Tab {
       ..label = String_fromData(data['label'])
       ..exclude_filters = List_fromData<String>(data['exclude_filters'], String_fromData)
       ..charts = List_fromData<Chart>(data['charts'], Chart.fromData);
+  }
+
+  static Tab required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static Tab notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
   }
 
   static void listen(DocStorage docStorage, TabCollectionListener listener, String collectionRoot) =>
@@ -106,6 +134,20 @@ class Chart {
       ..geography = Geography.fromData(data['geography']);
   }
 
+  static Chart required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static Chart notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
+  }
+
   static void listen(DocStorage docStorage, ChartCollectionListener listener, String collectionRoot) =>
       listenForUpdates<Chart>(docStorage, listener, collectionRoot, Chart.fromSnapshot);
 
@@ -143,6 +185,20 @@ class Timestamp {
     return (modelObj ?? Timestamp())
       ..aggregate = TimeAggregate.fromString(data['aggregate'] as String)
       ..key = String_fromData(data['key']);
+  }
+
+  static Timestamp required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static Timestamp notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
   }
 
   static void listen(DocStorage docStorage, TimestampCollectionListener listener, String collectionRoot) =>
@@ -185,6 +241,20 @@ class Field {
       ..field = FieldOperation.fromData(data['field']);
   }
 
+  static Field required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static Field notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
+  }
+
   static void listen(DocStorage docStorage, FieldCollectionListener listener, String collectionRoot) =>
       listenForUpdates<Field>(docStorage, listener, collectionRoot, Field.fromSnapshot);
 
@@ -222,6 +292,20 @@ class FieldOperation {
       ..key = String_fromData(data['key'])
       ..operator = FieldOperator.fromString(data['operator'] as String)
       ..value = data['value'];
+  }
+
+  static FieldOperation required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static FieldOperation notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
   }
 
   static void listen(DocStorage docStorage, FieldOperationCollectionListener listener, String collectionRoot) =>
@@ -263,6 +347,20 @@ class Filter {
       ..exclude_values = List_fromData<dynamic>(data['exclude_values'], null);
   }
 
+  static Filter required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static Filter notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
+  }
+
   static void listen(DocStorage docStorage, FilterCollectionListener listener, String collectionRoot) =>
       listenForUpdates<Filter>(docStorage, listener, collectionRoot, Filter.fromSnapshot);
 
@@ -297,6 +395,20 @@ class Geography {
     return (modelObj ?? Geography())
       ..country = String_fromData(data['country'])
       ..regionLevel = GeoRegionLevel.fromString(data['regionLevel'] as String);
+  }
+
+  static Geography required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static Geography notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
   }
 
   static void listen(DocStorage docStorage, GeographyCollectionListener listener, String collectionRoot) =>
@@ -345,6 +457,20 @@ class GeoRegionLevel {
     return defaultValue;
   }
 
+  static GeoRegionLevel required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static GeoRegionLevel notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
+  }
+
   final String name;
   const GeoRegionLevel(this.name);
 
@@ -378,6 +504,20 @@ class FieldOperator {
     }
     log.warning('unknown FieldOperator $text');
     return defaultValue;
+  }
+
+  static FieldOperator required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static FieldOperator notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
   }
 
   final String name;
@@ -417,6 +557,20 @@ class ChartType {
     return defaultValue;
   }
 
+  static ChartType required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static ChartType notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
+  }
+
   final String name;
   const ChartType(this.name);
 
@@ -452,6 +606,20 @@ class TimeAggregate {
     return defaultValue;
   }
 
+  static TimeAggregate required(Map data, String fieldName, String className) {
+    var value = fromData(data[fieldName]);
+    if (value == null && !data.containsKey(fieldName))
+      throw ValueException("$className.$fieldName is missing");
+    return value;
+  }
+
+  static TimeAggregate notNull(Map data, String fieldName, String className) {
+    var value = required(data, fieldName, className);
+    if (value == null)
+      throw ValueException("$className.$fieldName must not be null");
+    return value;
+  }
+
   final String name;
   const TimeAggregate(this.name);
 
@@ -475,12 +643,56 @@ bool bool_fromData(data) {
   return null;
 }
 
+bool bool_required(Map data, String fieldName, String className) {
+  var value = bool_fromData(data[fieldName]);
+  if (value == null && !data.containsKey(fieldName))
+    throw ValueException("$className.$fieldName is missing");
+  return value;
+}
+
+bool bool_notNull(Map data, String fieldName, String className) {
+  var value = bool_required(data, fieldName, className);
+  if (value == null)
+    throw ValueException("$className.$fieldName must not be null");
+  return value;
+}
+
 DateTime DateTime_fromData(data) {
   if (data == null) return null;
   var datetime = DateTime.tryParse(data);
   if (datetime != null) return datetime;
   log.warning('unknown DateTime value: ${data?.toString()}');
   return null;
+}
+
+DateTime DateTime_required(Map data, String fieldName, String className) {
+  var value = DateTime_fromData(data[fieldName]);
+  if (value == null && !data.containsKey(fieldName))
+    throw ValueException("$className.$fieldName is missing");
+  return value;
+}
+
+DateTime DateTime_notNull(Map data, String fieldName, String className) {
+  var value = DateTime_required(data, fieldName, className);
+  if (value == null)
+    throw ValueException("$className.$fieldName must not be null");
+  return value;
+}
+
+dynamic dynamic_fromData(data) => data;
+
+dynamic dynamic_required(Map data, String fieldName, String className) {
+  var value = data[fieldName];
+  if (value == null && !data.containsKey(fieldName))
+    throw ValueException("$className.$fieldName is missing");
+  return value;
+}
+
+dynamic dynamic_notNull(Map data, String fieldName, String className) {
+  var value = dynamic_required(data, fieldName, className);
+  if (value == null)
+    throw ValueException("$className.$fieldName must not be null");
+  return value;
 }
 
 int int_fromData(data) {
@@ -494,7 +706,42 @@ int int_fromData(data) {
   return null;
 }
 
+int int_required(Map data, String fieldName, String className) {
+  var value = int_fromData(data[fieldName]);
+  if (value == null && !data.containsKey(fieldName))
+    throw ValueException("$className.$fieldName is missing");
+  return value;
+}
+
+int int_notNull(Map data, String fieldName, String className) {
+  var value = int_required(data, fieldName, className);
+  if (value == null)
+    throw ValueException("$className.$fieldName must not be null");
+  return value;
+}
+
 String String_fromData(data) => data?.toString();
+
+String String_required(Map data, String fieldName, String className) {
+  var value = String_fromData(data[fieldName]);
+  if (value == null && !data.containsKey(fieldName))
+    throw ValueException("$className.$fieldName is missing");
+  return value;
+}
+
+String String_notNull(Map data, String fieldName, String className) {
+  var value = String_required(data, fieldName, className);
+  if (value == null)
+    throw ValueException("$className.$fieldName must not be null");
+  return value;
+}
+
+String String_notEmpty(Map data, String fieldName, String className) {
+  var value = String_notNull(data, fieldName, className);
+  if (value.isEmpty)
+    throw ValueException("$className.$fieldName must not be empty");
+  return value;
+}
 
 num num_fromData(data) {
   if (data == null) return null;
@@ -507,14 +754,91 @@ num num_fromData(data) {
   return null;
 }
 
-List<T> List_fromData<T>(dynamic data, T createModel(data)) =>
+num num_required(Map data, String fieldName, String className) {
+  var value = num_fromData(data[fieldName]);
+  if (value == null && !data.containsKey(fieldName))
+    throw ValueException("$className.$fieldName is missing");
+  return value;
+}
+
+num num_notNull(Map data, String fieldName, String className) {
+  var value = num_required(data, fieldName, className);
+  if (value == null)
+    throw ValueException("$className.$fieldName must not be null");
+  return value;
+}
+
+List<T> List_fromData<T>(dynamic data, T Function(dynamic) createModel) =>
     (data as List)?.map<T>((elem) => createModel(elem))?.toList();
 
-Map<String, T> Map_fromData<T>(dynamic data, T createModel(data)) =>
+List<T> List_required<T>(Map data, String fieldName, String className, T Function(dynamic) createModel) {
+  var value = List_fromData(data[fieldName], createModel);
+  if (value == null && !data.containsKey(fieldName))
+    throw ValueException("$className.$fieldName is missing");
+  return value;
+}
+
+List<T> List_notNull<T>(Map data, String fieldName, String className, T Function(dynamic) createModel) {
+  var value = List_required(data, fieldName, className, createModel);
+  if (value == null)
+    throw ValueException("$className.$fieldName must not be null");
+  return value;
+}
+
+List<T> List_notEmpty<T>(Map data, String fieldName, String className, T Function(dynamic) createModel) {
+  var value = List_notNull(data, fieldName, className, createModel);
+  if (value.isEmpty)
+    throw ValueException("$className.$fieldName must not be empty");
+  return value;
+}
+
+Map<String, T> Map_fromData<T>(dynamic data, T Function(dynamic) createModel) =>
     (data as Map)?.map<String, T>((key, value) => MapEntry(key.toString(), createModel(value)));
 
-Set<T> Set_fromData<T>(dynamic data, T createModel(data)) =>
+Map<String, T> Map_required<T>(Map data, String fieldName, String className, T Function(dynamic) createModel) {
+  var value = Map_fromData(data[fieldName], createModel);
+  if (value == null && !data.containsKey(fieldName))
+    throw ValueException("$className.$fieldName is missing");
+  return value;
+}
+
+Map<String, T> Map_notNull<T>(Map data, String fieldName, String className, T Function(dynamic) createModel) {
+  var value = Map_required(data, fieldName, className, createModel);
+  if (value == null)
+    throw ValueException("$className.$fieldName must not be null");
+  return value;
+}
+
+Map<String, T> Map_notEmpty<T>(Map data, String fieldName, String className, T Function(dynamic) createModel) {
+  var value = Map_notNull(data, fieldName, className, createModel);
+  if (value.isEmpty)
+    throw ValueException("$className.$fieldName must not be empty");
+  return value;
+}
+
+Set<T> Set_fromData<T>(dynamic data, T Function(dynamic) createModel) =>
     (data as List)?.map<T>((elem) => createModel(elem))?.toSet();
+
+Set<T> Set_required<T>(Map data, String fieldName, String className, T Function(dynamic) createModel) {
+  var value = Set_fromData(data[fieldName], createModel);
+  if (value == null && !data.containsKey(fieldName))
+    throw ValueException("$className.$fieldName is missing");
+  return value;
+}
+
+Set<T> Set_notNull<T>(Map data, String fieldName, String className, T Function(dynamic) createModel) {
+  var value = Set_required(data, fieldName, className, createModel);
+  if (value == null)
+    throw ValueException("$className.$fieldName must not be null");
+  return value;
+}
+
+Set<T> Set_notEmpty<T>(Map data, String fieldName, String className, T Function(dynamic) createModel) {
+  var value = Set_notNull(data, fieldName, className, createModel);
+  if (value.isEmpty)
+    throw ValueException("$className.$fieldName must not be null");
+  return value;
+}
 
 StreamSubscription<List<DocSnapshot>> listenForUpdates<T>(
     DocStorage docStorage,
