@@ -126,7 +126,7 @@ class Chart {
   static Chart fromData(data, [Chart modelObj]) {
     if (data == null) return null;
     return (modelObj ?? Chart())
-      ..type = ChartType.fromString(data['type'] as String)
+      ..type = ChartType.fromData(data['type'])
       ..timestamp = Timestamp.fromData(data['timestamp'])
       ..title = String_fromData(data['title'])
       ..narrative = String_fromData(data['narrative'])
@@ -155,7 +155,7 @@ class Chart {
 
   Map<String, dynamic> toData() {
     return {
-      if (type != null) 'type': type.toString(),
+      if (type != null) 'type': type.toData(),
       if (timestamp != null) 'timestamp': timestamp.toData(),
       if (title != null) 'title': title,
       if (narrative != null) 'narrative': narrative,
@@ -186,7 +186,7 @@ class Timestamp {
   static Timestamp fromData(data, [Timestamp modelObj]) {
     if (data == null) return null;
     return (modelObj ?? Timestamp())
-      ..aggregate = TimeAggregate.fromString(data['aggregate'] as String)
+      ..aggregate = TimeAggregate.fromData(data['aggregate'])
       ..key = String_fromData(data['key']);
   }
 
@@ -209,7 +209,7 @@ class Timestamp {
 
   Map<String, dynamic> toData() {
     return {
-      if (aggregate != null) 'aggregate': aggregate.toString(),
+      if (aggregate != null) 'aggregate': aggregate.toData(),
       if (key != null) 'key': key,
     };
   }
@@ -293,7 +293,7 @@ class FieldOperation {
     if (data == null) return null;
     return (modelObj ?? FieldOperation())
       ..key = String_fromData(data['key'])
-      ..operator = FieldOperator.fromString(data['operator'] as String)
+      ..operator = FieldOperator.fromData(data['operator'])
       ..value = data['value'];
   }
 
@@ -317,7 +317,7 @@ class FieldOperation {
   Map<String, dynamic> toData() {
     return {
       if (key != null) 'key': key,
-      if (operator != null) 'operator': operator.toString(),
+      if (operator != null) 'operator': operator.toData(),
       if (value != null) 'value': value,
     };
   }
@@ -397,7 +397,7 @@ class Geography {
     if (data == null) return null;
     return (modelObj ?? Geography())
       ..country = String_fromData(data['country'])
-      ..regionLevel = GeoRegionLevel.fromString(data['regionLevel'] as String);
+      ..regionLevel = GeoRegionLevel.fromData(data['regionLevel']);
   }
 
   static Geography required(Map data, String fieldName, String className) {
@@ -420,7 +420,7 @@ class Geography {
   Map<String, dynamic> toData() {
     return {
       if (country != null) 'country': country,
-      if (regionLevel != null) 'regionLevel': regionLevel.toString(),
+      if (regionLevel != null) 'regionLevel': regionLevel.toData(),
     };
   }
 
@@ -460,6 +460,12 @@ class GeoRegionLevel {
     return defaultValue;
   }
 
+  static GeoRegionLevel fromData(data, [GeoRegionLevel defaultValue = GeoRegionLevel.state]) {
+    if (data is String || data == null) return fromString(data, defaultValue);
+    log.warning('invalid GeoRegionLevel: ${data.runtimeType}: $data');
+    return defaultValue;
+  }
+
   static GeoRegionLevel required(Map data, String fieldName, String className) {
     var value = fromData(data[fieldName]);
     if (value == null && !data.containsKey(fieldName))
@@ -477,8 +483,10 @@ class GeoRegionLevel {
   final String name;
   const GeoRegionLevel(this.name);
 
+  String toData() => 'GeoRegionLevel.$name';
+
   @override
-  String toString() => 'GeoRegionLevel.$name';
+  String toString() => toData();
 }
 GeoRegionLevel Function(String text) GeoRegionLevel_fromStringOverride;
 
@@ -509,6 +517,12 @@ class FieldOperator {
     return defaultValue;
   }
 
+  static FieldOperator fromData(data, [FieldOperator defaultValue = FieldOperator.equals]) {
+    if (data is String || data == null) return fromString(data, defaultValue);
+    log.warning('invalid FieldOperator: ${data.runtimeType}: $data');
+    return defaultValue;
+  }
+
   static FieldOperator required(Map data, String fieldName, String className) {
     var value = fromData(data[fieldName]);
     if (value == null && !data.containsKey(fieldName))
@@ -526,8 +540,10 @@ class FieldOperator {
   final String name;
   const FieldOperator(this.name);
 
+  String toData() => 'FieldOperator.$name';
+
   @override
-  String toString() => 'FieldOperator.$name';
+  String toString() => toData();
 }
 FieldOperator Function(String text) FieldOperator_fromStringOverride;
 
@@ -562,6 +578,12 @@ class ChartType {
     return defaultValue;
   }
 
+  static ChartType fromData(data, [ChartType defaultValue = ChartType.bar]) {
+    if (data is String || data == null) return fromString(data, defaultValue);
+    log.warning('invalid ChartType: ${data.runtimeType}: $data');
+    return defaultValue;
+  }
+
   static ChartType required(Map data, String fieldName, String className) {
     var value = fromData(data[fieldName]);
     if (value == null && !data.containsKey(fieldName))
@@ -579,8 +601,10 @@ class ChartType {
   final String name;
   const ChartType(this.name);
 
+  String toData() => 'ChartType.$name';
+
   @override
-  String toString() => 'ChartType.$name';
+  String toString() => toData();
 }
 ChartType Function(String text) ChartType_fromStringOverride;
 
@@ -611,6 +635,12 @@ class TimeAggregate {
     return defaultValue;
   }
 
+  static TimeAggregate fromData(data, [TimeAggregate defaultValue = TimeAggregate.none]) {
+    if (data is String || data == null) return fromString(data, defaultValue);
+    log.warning('invalid TimeAggregate: ${data.runtimeType}: $data');
+    return defaultValue;
+  }
+
   static TimeAggregate required(Map data, String fieldName, String className) {
     var value = fromData(data[fieldName]);
     if (value == null && !data.containsKey(fieldName))
@@ -628,8 +658,10 @@ class TimeAggregate {
   final String name;
   const TimeAggregate(this.name);
 
+  String toData() => 'TimeAggregate.$name';
+
   @override
-  String toString() => 'TimeAggregate.$name';
+  String toString() => toData();
 }
 TimeAggregate Function(String text) TimeAggregate_fromStringOverride;
 
