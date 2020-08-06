@@ -598,7 +598,7 @@ void _computeChartBucketsAndRender() {
 
   _tempConfig = chart_helper.generateTimeSeriesChartConfig(
       _chart, _dataNormalisationEnabled, _stackTimeSeriesEnabled);
-  view.renderChart('Out messages split', '', _tempConfig);
+  view.renderChart('Outgoing messages split', '', _tempConfig);
 }
 
 void handleNavToSettings() {
