@@ -101,11 +101,11 @@ ChartConfiguration generateBarChartConfig(
   var filterData = List<num>();
   var comparisonFilterData = List<num>();
 
-  for (var chartCol in chart.fields) {
-    labels.add(chartCol.label ?? chartCol.field.value);
-    filterData.add(chartCol.bucket[0]);
-    comparisonFilterData.add(chartCol.bucket[1]);
-  }
+  // for (var chartCol in chart.fields) {
+  //   labels.add(chartCol.label ?? chartCol.field.value);
+  //   filterData.add(chartCol.bucket[0]);
+  //   comparisonFilterData.add(chartCol.bucket[1]);
+  // }
 
   var colors = chart.colors ?? barChartDefaultColors;
 
@@ -183,30 +183,31 @@ ChartDataSets _generateTimeSeriesChartDataset(
 ChartConfiguration generateTimeSeriesChartConfig(model.Chart chart,
     bool dataNormalisationEnabled, bool stackTimeseriesEnabled) {
   var colors = (chart.colors ?? [])..addAll(lineChartDefaultColors);
-  var datasets = chart.fields.asMap().entries.map((entry) {
-    var index = entry.key;
-    var field = entry.value;
-    return _generateTimeSeriesChartDataset(
-        field.label ?? field.field,
-        field.time_bucket.values.toList(),
-        colors[index],
-        stackTimeseriesEnabled ? (index == 0 ? 'origin' : '-1') : false);
-  }).toList();
+  return null;
+  // var datasets = chart.fields.asMap().entries.map((entry) {
+  //   var index = entry.key;
+  //   var field = entry.value;
+  //   return _generateTimeSeriesChartDataset(
+  //       field.label ?? field.field,
+  //       field.time_bucket.values.toList(),
+  //       colors[index],
+  //       stackTimeseriesEnabled ? (index == 0 ? 'origin' : '-1') : false);
+  // }).toList();
 
-  return ChartConfiguration(
-      type: 'line',
-      data: ChartData(
-          labels: chart.fields.first.time_bucket.keys.map((key) {
-            var date = DateTime.parse(key);
-            switch (chart.timestamp.aggregate) {
-              case model.TimeAggregate.day:
-                return intl.DateFormat('dd MMM').format(date);
-              case model.TimeAggregate.hour:
-              default:
-                return intl.DateFormat('dd MMM h:mm a').format(date);
-            }
-          }).toList(),
-          datasets: datasets),
-      options: _generateTimeSeriesChartOptions(
-          dataNormalisationEnabled, stackTimeseriesEnabled));
+  // return ChartConfiguration(
+  //     type: 'line',
+  //     data: ChartData(
+  //         labels: chart.fields.first.time_bucket.keys.map((key) {
+  //           var date = DateTime.parse(key);
+  //           switch (chart.timestamp.aggregate) {
+  //             case model.TimeAggregate.day:
+  //               return intl.DateFormat('dd MMM').format(date);
+  //             case model.TimeAggregate.hour:
+  //             default:
+  //               return intl.DateFormat('dd MMM h:mm a').format(date);
+  //           }
+  //         }).toList(),
+  //         datasets: datasets),
+  //     options: _generateTimeSeriesChartOptions(
+  //         dataNormalisationEnabled, stackTimeseriesEnabled));
 }

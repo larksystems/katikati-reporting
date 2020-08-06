@@ -23,8 +23,8 @@ DataPath:
   defaultValue: "interactions"
   dartValues:
     - interactions
-    - messageStats
-    - surveyStatus
+    - message_stats
+    - survey_status
 
 Timestamp:
   aggregate: "TimeAggregate"
@@ -62,6 +62,7 @@ ChartType:
     - map
     - time_series
     - summary
+    - funnel
 
 TimeAggregate:
   dartType: "enum"

@@ -52,7 +52,8 @@ Map<String, String> get _activeComparisonFilterValues => {
 Map<String, Map<String, dynamic>> _allInteractions;
 Map<String, Map<String, dynamic>> _messageStatus;
 Map<String, Map<String, dynamic>> _surveyStatus;
-Map<String, Map<String, Set>> _uniqFieldCategoryValues;
+
+Map<model.DataPath, Map<String, Set>> _uniqueFieldValues;
 
 Map<String, Set> _uniqueFieldCategoryValues;
 Map<String, List<DateTime>> _allInteractionsDateRange;
@@ -137,9 +138,8 @@ void onLoginCompleted() async {
   await loadFirebaseData();
   await loadGeoMapsData();
 
-  // // todo: make this more generic
-  // _uniqueFieldCategoryValues =
-  //     computeUniqFieldCategoryValues(_config.filters, _allInteractions);
+  _uniqueFieldValues = computeUniqueFieldValues(
+      _config.tabs.map((t) => t.filters ?? []).expand((e) => e).toList());
   // // todo: make this more generic
   // _allInteractionsDateRange = computeDateRanges(_allInteractions);
   _selectedAnalysisTabIndex = 0;
@@ -225,23 +225,38 @@ void loadGeoMapsData() async {
 }
 
 // Compute data methods
-Map<String, Set> computeUniqFieldCategoryValues(
-    List<model.Filter> filterOptions,
-    Map<String, Map<String, dynamic>> interactions) {
-  var uniqueFieldCategories = Map<String, Set>();
-  filterOptions.forEach((option) {
-    uniqueFieldCategories[option.key] = Set();
+Map<model.DataPath, Map<String, Set>> computeUniqueFieldValues(
+    List<model.Filter> filters) {
+  var uniqueFieldValues = Map<model.DataPath, Map<String, Set>>();
+  filters.forEach((filter) {
+    var dataPath = filter.data_path;
+    uniqueFieldValues[dataPath] = uniqueFieldValues[dataPath] ?? {};
+    uniqueFieldValues[dataPath][filter.key] = Set();
   });
 
-  interactions.forEach((_, interaction) {
-    uniqueFieldCategories.forEach((key, valueSet) {
-      var value = interaction[key];
-      (value is List) ? valueSet.addAll(value) : valueSet.add(value);
-    });
+  uniqueFieldValues.forEach((dataPath, keysObj) {
+    switch (dataPath) {
+      case model.DataPath.interactions:
+        _allInteractions.forEach((_, interaction) {
+          keysObj.keys.forEach((key) {
+            var interactionValue = interaction[key];
+            if (interactionValue is List) {
+              interactionValue.forEach((interactionVal) {
+                uniqueFieldValues[dataPath][key].add(interactionVal);
+              });
+            } else {
+              uniqueFieldValues[dataPath][key].add(interactionValue);
+            }
+          });
+        });
+        break;
+      default:
+        throw UnimplementedError(
+            'computeUniqueFieldValues ${dataPath} not handled');
+    }
   });
 
-  logger.debug('Computed unique field values for all filters');
-  return uniqueFieldCategories;
+  return uniqueFieldValues;
 }
 
 Map<String, List<DateTime>> computeDateRanges(
@@ -309,172 +324,172 @@ bool _interactionMatchesFilters(
 //   return false;
 // }
 
-void _computeChartBuckets(List<model.Chart> charts) {
-  // todo: make this interaction normalisation value [0, 0]
-  // _filterValuesCount = 0;
-  // _comparisonFilterValuesCount = 0;
+// void _computeChartBuckets(List<model.Chart> charts) {
+//   // todo: make this interaction normalisation value [0, 0]
+//   // _filterValuesCount = 0;
+//   // _comparisonFilterValuesCount = 0;
 
-  _computedCharts = [];
+//   _computedCharts = [];
 
-  // reset bucket to [filter(0), comparisonFilter(0)] for each chart col
-  // reset time_bucket to {"mm/dd/yyyy": 0} for time series chart col
-  // reset allInteractionDateBuckets (for normalising) to {"recorded_at": {day: {"mm/dd/yyyy": 0}}}
-  for (var chart in charts) {
-    switch (chart.type) {
-      case model.ChartType.bar:
-        var labels = chart.fields.map((c) => c.field.key).toList();
-        var buckets = chart.fields.map((e) => [0, 0]).toList();
-        var computedBarChart = model.ComputedBarChart(chart.data_path,
-            chart.title, chart.narrative, chart.colors, labels, buckets);
-        _computedCharts.add(computedBarChart);
-        break;
-      case model.ChartType.time_series:
-        var series = chart.fields.map((c) => c.field.key).toList();
-        switch (chart.data_path) {
-          case model.DataPath.interactions:
-            break;
-          case model.DataPath.messageStats:
-            break;
-          case model.DataPath.surveyStatus:
-            break;
-          default:
-        }
-        break;
-      default:
-        throw Exception('${chart.type} not implemented');
-    }
-    for (var chartCol in chart.fields) {
-      chartCol.bucket = [0, 0];
-      if (chart.type == model.ChartType.time_series) {
-        chartCol.time_bucket = _generateEmptyDateTimeBuckets(
-            _allInteractionsDateRange[chart.timestamp.key][0],
-            _allInteractionsDateRange[chart.timestamp.key][1],
-            chart.timestamp.aggregate);
-      }
-    }
-    if (chart.type == model.ChartType.time_series) {
-      var key = chart.timestamp.key;
-      var aggregate = chart.timestamp.aggregate;
-      _allInteractionDateBuckets = {};
-      _allInteractionDateBuckets[key] = {};
-      _allInteractionDateBuckets[key][aggregate] =
-          _generateEmptyDateTimeBuckets(
-              _allInteractionsDateRange[chart.timestamp.key][0],
-              _allInteractionsDateRange[chart.timestamp.key][1],
-              chart.timestamp.aggregate);
-    }
-  }
+//   // reset bucket to [filter(0), comparisonFilter(0)] for each chart col
+//   // reset time_bucket to {"mm/dd/yyyy": 0} for time series chart col
+//   // reset allInteractionDateBuckets (for normalising) to {"recorded_at": {day: {"mm/dd/yyyy": 0}}}
+//   for (var chart in charts) {
+//     switch (chart.type) {
+//       case model.ChartType.bar:
+//         var labels = chart.fields.map((c) => c.field.key).toList();
+//         var buckets = chart.fields.map((e) => [0, 0]).toList();
+//         var computedBarChart = model.ComputedBarChart(chart.data_path,
+//             chart.title, chart.narrative, chart.colors, labels, buckets);
+//         _computedCharts.add(computedBarChart);
+//         break;
+//       case model.ChartType.time_series:
+//         var series = chart.fields.map((c) => c.field.key).toList();
+//         switch (chart.data_path) {
+//           case model.DataPath.interactions:
+//             break;
+//           case model.DataPath.messageStats:
+//             break;
+//           case model.DataPath.surveyStatus:
+//             break;
+//           default:
+//         }
+//         break;
+//       default:
+//         throw Exception('${chart.type} not implemented');
+//     }
+//     for (var chartCol in chart.fields) {
+//       chartCol.bucket = [0, 0];
+//       if (chart.type == model.ChartType.time_series) {
+//         chartCol.time_bucket = _generateEmptyDateTimeBuckets(
+//             _allInteractionsDateRange[chart.timestamp.key][0],
+//             _allInteractionsDateRange[chart.timestamp.key][1],
+//             chart.timestamp.aggregate);
+//       }
+//     }
+//     if (chart.type == model.ChartType.time_series) {
+//       var key = chart.timestamp.key;
+//       var aggregate = chart.timestamp.aggregate;
+//       _allInteractionDateBuckets = {};
+//       _allInteractionDateBuckets[key] = {};
+//       _allInteractionDateBuckets[key][aggregate] =
+//           _generateEmptyDateTimeBuckets(
+//               _allInteractionsDateRange[chart.timestamp.key][0],
+//               _allInteractionsDateRange[chart.timestamp.key][1],
+//               chart.timestamp.aggregate);
+//     }
+//   }
 
-  for (var interaction in _allInteractions.values) {
-    // Check if this interaction falls within the active filter
-    var addToPrimaryBucket =
-        _interactionMatchesFilters(interaction, _activeFilterValues);
-    var addToComparisonBucket =
-        _interactionMatchesFilters(interaction, _activeComparisonFilterValues);
+//   for (var interaction in _allInteractions.values) {
+//     // Check if this interaction falls within the active filter
+//     var addToPrimaryBucket =
+//         _interactionMatchesFilters(interaction, _activeFilterValues);
+//     var addToComparisonBucket =
+//         _interactionMatchesFilters(interaction, _activeComparisonFilterValues);
 
-    if (addToPrimaryBucket) {
-      ++_filterValuesCount;
-      for (var chart in charts) {
-        if (chart.type == model.ChartType.time_series) {
-          var key = chart.timestamp.key;
-          var aggregate = chart.timestamp.aggregate;
-          var timeStampKey = _generateDateTimeKey(interaction[key], aggregate);
-          _allInteractionDateBuckets[key][aggregate][timeStampKey] += 1;
-        }
-      }
-    }
+//     if (addToPrimaryBucket) {
+//       ++_filterValuesCount;
+//       for (var chart in charts) {
+//         if (chart.type == model.ChartType.time_series) {
+//           var key = chart.timestamp.key;
+//           var aggregate = chart.timestamp.aggregate;
+//           var timeStampKey = _generateDateTimeKey(interaction[key], aggregate);
+//           _allInteractionDateBuckets[key][aggregate][timeStampKey] += 1;
+//         }
+//       }
+//     }
 
-    if (addToComparisonBucket) {
-      ++_comparisonFilterValuesCount;
-    }
+//     if (addToComparisonBucket) {
+//       ++_comparisonFilterValuesCount;
+//     }
 
-    // If the interaction doesnt fall in the active filters, continue
-    if (!addToPrimaryBucket && !addToComparisonBucket) continue;
+//     // If the interaction doesnt fall in the active filters, continue
+//     if (!addToPrimaryBucket && !addToComparisonBucket) continue;
 
-    for (var chart in charts) {
-      for (var chartCol in chart.fields) {
-        if (!_interactionMatchesOperation(interaction, chartCol)) continue;
+//     for (var chart in charts) {
+//       for (var chartCol in chart.fields) {
+//         if (!_interactionMatchesOperation(interaction, chartCol)) continue;
 
-        if (addToPrimaryBucket) {
-          ++chartCol.bucket[0];
-          if (chart.type == model.ChartType.time_series) {
-            var dateTimeKey = _generateDateTimeKey(
-                interaction[chart.timestamp.key] as DateTime,
-                chart.timestamp.aggregate);
-            chartCol.time_bucket[dateTimeKey] += 1;
-          }
-        }
-        if (addToComparisonBucket) {
-          ++chartCol.bucket[1];
-        }
-      }
-    }
-  }
+//         if (addToPrimaryBucket) {
+//           ++chartCol.bucket[0];
+//           if (chart.type == model.ChartType.time_series) {
+//             var dateTimeKey = _generateDateTimeKey(
+//                 interaction[chart.timestamp.key] as DateTime,
+//                 chart.timestamp.aggregate);
+//             chartCol.time_bucket[dateTimeKey] += 1;
+//           }
+//         }
+//         if (addToComparisonBucket) {
+//           ++chartCol.bucket[1];
+//         }
+//       }
+//     }
+//   }
 
-  if (_dataNormalisationEnabled) {
-    for (var chart in charts) {
-      for (var chartCol in chart.fields) {
-        num filterValuesPercent = chartCol.bucket[0] * 100 / _filterValuesCount;
-        num comparisonFilterValuesPercent =
-            chartCol.bucket[1] * 100 / _comparisonFilterValuesCount;
+//   if (_dataNormalisationEnabled) {
+//     for (var chart in charts) {
+//       for (var chartCol in chart.fields) {
+//         num filterValuesPercent = chartCol.bucket[0] * 100 / _filterValuesCount;
+//         num comparisonFilterValuesPercent =
+//             chartCol.bucket[1] * 100 / _comparisonFilterValuesCount;
 
-        chartCol.bucket = [
-          filterValuesPercent.roundToDecimal(2),
-          comparisonFilterValuesPercent.roundToDecimal(2)
-        ];
+//         chartCol.bucket = [
+//           filterValuesPercent.roundToDecimal(2),
+//           comparisonFilterValuesPercent.roundToDecimal(2)
+//         ];
 
-        if (chart.type == model.ChartType.time_series) {
-          for (var datetime in chartCol.time_bucket.keys) {
-            chartCol.time_bucket[datetime] =
-                ((chartCol.time_bucket[datetime] * 100) /
-                        _allInteractionDateBuckets[chart.timestamp.key]
-                            [chart.timestamp.aggregate][datetime])
-                    .roundToDecimal(2);
-          }
-        }
-      }
-    }
-  }
+//         if (chart.type == model.ChartType.time_series) {
+//           for (var datetime in chartCol.time_bucket.keys) {
+//             chartCol.time_bucket[datetime] =
+//                 ((chartCol.time_bucket[datetime] * 100) /
+//                         _allInteractionDateBuckets[chart.timestamp.key]
+//                             [chart.timestamp.aggregate][datetime])
+//                     .roundToDecimal(2);
+//           }
+//         }
+//       }
+//     }
+//   }
 
-  logger.debug('Computed chart buckets ${charts}');
-}
+//   logger.debug('Computed chart buckets ${charts}');
+// }
 
-String _generateDateTimeKey(DateTime dateTime, model.TimeAggregate aggregate) {
-  switch (aggregate) {
-    case model.TimeAggregate.day:
-      dateTime = DateTime(dateTime.year, dateTime.month, dateTime.day, 0, 0, 0);
-      break;
-    case model.TimeAggregate.hour:
-      dateTime = DateTime(
-          dateTime.year, dateTime.month, dateTime.day, dateTime.hour, 0, 0);
-      break;
-    default:
-      logger.error('Time series chart aggregate ${aggregate} not handled');
-  }
-  return STANDARD_DATE_TIME_FORMAT.format(dateTime);
-}
+// String _generateDateTimeKey(DateTime dateTime, model.TimeAggregate aggregate) {
+//   switch (aggregate) {
+//     case model.TimeAggregate.day:
+//       dateTime = DateTime(dateTime.year, dateTime.month, dateTime.day, 0, 0, 0);
+//       break;
+//     case model.TimeAggregate.hour:
+//       dateTime = DateTime(
+//           dateTime.year, dateTime.month, dateTime.day, dateTime.hour, 0, 0);
+//       break;
+//     default:
+//       logger.error('Time series chart aggregate ${aggregate} not handled');
+//   }
+//   return STANDARD_DATE_TIME_FORMAT.format(dateTime);
+// }
 
-Map<String, num> _generateEmptyDateTimeBuckets(
-    DateTime start, DateTime end, model.TimeAggregate aggregate) {
-  var timeBucket = Map<String, num>();
-  var currentTime = DateTime(start.year, start.month, start.day, 0, 0, 0);
-  var endTime = DateTime(end.year, end.month, end.day, 23, 59, 59);
-  var durationToAdd;
-  switch (aggregate) {
-    case model.TimeAggregate.day:
-      durationToAdd = Duration(days: 1);
-      break;
-    case model.TimeAggregate.hour:
-      durationToAdd = Duration(hours: 1);
-      break;
-  }
-  while (currentTime.isBefore(endTime)) {
-    timeBucket[STANDARD_DATE_TIME_FORMAT.format(currentTime)] = 0;
-    currentTime = currentTime.add(durationToAdd);
-  }
+// Map<String, num> _generateEmptyDateTimeBuckets(
+//     DateTime start, DateTime end, model.TimeAggregate aggregate) {
+//   var timeBucket = Map<String, num>();
+//   var currentTime = DateTime(start.year, start.month, start.day, 0, 0, 0);
+//   var endTime = DateTime(end.year, end.month, end.day, 23, 59, 59);
+//   var durationToAdd;
+//   switch (aggregate) {
+//     case model.TimeAggregate.day:
+//       durationToAdd = Duration(days: 1);
+//       break;
+//     case model.TimeAggregate.hour:
+//       durationToAdd = Duration(hours: 1);
+//       break;
+//   }
+//   while (currentTime.isBefore(endTime)) {
+//     timeBucket[STANDARD_DATE_TIME_FORMAT.format(currentTime)] = 0;
+//     currentTime = currentTime.add(durationToAdd);
+//   }
 
-  return timeBucket;
-}
+//   return timeBucket;
+// }
 
 // Render methods
 void handleNavToAnalysis() {
@@ -490,98 +505,98 @@ void handleNavToAnalysis() {
   view.renderChartOptions(_dataComparisonEnabled, _dataNormalisationEnabled,
       _stackTimeSeriesEnabled);
 
-  _computeFilterDropdownsAndRender();
-  _computeChartBucketsAndRender();
+  _computeFilterDropdownsAndRender(
+      _config.tabs[_selectedAnalysisTabIndex].filters);
+  // _computeChartBucketsAndRender();
 }
 
-void _computeFilterDropdownsAndRender() {
-  var filterKeys = _config.tabs[_selectedAnalysisTabIndex].filters
-      .map((e) => e.key)
-      .toList();
-  var filterOptions = _uniqueFieldCategoryValues.map((key, setValues) {
-    return MapEntry(
-        key,
-        setValues.map((s) => s.toString()).toList()
-          ..add(DEFAULT_FILTER_SELECT_VALUE));
+void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
+  filters = filters ?? [];
+
+  var filterPaths = List<String>();
+  var filterKeys = List<String>();
+  var filterOptions = Map<String, List<String>>();
+  filters.forEach((filter) {
+    filterPaths.add(filter.data_path.name);
+    filterKeys.add(filter.key);
+    filterOptions[filter.key] = _uniqueFieldValues[filter.data_path][filter.key]
+        .map((e) => e.toString())
+        .toList()
+          ..add(DEFAULT_FILTER_SELECT_VALUE);
   });
 
   var initialFilterValues = {
     for (var key in filterKeys) key: DEFAULT_FILTER_SELECT_VALUE
   };
 
-  view.renderFilterDropdowns(filterKeys, filterOptions, _activeFilters,
+  view.renderFilterDropdowns(filterPaths, filterOptions, _activeFilters,
       initialFilterValues, initialFilterValues, _dataComparisonEnabled);
-
-  var selectedTab = _config.tabs[_selectedAnalysisTabIndex];
-  for (var filterKey in selectedTab.exclude_filters ?? []) {
-    view.hideFilterRow(filterKey);
-  }
 }
 
-void _computeChartBucketsAndRender() {
-  var charts = _config.tabs[_selectedAnalysisTabIndex].charts;
-  _computeChartBuckets(charts);
+// void _computeChartBucketsAndRender() {
+//   var charts = _config.tabs[_selectedAnalysisTabIndex].charts;
+//   _computeChartBuckets(charts);
 
-  for (var chart in charts) {
-    switch (chart.type) {
-      case model.ChartType.bar:
-        view.renderChart(
-            chart.title,
-            chart.narrative,
-            chart_helper.generateBarChartConfig(
-                chart,
-                _dataComparisonEnabled,
-                _dataNormalisationEnabled,
-                _activeFilterValues,
-                _activeComparisonFilterValues));
-        break;
-      case model.ChartType.time_series:
-        view.renderChart(
-            chart.title,
-            chart.narrative,
-            chart_helper.generateTimeSeriesChartConfig(
-                chart, _dataNormalisationEnabled, _stackTimeSeriesEnabled));
-        break;
-      case model.ChartType.map:
-        var mapData =
-            _mapsGeoJSON[chart.geography.country][chart.geography.regionLevel];
-        var mapValues = Map<String, List<num>>();
-        var mapComparisonValues = Map<String, List<num>>();
-        for (var field in chart.fields) {
-          var regionName = field.field.value.toString();
-          var normalisationValue =
-              _dataNormalisationEnabled ? 100 : _filterValuesCount;
-          var comparisonNormalisationValue =
-              _dataNormalisationEnabled ? 100 : _comparisonFilterValuesCount;
+//   for (var chart in charts) {
+//     switch (chart.type) {
+//       case model.ChartType.bar:
+//         view.renderChart(
+//             chart.title,
+//             chart.narrative,
+//             chart_helper.generateBarChartConfig(
+//                 chart,
+//                 _dataComparisonEnabled,
+//                 _dataNormalisationEnabled,
+//                 _activeFilterValues,
+//                 _activeComparisonFilterValues));
+//         break;
+//       case model.ChartType.time_series:
+//         view.renderChart(
+//             chart.title,
+//             chart.narrative,
+//             chart_helper.generateTimeSeriesChartConfig(
+//                 chart, _dataNormalisationEnabled, _stackTimeSeriesEnabled));
+//         break;
+//       case model.ChartType.map:
+//         var mapData =
+//             _mapsGeoJSON[chart.geography.country][chart.geography.regionLevel];
+//         var mapValues = Map<String, List<num>>();
+//         var mapComparisonValues = Map<String, List<num>>();
+//         for (var field in chart.fields) {
+//           var regionName = field.field.value.toString();
+//           var normalisationValue =
+//               _dataNormalisationEnabled ? 100 : _filterValuesCount;
+//           var comparisonNormalisationValue =
+//               _dataNormalisationEnabled ? 100 : _comparisonFilterValuesCount;
 
-          mapValues[regionName] = [
-            field.bucket[0],
-            field.bucket[0] / normalisationValue,
-          ];
-          mapComparisonValues[regionName] = [
-            field.bucket[1],
-            field.bucket[1] / comparisonNormalisationValue
-          ];
-        }
+//           mapValues[regionName] = [
+//             field.bucket[0],
+//             field.bucket[0] / normalisationValue,
+//           ];
+//           mapComparisonValues[regionName] = [
+//             field.bucket[1],
+//             field.bucket[1] / comparisonNormalisationValue
+//           ];
+//         }
 
-        view.renderGeoMap(
-          chart.title,
-          chart.narrative,
-          mapData,
-          mapValues,
-          mapComparisonValues,
-          _dataComparisonEnabled,
-          _dataNormalisationEnabled,
-          chart.colors ?? chart_helper.barChartDefaultColors,
-        );
-        break;
-      default:
-        logger.error('No such chart type ${chart.type}');
-        view.showAlert(
-            'Warning: Chart type ${chart.type} listed in your config is not supported.');
-    }
-  }
-}
+//         view.renderGeoMap(
+//           chart.title,
+//           chart.narrative,
+//           mapData,
+//           mapValues,
+//           mapComparisonValues,
+//           _dataComparisonEnabled,
+//           _dataNormalisationEnabled,
+//           chart.colors ?? chart_helper.barChartDefaultColors,
+//         );
+//         break;
+//       default:
+//         logger.error('No such chart type ${chart.type}');
+//         view.showAlert(
+//             'Warning: Chart type ${chart.type} listed in your config is not supported.');
+//     }
+//   }
+// }
 
 void handleNavToSettings() {
   view.clearContentTab();
@@ -591,40 +606,40 @@ void handleNavToSettings() {
   view.renderSettingsConfigUtility(_uniqueFieldCategoryValues);
 }
 
-void _updateFiltersInView() {
-  var filterKeys = _config.filters.map((filter) => filter.key).toList();
-  var selectedTab = _config.tabs[_selectedAnalysisTabIndex];
-  var excludeKeys = selectedTab.exclude_filters ?? [];
-  for (var key in filterKeys) {
-    if (!_activeFilters.contains(key)) {
-      view.disableFilterOption(key);
-      view.disableFilterDropdown(key);
-      view.disableFilterDropdown(key, comparison: true);
-    } else {
-      view.enableFilterOption(key);
-      view.enableFilterDropdown(key);
-      view.enableFilterDropdown(key, comparison: true);
-    }
+// void _updateFiltersInView() {
+//   var filterKeys = _config.filters.map((filter) => filter.key).toList();
+//   var selectedTab = _config.tabs[_selectedAnalysisTabIndex];
+//   var excludeKeys = selectedTab.exclude_filters ?? [];
+//   for (var key in filterKeys) {
+//     if (!_activeFilters.contains(key)) {
+//       view.disableFilterOption(key);
+//       view.disableFilterDropdown(key);
+//       view.disableFilterDropdown(key, comparison: true);
+//     } else {
+//       view.enableFilterOption(key);
+//       view.enableFilterDropdown(key);
+//       view.enableFilterDropdown(key, comparison: true);
+//     }
 
-    view.setFilterDropdownValue(
-        key, _filterValues[key] ?? DEFAULT_FILTER_SELECT_VALUE);
-    view.setFilterDropdownValue(
-        key, _comparisonFilterValues[key] ?? DEFAULT_FILTER_SELECT_VALUE,
-        comparison: true);
+//     view.setFilterDropdownValue(
+//         key, _filterValues[key] ?? DEFAULT_FILTER_SELECT_VALUE);
+//     view.setFilterDropdownValue(
+//         key, _comparisonFilterValues[key] ?? DEFAULT_FILTER_SELECT_VALUE,
+//         comparison: true);
 
-    if (_dataComparisonEnabled) {
-      view.showFilterDropdown(key, comparison: true);
-    } else {
-      view.hideFilterDropdown(key, comparison: true);
-    }
+//     if (_dataComparisonEnabled) {
+//       view.showFilterDropdown(key, comparison: true);
+//     } else {
+//       view.hideFilterDropdown(key, comparison: true);
+//     }
 
-    if (excludeKeys.contains(key)) {
-      view.hideFilterRow(key);
-    } else {
-      view.showFilterRow(key);
-    }
-  }
-}
+//     if (excludeKeys.contains(key)) {
+//       view.hideFilterRow(key);
+//     } else {
+//       view.showFilterRow(key);
+//     }
+//   }
+// }
 
 // User actions
 void command(UIAction action, Data data) async {
@@ -644,17 +659,21 @@ void command(UIAction action, Data data) async {
       _activeFilters = {};
       _filterValues = {};
       _comparisonFilterValues = {};
-      _updateFiltersInView();
+      view.removeFiltersWrapper();
       view.removeAllChartWrappers();
-      _computeChartBucketsAndRender();
+      _computeFilterDropdownsAndRender(
+          _config.tabs[_selectedAnalysisTabIndex].filters);
+      // _computeChartBucketsAndRender();
       logger.debug('Changed to analysis tab ${_selectedAnalysisTabIndex}');
       break;
     case UIAction.toggleDataComparison:
       var d = data as ToggleOptionEnabledData;
       _dataComparisonEnabled = d.enabled;
-      _updateFiltersInView();
+      view.removeFiltersWrapper();
       view.removeAllChartWrappers();
-      _computeChartBucketsAndRender();
+      _computeFilterDropdownsAndRender(
+          _config.tabs[_selectedAnalysisTabIndex].filters);
+      // _computeChartBucketsAndRender();
       logger.debug('Data comparison changed to ${_dataComparisonEnabled}');
       break;
     case UIAction.toggleDataNormalisation:
@@ -663,7 +682,7 @@ void command(UIAction action, Data data) async {
       logger
           .debug('Data normalisation changed to ${_dataNormalisationEnabled}');
       view.removeAllChartWrappers();
-      _computeChartBucketsAndRender();
+      // _computeChartBucketsAndRender();
       break;
     case UIAction.toggleStackTimeseries:
       var d = data as ToggleOptionEnabledData;
@@ -671,7 +690,7 @@ void command(UIAction action, Data data) async {
       logger.debug(
           'Stack time series chart changed to ${_stackTimeSeriesEnabled}');
       view.removeAllChartWrappers();
-      _computeChartBucketsAndRender();
+      // _computeChartBucketsAndRender();
       break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
@@ -691,14 +710,14 @@ void command(UIAction action, Data data) async {
         logger.debug('Removed ${d.key} from active filters, ${_activeFilters}');
       }
       view.removeAllChartWrappers();
-      _computeChartBucketsAndRender();
+      // _computeChartBucketsAndRender();
       break;
     case UIAction.setFilterValue:
       var d = data as SetFilterValueData;
       _filterValues[d.key] = d.value;
       logger.debug('Set to filter values, ${_filterValues}');
       view.removeAllChartWrappers();
-      _computeChartBucketsAndRender();
+      // _computeChartBucketsAndRender();
       break;
     case UIAction.setComparisonFilterValue:
       var d = data as SetFilterValueData;
@@ -706,7 +725,7 @@ void command(UIAction action, Data data) async {
       logger
           .debug('Set to comparison filter values, ${_comparisonFilterValues}');
       view.removeAllChartWrappers();
-      _computeChartBucketsAndRender();
+      // _computeChartBucketsAndRender();
       break;
     case UIAction.saveConfigToFirebase:
       var d = data as SaveConfigToFirebaseData;
@@ -740,44 +759,44 @@ void command(UIAction action, Data data) async {
       _config = model.Config.fromData(_configRaw);
       break;
     case UIAction.copyToClipboardConfigSkeleton:
-      var config = model.Config()
-        ..data_paths = {'interactions': ''}
-        ..filters = _uniqueFieldCategoryValues.keys
-            .map((key) => model.Filter()
-              ..key = key
-              ..label = key)
-            .toList()
-        ..tabs = List<int>.generate(2, (i) => i)
-            .map((i) => model.Tab()
-              ..label = 'Tab $i'
-              ..exclude_filters = []
-              ..charts = [])
-            .toList();
-      var configStr = convert.jsonEncode(config.toData()).toString();
-      _copyToClipboard(configStr);
+      // var config = model.Config()
+      //   ..data_paths = {'interactions': ''}
+      //   ..filters = _uniqueFieldCategoryValues.keys
+      //       .map((key) => model.Filter()
+      //         ..key = key
+      //         ..label = key)
+      //       .toList()
+      //   ..tabs = List<int>.generate(2, (i) => i)
+      //       .map((i) => model.Tab()
+      //         ..label = 'Tab $i'
+      //         ..exclude_filters = []
+      //         ..charts = [])
+      //       .toList();
+      // var configStr = convert.jsonEncode(config.toData()).toString();
+      // _copyToClipboard(configStr);
       break;
     case UIAction.copyToClipboardChartConfig:
-      var d = data as CopyToClipboardChartConfigData;
-      var values = _uniqueFieldCategoryValues[d.key].toList();
-      var valuesConfig = values
-          .map((value) => model.Field()
-            ..label = value
-            ..field = (model.FieldOperation()
-              ..key = d.key
-              ..operator = model.FieldOperator.equals
-              ..value = value))
-          .toList();
-      var chartsConfig = model.Chart()
-        ..title = 'By ${d.key}'
-        ..narrative = ''
-        ..type = model.ChartType.bar
-        ..fields = valuesConfig;
-      var configStr = convert.jsonEncode(chartsConfig.toData()).toString();
-      // todo: replace this with @override toString() for enums
-      ['ChartType.', 'FieldOperator.'].forEach((findStr) {
-        configStr = configStr.replaceAll(findStr, '');
-      });
-      _copyToClipboard(configStr);
+      // var d = data as CopyToClipboardChartConfigData;
+      // var values = _uniqueFieldCategoryValues[d.key].toList();
+      // var valuesConfig = values
+      //     .map((value) => model.Field()
+      //       ..label = value
+      //       ..field = (model.FieldOperation()
+      //         ..key = d.key
+      //         ..operator = model.FieldOperator.equals
+      //         ..value = value))
+      //     .toList();
+      // var chartsConfig = model.Chart()
+      //   ..title = 'By ${d.key}'
+      //   ..narrative = ''
+      //   ..type = model.ChartType.bar
+      //   ..fields = valuesConfig;
+      // var configStr = convert.jsonEncode(chartsConfig.toData()).toString();
+      // // todo: replace this with @override toString() for enums
+      // ['ChartType.', 'FieldOperator.'].forEach((findStr) {
+      //   configStr = configStr.replaceAll(findStr, '');
+      // });
+      // _copyToClipboard(configStr);
       break;
     default:
   }
@@ -786,52 +805,52 @@ void command(UIAction action, Data data) async {
 void validateConfig(model.Config config) {
   // todo: validate time_series chart
   // Data paths
-  if (config.data_paths == null) {
-    throw StateError('data_paths cannot be empty');
-  }
+  // if (config.data_paths == null) {
+  //   throw StateError('data_paths cannot be empty');
+  // }
 
-  if (config.data_paths['interactions'] == null) {
-    throw StateError('data_paths > interactions cannot be empty');
-  }
+  // if (config.data_paths['interactions'] == null) {
+  //   throw StateError('data_paths > interactions cannot be empty');
+  // }
 
-  // Filters
-  if (config.filters == null) {
-    throw StateError('filters need to be an array');
-  }
+  // // Filters
+  // if (config.filters == null) {
+  //   throw StateError('filters need to be an array');
+  // }
 
-  for (var filter in config.filters) {
-    if (filter.key == null) {
-      throw StateError('filters {key} cannot be empty');
-    }
-  }
+  // for (var filter in config.filters) {
+  //   if (filter.key == null) {
+  //     throw StateError('filters {key} cannot be empty');
+  //   }
+  // }
 
-  // Tabs
-  if (config.tabs == null) {
-    throw StateError('tabs cannot be empty');
-  }
+  // // Tabs
+  // if (config.tabs == null) {
+  //   throw StateError('tabs cannot be empty');
+  // }
 
-  for (var tab in config.tabs) {
-    for (var chart in tab.charts) {
-      for (var field in chart.fields) {
-        if (field.field.key == null) {
-          throw StateError('Chart field cannot be empty');
-        }
-        if (field.field.value == null) {
-          throw StateError('Chart field value cannot be empty');
-        }
-        // no need to check for operator, as it is caught by enums
-      }
+  // for (var tab in config.tabs) {
+  //   for (var chart in tab.charts) {
+  //     for (var field in chart.fields) {
+  //       if (field.field.key == null) {
+  //         throw StateError('Chart field cannot be empty');
+  //       }
+  //       if (field.field.value == null) {
+  //         throw StateError('Chart field value cannot be empty');
+  //       }
+  //       // no need to check for operator, as it is caught by enums
+  //     }
 
-      // geography map
-      if (chart.type == model.ChartType.map) {
-        if (chart.geography == null ||
-            chart.geography.country == null ||
-            chart.geography.regionLevel == null) {
-          throw StateError('Geography map not specified');
-        }
-      }
-    }
-  }
+  //     // geography map
+  //     if (chart.type == model.ChartType.map) {
+  //       if (chart.geography == null ||
+  //           chart.geography.country == null ||
+  //           chart.geography.regionLevel == null) {
+  //         throw StateError('Geography map not specified');
+  //       }
+  //     }
+  //   }
+  // }
 }
 
 void _copyToClipboard(String str) {

@@ -132,13 +132,13 @@ typedef void ChartCollectionListener(
 
 class DataPath {
   static const interactions = DataPath('interactions');
-  static const messageStats = DataPath('messageStats');
-  static const surveyStatus = DataPath('surveyStatus');
+  static const message_stats = DataPath('message_stats');
+  static const survey_status = DataPath('survey_status');
 
   static const values = <DataPath>[
     interactions,
-    messageStats,
-    surveyStatus,
+    message_stats,
+    survey_status,
   ];
 
   static DataPath fromString(String text, [DataPath defaultValue = DataPath.interactions]) {
@@ -241,6 +241,7 @@ typedef void FieldCollectionListener(
 class Filter {
   String docId;
   String key;
+  DataPath data_path;
 
   static Filter fromSnapshot(DocSnapshot doc, [Filter modelObj]) =>
       fromData(doc.data, modelObj)..docId = doc.id;
@@ -248,7 +249,8 @@ class Filter {
   static Filter fromData(data, [Filter modelObj]) {
     if (data == null) return null;
     return (modelObj ?? Filter())
-      ..key = String_fromData(data['key']);
+      ..key = String_fromData(data['key'])
+      ..data_path = DataPath.fromString(data['data_path'] as String);
   }
 
   static void listen(DocStorage docStorage, FilterCollectionListener listener, String collectionRoot) =>
@@ -257,6 +259,7 @@ class Filter {
   Map<String, dynamic> toData() {
     return {
       if (key != null) 'key': key,
+      if (data_path != null) 'data_path': data_path.toString(),
     };
   }
 
@@ -340,6 +343,7 @@ class ChartType {
   static const map = ChartType('map');
   static const time_series = ChartType('time_series');
   static const summary = ChartType('summary');
+  static const funnel = ChartType('funnel');
 
   static const values = <ChartType>[
     bar,
@@ -347,6 +351,7 @@ class ChartType {
     map,
     time_series,
     summary,
+    funnel,
   ];
 
   static ChartType fromString(String text, [ChartType defaultValue = ChartType.bar]) {

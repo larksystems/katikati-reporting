@@ -327,7 +327,7 @@ void disableFilterOption(String filterKey) {
 }
 
 void renderFilterDropdowns(
-    List<String> filterKeys,
+    List<String> dataPaths,
     Map<String, List<String>> filterOptions,
     Set<String> activeKeys,
     Map<String, String> initialFilterValues,
@@ -340,7 +340,7 @@ void renderFilterDropdowns(
         ..innerText = 'Filters';
   var optionsCol = generateGridOptionsColumnElement();
 
-  for (var key in filterKeys) {
+  for (var key in filterOptions.keys) {
     var filterRow = generateGridRowElement(id: _generateFilterRowID(key));
     var checkboxCol = html.DivElement()..classes = ['col-3'];
     var filterCol = html.DivElement()..classes = ['col-3'];

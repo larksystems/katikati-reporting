@@ -81,7 +81,6 @@ void _fbAuthChanged(
 Future<Map<String, dynamic>> fetchConfig() async {
   logger.debug('Fetching config from firebase ..');
   var str = await html.HttpRequest.getString('assets/config.json');
-  print(jsonDecode(str));
   return jsonDecode(str);
 
   // var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
