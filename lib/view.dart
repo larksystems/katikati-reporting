@@ -776,65 +776,6 @@ void renderSettingsConfigEditor(String config) {
   wrapper.append(saveButton);
 }
 
-void renderSettingsConfigUtility(Map<String, Set> uniqueValues) {
-  var wrapper = html.DivElement()
-    ..classes = [CONFIG_UNIQUE_VALUES_WRAPPER_CLASSNAME];
-  content.append(wrapper);
-
-  var skeletonHeader = html.HeadingElement.h5()
-    ..text = 'Step 1: Skeleton of config';
-  var skeletonCopyButton = html.ButtonElement()
-    ..classes = ['btn', 'btn-outline-secondary']
-    ..innerText = 'Copy config skeleton'
-    ..onClick
-        .listen((_) => command(UIAction.copyToClipboardConfigSkeleton, null));
-  var skeletonInstructions = html.OListElement()..type = 'a';
-  [
-    'Fill <code>interactions</code> under data_paths',
-    'Optionally fill <code>label</code> for each of the filters',
-    'Fill <code>label</code> for each of the tabs',
-    'Fill <code>exclude_filters: ["filter_key"]</code> for each of the tabs'
-  ].forEach(
-      (i) => skeletonInstructions.append(html.LIElement()..innerHtml = i));
-  wrapper.append(skeletonHeader);
-  wrapper.append(skeletonCopyButton);
-  wrapper.append(skeletonInstructions);
-
-  var chartConfigTitle = html.HeadingElement.h5()
-    ..innerText = 'Step 2: Chart config / tabs > charts: []';
-  var chartConfigInstructions = html.OListElement()..type = 'a';
-  [
-    'Optionally fill <code>label</code> for each of the field keys',
-    'Optionally delete the unwanted fields from the chart config (esp. for themes)',
-    'Optionally edit the chart type (defaults to bar)'
-  ].forEach(
-      (i) => chartConfigInstructions.append(html.LIElement()..innerHtml = i));
-  var chartConfigTable = html.TableElement()
-    ..classes = ['table', 'table-bordered'];
-  uniqueValues.forEach((key, value) {
-    var tableRow = html.TableRowElement();
-    var fieldCol = html.TableCellElement()..innerText = key;
-    var valuesCol = html.TableCellElement()
-      ..innerText = (value.toList()..sort()).join(', ');
-    var copyCol = html.TableCellElement();
-    var copyButton = html.ButtonElement()
-      ..classes = ['btn', 'btn-outline-secondary']
-      ..innerText = 'Copy chart config'
-      ..onClick.listen((_) => command(UIAction.copyToClipboardChartConfig,
-          CopyToClipboardChartConfigData(key)));
-    copyCol.append(copyButton);
-
-    tableRow.append(fieldCol);
-    tableRow.append(valuesCol);
-    tableRow.append(copyCol);
-    chartConfigTable.append(tableRow);
-  });
-
-  wrapper.append(chartConfigTitle);
-  wrapper.append(chartConfigInstructions);
-  wrapper.append(chartConfigTable);
-}
-
 void showConfigSettingsAlert(String message, bool isError) {
   configSettingsAlert
     ..text = message

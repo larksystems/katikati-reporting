@@ -136,6 +136,11 @@ void onLoginCompleted() async {
   view.showLoading();
 
   await loadFirebaseData();
+  if (_config.data_paths == null) {
+    view.hideLoading();
+    return;
+  }
+
   await loadGeoMapsData();
 
   _uniqueFieldValues = computeUniqueFieldValues(
@@ -162,6 +167,10 @@ void loadFirebaseData() async {
     view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
     logger.error(e);
     rethrow;
+  }
+
+  if (_config.data_paths == null) {
+    return;
   }
 
   var interactionsPath = _config.data_paths['interactions'];
@@ -386,8 +395,8 @@ void _computeChartDataAndRender() {
         break;
       default:
         computedCharts.add(null);
-      // throw UnimplementedError(
-      //     '_computeChartDataAndRender Chart type ${chart.type} not computed');
+        logger.error(
+            '_computeChartDataAndRender Chart type ${chart.type} not computed');
     }
   }
 
@@ -399,11 +408,10 @@ void _computeChartDataAndRender() {
     if (computedChart is model.ComputedFunnelChart) {
       switch (chart.data_path) {
         case model.DataPath.survey_status:
-          var data =
-              _surveyStatus[chart.doc_name][chart.fields.values.first] as List;
+          var data = _surveyStatus[chart.doc_name][chart.fields.key] as List;
           data.forEach((e) {
-            computedChart.stages.add(e['label']);
-            computedChart.values.add(e['value']);
+            computedChart.stages.add(e[chart.fields.labels.first]);
+            computedChart.values.add(e[chart.fields.values.first]);
           });
           break;
         default:
@@ -546,7 +554,6 @@ void handleNavToSettings() {
   var encoder = convert.JsonEncoder.withIndent('  ');
   var configString = encoder.convert(_configRaw);
   view.renderSettingsConfigEditor(configString);
-  view.renderSettingsConfigUtility(_uniqueFieldCategoryValues);
 }
 
 // User actions
@@ -657,7 +664,7 @@ void command(UIAction action, Data data) async {
       try {
         await fb.updateConfig(configJSON);
       } catch (e) {
-        view.showAlert(e);
+        view.showAlert(e.toString());
         logger.error(e);
         return;
       }

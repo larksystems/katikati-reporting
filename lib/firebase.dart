@@ -80,12 +80,10 @@ void _fbAuthChanged(
 // Read data
 Future<Map<String, dynamic>> fetchConfig() async {
   logger.debug('Fetching config from firebase ..');
-  var str = await html.HttpRequest.getString('assets/config.json');
-  return jsonDecode(str);
 
-  // var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
-  // var configSnapshot = await chartsConfigRef.get();
-  // return configSnapshot.data();
+  var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
+  var configSnapshot = await chartsConfigRef.get();
+  return configSnapshot.data();
 }
 
 Future<Null> updateConfig(Map<String, dynamic> data) async {
@@ -100,29 +98,17 @@ Future<Map<String, Map<String, dynamic>>> fetchInteractions(String path) async {
         'Path for fetching interactions cannot be empty or null');
   }
 
-  // DELETE BELOW
-  var interactionsMap1 = Map<String, Map<String, dynamic>>();
-  var str = await html.HttpRequest.getString('assets/data.json');
-  var list = jsonDecode(str)['data'];
-  var count = 0;
-  list.forEach((i) {
-    interactionsMap1[count.toString()] = i;
-    ++count;
+  var _interactionsRef = firebase.firestore().collection(path);
+
+  var interactionsSnapshot = await _interactionsRef.get();
+  logger.debug('Fetched ${interactionsSnapshot.size} interactions');
+
+  var interactionsMap = Map<String, Map<String, dynamic>>();
+  interactionsSnapshot.forEach((doc) {
+    interactionsMap[doc.id] = doc.data();
   });
-  logger.debug('Fetched ${interactionsMap1.length} interactions');
-  return interactionsMap1;
 
-  // var _interactionsRef = firebase.firestore().collection(path);
-
-  // var interactionsSnapshot = await _interactionsRef.get();
-  // logger.debug('Fetched ${interactionsSnapshot.size} interactions');
-
-  // var interactionsMap = Map<String, Map<String, dynamic>>();
-  // interactionsSnapshot.forEach((doc) {
-  //   interactionsMap[doc.id] = doc.data();
-  // });
-
-  // return interactionsMap;
+  return interactionsMap;
 }
 
 Future<Map<String, Map<String, dynamic>>> fetchMessageStats(String path) async {
