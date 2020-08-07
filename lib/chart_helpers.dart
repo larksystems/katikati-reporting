@@ -3,8 +3,7 @@ import 'package:dashboard/model.dart' as model;
 import 'package:chartjs/chartjs.dart';
 import 'package:intl/intl.dart' as intl;
 
-const barChartDefaultColors = ['#ef5350', '#07acc1'];
-const lineChartDefaultColors = [
+const chartDefaultColors = [
   '#3366cc',
   '#dc3912',
   '#ff9900',
@@ -92,22 +91,17 @@ ChartOptions _generateBarChartOptions(bool dataNormalisationEnabled) {
 }
 
 ChartConfiguration generateBarChartConfig(
-    model.Chart chart,
+    model.ComputedBarChart chart,
     bool dataComparisonEnabled,
     bool dataNormalisationEnabled,
     Map<String, String> activeFilterValues,
     Map<String, String> activeComparisonFilterValues) {
-  var labels = [];
-  var filterData = List<num>();
-  var comparisonFilterData = List<num>();
+  var labels = chart.labels;
+  var filterData = chart.buckets.map((bucket) => bucket.first).toList();
+  var comparisonFilterData =
+      chart.buckets.map((bucket) => bucket.last).toList();
 
-  // for (var chartCol in chart.fields) {
-  //   labels.add(chartCol.label ?? chartCol.field.value);
-  //   filterData.add(chartCol.bucket[0]);
-  //   comparisonFilterData.add(chartCol.bucket[1]);
-  // }
-
-  var colors = chart.colors ?? barChartDefaultColors;
+  var colors = chart.colors ?? chartDefaultColors;
 
   var datasets = [
     _generateBarChartDataset(
@@ -180,34 +174,32 @@ ChartDataSets _generateTimeSeriesChartDataset(
       data: data);
 }
 
-ChartConfiguration generateTimeSeriesChartConfig(model.Chart chart,
-    bool dataNormalisationEnabled, bool stackTimeseriesEnabled) {
-  var colors = (chart.colors ?? [])..addAll(lineChartDefaultColors);
-  return null;
-  // var datasets = chart.fields.asMap().entries.map((entry) {
-  //   var index = entry.key;
-  //   var field = entry.value;
-  //   return _generateTimeSeriesChartDataset(
-  //       field.label ?? field.field,
-  //       field.time_bucket.values.toList(),
-  //       colors[index],
-  //       stackTimeseriesEnabled ? (index == 0 ? 'origin' : '-1') : false);
-  // }).toList();
+ChartConfiguration generateTimeSeriesChartConfig(
+    model.ComputedTimeSeriesChart chart,
+    bool dataNormalisationEnabled,
+    bool stackTimeseriesEnabled) {
+  var colors = (chart.colors ?? [])..addAll(chartDefaultColors);
 
-  // return ChartConfiguration(
-  //     type: 'line',
-  //     data: ChartData(
-  //         labels: chart.fields.first.time_bucket.keys.map((key) {
-  //           var date = DateTime.parse(key);
-  //           switch (chart.timestamp.aggregate) {
-  //             case model.TimeAggregate.day:
-  //               return intl.DateFormat('dd MMM').format(date);
-  //             case model.TimeAggregate.hour:
-  //             default:
-  //               return intl.DateFormat('dd MMM h:mm a').format(date);
-  //           }
-  //         }).toList(),
-  //         datasets: datasets),
-  //     options: _generateTimeSeriesChartOptions(
-  //         dataNormalisationEnabled, stackTimeseriesEnabled));
+  var datasets = chart.seriesLabels.asMap().entries.map((e) {
+    var index = e.key;
+    var seriesLabel = e.value;
+    var seriesData = chart.buckets.values.map((valueList) {
+      return valueList[index];
+    }).toList();
+    return _generateTimeSeriesChartDataset(
+        seriesLabel,
+        seriesData,
+        colors[index],
+        stackTimeseriesEnabled ? (index == 0 ? 'origin' : '-1') : false);
+  }).toList();
+
+  return ChartConfiguration(
+      type: 'line',
+      data: ChartData(
+          labels: chart.buckets.keys
+              .map((date) => intl.DateFormat('dd MMM').format(date))
+              .toList(),
+          datasets: datasets),
+      options: _generateTimeSeriesChartOptions(
+          dataNormalisationEnabled, stackTimeseriesEnabled));
 }

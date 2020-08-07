@@ -17,6 +17,7 @@ Chart:
   colors: "array string"
   geography: "Geography"
   timestamp: Timestamp
+  is_paired: "bool"
 
 DataPath:
   dartType: "enum"

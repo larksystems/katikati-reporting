@@ -87,6 +87,7 @@ class Chart {
   List<String> colors;
   Geography geography;
   Timestamp timestamp;
+  bool is_paired;
 
   static Chart fromSnapshot(DocSnapshot doc, [Chart modelObj]) =>
       fromData(doc.data, modelObj)..docId = doc.id;
@@ -102,7 +103,8 @@ class Chart {
       ..type = ChartType.fromString(data['type'] as String)
       ..colors = List_fromData<String>(data['colors'], String_fromData)
       ..geography = Geography.fromData(data['geography'])
-      ..timestamp = Timestamp.fromData(data['timestamp']);
+      ..timestamp = Timestamp.fromData(data['timestamp'])
+      ..is_paired = bool_fromData(data['is_paired']);
   }
 
   static void listen(DocStorage docStorage, ChartCollectionListener listener, String collectionRoot) =>
@@ -119,6 +121,7 @@ class Chart {
       if (colors != null) 'colors': colors,
       if (geography != null) 'geography': geography.toData(),
       if (timestamp != null) 'timestamp': timestamp.toData(),
+      if (is_paired != null) 'is_paired': is_paired,
     };
   }
 

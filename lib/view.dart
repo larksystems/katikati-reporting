@@ -1,4 +1,5 @@
 import 'dart:html' as html;
+import 'dart:svg' as svg;
 import 'package:uuid/uuid.dart';
 import 'controller.dart';
 import 'package:chartjs/chartjs.dart' as chartjs;
@@ -390,6 +391,185 @@ void renderChart(
     String title, String narrative, chartjs.ChartConfiguration chartConfig) {
   var chart = _generateChart(title, narrative, chartConfig);
   content.append(chart);
+}
+
+void renderFunnelChart(String title, String narrative, List<String> colors,
+    List<String> stages, List<num> values, bool isPaired) {
+  var chart =
+      _generateFunnelChart(title, narrative, colors, stages, values, isPaired);
+  content.append(chart);
+}
+
+html.DivElement _generateFunnelChart(String title, String narrative,
+    List<String> colors, List<String> stages, List<num> values, bool isPaired) {
+  var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];
+
+  var titleElement = html.HeadingElement.h5()..text = title;
+  var narrativeElement = html.ParagraphElement()..text = narrative;
+  wrapper.append(titleElement);
+  wrapper.append(narrativeElement);
+
+  var card = html.DivElement()..classes = [CARD_CLASSNAME];
+  var cardBody = html.DivElement()..classes = [CARD_BODY_CLASSNAME];
+  card.append(cardBody);
+  wrapper.append(card);
+
+  var maxDataValue = values.first;
+  var chartHeight = 360;
+  var maxHeight = 300;
+  var width = 96;
+  var xOffset = 30;
+  var yOffset = 30;
+  var increment = isPaired ? 2 : 1;
+  var colorsIndex = 0;
+  var defaultOpacity = '0.8';
+  var hoverOpacity = '1.0';
+
+  var svgWrapper = svg.SvgSvgElement()
+    ..setAttribute('width', '100%')
+    ..setAttribute('height', chartHeight.toString());
+
+  for (var i = 0; i < values.length - 1; i = i + increment) {
+    var curr = values[i];
+    var next = values[i + 1];
+
+    var leftHeight = curr / maxDataValue * maxHeight;
+    var leftDiff = yOffset + (maxHeight - leftHeight) / 2;
+    var rightHeight = next / maxDataValue * maxHeight;
+    var rightDiff = (maxHeight - rightHeight) / 2 + yOffset;
+    var leftOffset = xOffset + (i / 2) * width;
+
+    var x1 = leftOffset;
+    var y1 = leftDiff;
+    var x2 = leftOffset;
+    var y2 = leftDiff + leftHeight;
+    var x3 = leftOffset + width;
+    var y3 = rightDiff + rightHeight;
+    var x4 = leftOffset + width;
+    var y4 = rightDiff;
+
+    var points = ['$x1,$y1', '$x2,$y2', '$x3,$y3', '$x4,$y4'];
+
+    var topLabel = svg.TextElement()
+      ..setAttribute('x', x1.toString())
+      ..setAttribute('y', (y1 - 4).toString())
+      ..setAttribute('font-size', '12px')
+      ..setAttribute('visibility', 'hidden')
+      ..innerHtml = '${stages[i]} (${values[i]})';
+    var bottomLabel = svg.TextElement()
+      ..setAttribute('x', x3.toString())
+      ..setAttribute('y', (y3 + 12).toString())
+      ..setAttribute('font-size', '12px')
+      ..setAttribute('visibility', 'hidden')
+      ..innerHtml = '${stages[i + 1]} (${values[i + 1]})';
+
+    var percent = ((next - curr) * 100 / curr).round();
+    var percentLabel = svg.TextElement()
+      ..setAttribute('x', ((x1 + x4) / 2).toString())
+      ..setAttribute('y', ((y3 + y4) / 2 + 6).toString())
+      ..setAttribute('font-size', '12px')
+      ..setAttribute('text-anchor', 'middle')
+      ..setAttribute('pointer-events', 'none')
+      ..innerHtml = '${percent}%';
+
+    var funnel = svg.PolygonElement()
+      ..setAttribute('points', points.join(' '))
+      ..setAttribute('fill', colors[colorsIndex++])
+      ..setAttribute('opacity', defaultOpacity)
+      ..onMouseEnter.listen((event) {
+        topLabel.setAttribute('visibility', 'visible');
+        bottomLabel.setAttribute('visibility', 'visible');
+        (event.target as svg.PolygonElement)
+            .setAttribute('opacity', hoverOpacity);
+      })
+      ..onMouseLeave.listen((event) {
+        topLabel.setAttribute('visibility', 'hidden');
+        bottomLabel.setAttribute('visibility', 'hidden');
+        (event.target as svg.PolygonElement)
+            .setAttribute('opacity', defaultOpacity);
+      });
+
+    svgWrapper.append(funnel);
+    svgWrapper.append(topLabel);
+    svgWrapper.append(bottomLabel);
+    svgWrapper.append(percentLabel);
+  }
+
+  if (isPaired) {
+    if (values.length.isOdd) {
+      var leftHeight = values.last / maxDataValue * maxHeight;
+      var leftDiff = (maxHeight - leftHeight) / 2 + yOffset;
+      var leftOffset = xOffset + ((values.length - 1) / 2) * width;
+      var points = [
+        '$leftOffset,$leftDiff',
+        '$leftOffset,${leftDiff + leftHeight}',
+        '${leftOffset + width / 2},${leftDiff + leftHeight}',
+        '${leftOffset + width / 2},$leftDiff'
+      ];
+      var label = svg.TextElement()
+        ..setAttribute('x', (leftOffset + width / 2).toString())
+        ..setAttribute('y', (leftDiff + leftHeight / 2 + 6).toString())
+        ..setAttribute('font-size', '12px')
+        ..setAttribute('visibility', 'hidden')
+        ..innerHtml = '${stages.last} (${values.last})';
+      var funnel = svg.PolygonElement()
+        ..setAttribute('points', points.join(' '))
+        ..setAttribute('fill', colors[colorsIndex++])
+        ..setAttribute('opacity', defaultOpacity)
+        ..onMouseEnter.listen((event) {
+          label.setAttribute('visibility', 'visible');
+          (event.target as svg.PolygonElement)
+              .setAttribute('opacity', hoverOpacity);
+        })
+        ..onMouseLeave.listen((event) {
+          label.setAttribute('visibility', 'hidden');
+          (event.target as svg.PolygonElement)
+              .setAttribute('opacity', defaultOpacity);
+        });
+      svgWrapper.append(funnel);
+      svgWrapper.append(label);
+    }
+  }
+
+  colorsIndex = 0;
+  var legendWrapper = html.DivElement();
+  for (var i = 0; i < values.length - 1; i = i + increment) {
+    var labelWrapper = html.SpanElement()..style.paddingRight = '24px';
+
+    var label = html.SpanElement()
+      ..innerText = isPaired ? '${stages[i]} → ${stages[i + 1]}' : stages[i];
+    var icon = html.SpanElement()
+      ..style.backgroundColor = colors[colorsIndex++]
+      ..style.marginRight = '4px'
+      ..style.height = '12px'
+      ..style.width = '12px'
+      ..style.display = 'inline-block';
+    labelWrapper.append(icon);
+    labelWrapper.append(label);
+
+    legendWrapper.append(labelWrapper);
+  }
+
+  if (isPaired) {
+    if (values.length.isOdd) {
+      var labelWrapper = html.SpanElement()..style.paddingRight = '24px';
+      var label = html.SpanElement()..innerText = stages.last;
+      var icon = html.SpanElement()
+        ..style.backgroundColor = colors[colorsIndex++]
+        ..style.marginRight = '4px'
+        ..style.height = '12px'
+        ..style.width = '12px'
+        ..style.display = 'inline-block';
+      labelWrapper.append(icon);
+      labelWrapper.append(label);
+
+      legendWrapper.append(labelWrapper);
+    }
+  }
+
+  cardBody.append(svgWrapper);
+  cardBody.append(legendWrapper);
+  return wrapper;
 }
 
 void renderGeoMap(

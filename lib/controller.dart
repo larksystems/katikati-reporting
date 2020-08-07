@@ -62,7 +62,7 @@ Map<String, Map<model.TimeAggregate, Map<String, num>>>
 Map<String, dynamic> _configRaw;
 model.Config _config;
 
-List<model.ComputedChart> _computedCharts;
+List<model.ComputedChart> computedCharts;
 
 // Actions
 enum UIAction {
@@ -507,6 +507,7 @@ void handleNavToAnalysis() {
 
   _computeFilterDropdownsAndRender(
       _config.tabs[_selectedAnalysisTabIndex].filters);
+  _computeChartDataAndRender();
   // _computeChartBucketsAndRender();
 }
 
@@ -531,6 +532,108 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
 
   view.renderFilterDropdowns(filterPaths, filterOptions, _activeFilters,
       initialFilterValues, initialFilterValues, _dataComparisonEnabled);
+}
+
+void _computeChartDataAndRender() {
+  var charts = _config.tabs[_selectedAnalysisTabIndex].charts;
+  computedCharts = [];
+
+  // Initial data fields
+  for (var chart in charts) {
+    switch (chart.type) {
+      case model.ChartType.bar:
+        var computedChart = model.ComputedBarChart(
+            chart.data_path,
+            chart.title,
+            chart.narrative,
+            chart.colors,
+            chart.fields.labels,
+            chart.fields.values.map((_) => [10, 20]).toList(),
+            ['a', 'b']);
+        computedCharts.add(computedChart);
+        break;
+      case model.ChartType.time_series:
+        var buckets = {
+          DateTime.now(): [10, 20],
+          DateTime.now().add(Duration(days: 1)): [20, 30]
+        };
+        var computedChart = model.ComputedTimeSeriesChart(
+            chart.data_path,
+            chart.title,
+            chart.narrative,
+            chart.colors,
+            chart.fields.labels,
+            buckets);
+        computedCharts.add(computedChart);
+        break;
+      case model.ChartType.funnel:
+        var computedChart = model.ComputedFunnelChart(
+            chart.data_path,
+            chart.title,
+            chart.narrative,
+            chart.colors,
+            [],
+            [],
+            chart.is_paired);
+        computedCharts.add(computedChart);
+        break;
+      default:
+        computedCharts.add(null);
+      // throw UnimplementedError(
+      //     '_computeChartDataAndRender Chart type ${chart.type} not computed');
+    }
+  }
+
+  // compute data
+  // survey status
+  for (var i = 0; i < charts.length; ++i) {
+    var chart = charts[i];
+    var computedChart = computedCharts[i];
+    if (computedChart is model.ComputedFunnelChart) {
+      switch (chart.data_path) {
+        case model.DataPath.survey_status:
+          var data =
+              _surveyStatus[chart.doc_name][chart.fields.values.first] as List;
+          data.forEach((e) {
+            computedChart.stages.add(e['label']);
+            computedChart.values.add(e['value']);
+          });
+          break;
+        default:
+          logger
+              .error('computed funnel chart doesnt support ${chart.data_path}');
+      }
+    }
+  }
+
+  // Render charts
+  for (var computedChart in computedCharts) {
+    if (computedChart is model.ComputedBarChart) {
+      var chartConfig = chart_helper.generateBarChartConfig(
+          computedChart,
+          _dataComparisonEnabled,
+          _dataNormalisationEnabled,
+          _activeFilterValues,
+          _activeComparisonFilterValues);
+      view.renderChart(
+          computedChart.title, computedChart.narrative, chartConfig);
+    } else if (computedChart is model.ComputedTimeSeriesChart) {
+      var chartConfig = chart_helper.generateTimeSeriesChartConfig(
+          computedChart, _dataNormalisationEnabled, _stackTimeSeriesEnabled);
+      view.renderChart(
+          computedChart.title, computedChart.narrative, chartConfig);
+    } else if (computedChart is model.ComputedFunnelChart) {
+      view.renderFunnelChart(
+          computedChart.title,
+          computedChart.narrative,
+          computedChart.colors ?? chart_helper.chartDefaultColors,
+          computedChart.stages,
+          computedChart.values,
+          computedChart.isCoupled);
+    } else {
+      logger.error('No chart type to render');
+    }
+  }
 }
 
 // void _computeChartBucketsAndRender() {
@@ -663,7 +766,7 @@ void command(UIAction action, Data data) async {
       view.removeAllChartWrappers();
       _computeFilterDropdownsAndRender(
           _config.tabs[_selectedAnalysisTabIndex].filters);
-      // _computeChartBucketsAndRender();
+      _computeChartDataAndRender();
       logger.debug('Changed to analysis tab ${_selectedAnalysisTabIndex}');
       break;
     case UIAction.toggleDataComparison:
