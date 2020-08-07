@@ -40,7 +40,7 @@ Map<String, String> _filterValues = {};
 Map<String, String> _comparisonFilterValues = {};
 int _filterValuesCount = 0;
 int _comparisonFilterValuesCount = 0;
-Map<String, Map<model.GeoRegionLevel, dynamic>> _mapsGeoJSON = {};
+Map<String, Map<String, dynamic>> _mapsGeoJSON = {};
 
 Map<String, String> get _activeFilterValues =>
     {..._filterValues}..removeWhere((key, _) => !_activeFilters.contains(key));
@@ -50,7 +50,7 @@ Map<String, String> get _activeComparisonFilterValues => {
 
 // Data
 Map<String, Map<String, dynamic>> _allInteractions;
-Map<String, Map<String, dynamic>> _messageStatus;
+Map<String, Map<String, dynamic>> _messageStats;
 Map<String, Map<String, dynamic>> _surveyStatus;
 
 Map<model.DataPath, Map<String, Set>> _uniqueFieldValues;
@@ -175,10 +175,10 @@ void loadFirebaseData() async {
     }
   }
 
-  var messageStatusPath = _config.data_paths['message_status'];
+  var messageStatusPath = _config.data_paths['message_stats'];
   if (messageStatusPath != null) {
     try {
-      _messageStatus = await fb.fetchMessageStats(messageStatusPath);
+      _messageStats = await fb.fetchMessageStats(messageStatusPath);
     } catch (e) {
       view.showAlert(UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG);
       logger.error(e);
@@ -203,15 +203,14 @@ void loadGeoMapsData() async {
     for (var chart in tab.charts) {
       if (chart.type == model.ChartType.map) {
         var country = chart.geography.country;
-        var regionLevel = chart.geography.regionLevel;
-        var regionLevelStr = regionLevel.toString().split('.').last;
-        var mapPath = 'assets/maps/${country}/${regionLevelStr}.geojson';
+        var regionLevel = chart.geography.regionLevel.name;
+        var mapPath = 'assets/maps/${country}/${regionLevel}.geojson';
         var geostr;
         try {
           geostr = await html.HttpRequest.getString(mapPath);
         } catch (e) {
           view.showAlert(
-              'Failed to get geography map ${country}/${regionLevelStr}');
+              'Failed to get geography map ${country}/${regionLevel}');
           rethrow;
         }
 
@@ -259,27 +258,6 @@ Map<model.DataPath, Map<String, Set>> computeUniqueFieldValues(
   return uniqueFieldValues;
 }
 
-Map<String, List<DateTime>> computeDateRanges(
-    Map<String, Map<String, dynamic>> interactions) {
-  var dateRanges = Map<String, List<DateTime>>();
-  interactions.forEach((_, interaction) {
-    interaction.keys.forEach((key) {
-      var value = interaction[key];
-      if (value is DateTime) {
-        dateRanges[key] = dateRanges[key] ?? [DateTime(2100), DateTime(1970)];
-        if (value.isBefore(dateRanges[key][0])) {
-          dateRanges[key][0] = value;
-        }
-        if (value.isAfter(dateRanges[key][1])) {
-          dateRanges[key][1] = value;
-        }
-      }
-    });
-  });
-  logger.debug('Computed date ranges for all interactions');
-  return dateRanges;
-}
-
 bool _interactionMatchesFilters(
     Map<String, dynamic> interaction, Map<String, String> filters) {
   for (var entry in filters.entries) {
@@ -296,200 +274,18 @@ bool _interactionMatchesFilters(
   return true;
 }
 
-// bool _interactionMatchesOperation(
-//     Map<String, dynamic> interaction, model.Field chartCol) {
-//   switch (chartCol.field.operator) {
-//     case model.FieldOperator.equals:
-//       if (interaction[chartCol.field.key] == chartCol.field.value) {
-//         return true;
-//       }
-//       break;
-//     case model.FieldOperator.contains:
-//       if ((interaction[chartCol.field.key] as List)
-//           .contains(chartCol.field.value)) {
-//         return true;
-//       }
-//       break;
-//     case model.FieldOperator.not_contains:
-//       if (!(interaction[chartCol.field.key] as List)
-//           .contains(chartCol.field.value)) {
-//         return true;
-//       }
-//       break;
-//     default:
-//       logger.error('No such operator: ${chartCol.field.operator}');
-//       view.showAlert(
-//           'Warning: Field operator ${chartCol.field.operator} listed in your config is not supported. Results may be misleading');
-//   }
-//   return false;
-// }
+bool _interactionMatchesOperation(
+    Map<String, dynamic> interaction, String key, String value) {
+  if (interaction[key] is List && interaction[key].contains(value)) {
+    return true;
+  }
 
-// void _computeChartBuckets(List<model.Chart> charts) {
-//   // todo: make this interaction normalisation value [0, 0]
-//   // _filterValuesCount = 0;
-//   // _comparisonFilterValuesCount = 0;
+  if (interaction[key] == value) {
+    return true;
+  }
 
-//   _computedCharts = [];
-
-//   // reset bucket to [filter(0), comparisonFilter(0)] for each chart col
-//   // reset time_bucket to {"mm/dd/yyyy": 0} for time series chart col
-//   // reset allInteractionDateBuckets (for normalising) to {"recorded_at": {day: {"mm/dd/yyyy": 0}}}
-//   for (var chart in charts) {
-//     switch (chart.type) {
-//       case model.ChartType.bar:
-//         var labels = chart.fields.map((c) => c.field.key).toList();
-//         var buckets = chart.fields.map((e) => [0, 0]).toList();
-//         var computedBarChart = model.ComputedBarChart(chart.data_path,
-//             chart.title, chart.narrative, chart.colors, labels, buckets);
-//         _computedCharts.add(computedBarChart);
-//         break;
-//       case model.ChartType.time_series:
-//         var series = chart.fields.map((c) => c.field.key).toList();
-//         switch (chart.data_path) {
-//           case model.DataPath.interactions:
-//             break;
-//           case model.DataPath.messageStats:
-//             break;
-//           case model.DataPath.surveyStatus:
-//             break;
-//           default:
-//         }
-//         break;
-//       default:
-//         throw Exception('${chart.type} not implemented');
-//     }
-//     for (var chartCol in chart.fields) {
-//       chartCol.bucket = [0, 0];
-//       if (chart.type == model.ChartType.time_series) {
-//         chartCol.time_bucket = _generateEmptyDateTimeBuckets(
-//             _allInteractionsDateRange[chart.timestamp.key][0],
-//             _allInteractionsDateRange[chart.timestamp.key][1],
-//             chart.timestamp.aggregate);
-//       }
-//     }
-//     if (chart.type == model.ChartType.time_series) {
-//       var key = chart.timestamp.key;
-//       var aggregate = chart.timestamp.aggregate;
-//       _allInteractionDateBuckets = {};
-//       _allInteractionDateBuckets[key] = {};
-//       _allInteractionDateBuckets[key][aggregate] =
-//           _generateEmptyDateTimeBuckets(
-//               _allInteractionsDateRange[chart.timestamp.key][0],
-//               _allInteractionsDateRange[chart.timestamp.key][1],
-//               chart.timestamp.aggregate);
-//     }
-//   }
-
-//   for (var interaction in _allInteractions.values) {
-//     // Check if this interaction falls within the active filter
-//     var addToPrimaryBucket =
-//         _interactionMatchesFilters(interaction, _activeFilterValues);
-//     var addToComparisonBucket =
-//         _interactionMatchesFilters(interaction, _activeComparisonFilterValues);
-
-//     if (addToPrimaryBucket) {
-//       ++_filterValuesCount;
-//       for (var chart in charts) {
-//         if (chart.type == model.ChartType.time_series) {
-//           var key = chart.timestamp.key;
-//           var aggregate = chart.timestamp.aggregate;
-//           var timeStampKey = _generateDateTimeKey(interaction[key], aggregate);
-//           _allInteractionDateBuckets[key][aggregate][timeStampKey] += 1;
-//         }
-//       }
-//     }
-
-//     if (addToComparisonBucket) {
-//       ++_comparisonFilterValuesCount;
-//     }
-
-//     // If the interaction doesnt fall in the active filters, continue
-//     if (!addToPrimaryBucket && !addToComparisonBucket) continue;
-
-//     for (var chart in charts) {
-//       for (var chartCol in chart.fields) {
-//         if (!_interactionMatchesOperation(interaction, chartCol)) continue;
-
-//         if (addToPrimaryBucket) {
-//           ++chartCol.bucket[0];
-//           if (chart.type == model.ChartType.time_series) {
-//             var dateTimeKey = _generateDateTimeKey(
-//                 interaction[chart.timestamp.key] as DateTime,
-//                 chart.timestamp.aggregate);
-//             chartCol.time_bucket[dateTimeKey] += 1;
-//           }
-//         }
-//         if (addToComparisonBucket) {
-//           ++chartCol.bucket[1];
-//         }
-//       }
-//     }
-//   }
-
-//   if (_dataNormalisationEnabled) {
-//     for (var chart in charts) {
-//       for (var chartCol in chart.fields) {
-//         num filterValuesPercent = chartCol.bucket[0] * 100 / _filterValuesCount;
-//         num comparisonFilterValuesPercent =
-//             chartCol.bucket[1] * 100 / _comparisonFilterValuesCount;
-
-//         chartCol.bucket = [
-//           filterValuesPercent.roundToDecimal(2),
-//           comparisonFilterValuesPercent.roundToDecimal(2)
-//         ];
-
-//         if (chart.type == model.ChartType.time_series) {
-//           for (var datetime in chartCol.time_bucket.keys) {
-//             chartCol.time_bucket[datetime] =
-//                 ((chartCol.time_bucket[datetime] * 100) /
-//                         _allInteractionDateBuckets[chart.timestamp.key]
-//                             [chart.timestamp.aggregate][datetime])
-//                     .roundToDecimal(2);
-//           }
-//         }
-//       }
-//     }
-//   }
-
-//   logger.debug('Computed chart buckets ${charts}');
-// }
-
-// String _generateDateTimeKey(DateTime dateTime, model.TimeAggregate aggregate) {
-//   switch (aggregate) {
-//     case model.TimeAggregate.day:
-//       dateTime = DateTime(dateTime.year, dateTime.month, dateTime.day, 0, 0, 0);
-//       break;
-//     case model.TimeAggregate.hour:
-//       dateTime = DateTime(
-//           dateTime.year, dateTime.month, dateTime.day, dateTime.hour, 0, 0);
-//       break;
-//     default:
-//       logger.error('Time series chart aggregate ${aggregate} not handled');
-//   }
-//   return STANDARD_DATE_TIME_FORMAT.format(dateTime);
-// }
-
-// Map<String, num> _generateEmptyDateTimeBuckets(
-//     DateTime start, DateTime end, model.TimeAggregate aggregate) {
-//   var timeBucket = Map<String, num>();
-//   var currentTime = DateTime(start.year, start.month, start.day, 0, 0, 0);
-//   var endTime = DateTime(end.year, end.month, end.day, 23, 59, 59);
-//   var durationToAdd;
-//   switch (aggregate) {
-//     case model.TimeAggregate.day:
-//       durationToAdd = Duration(days: 1);
-//       break;
-//     case model.TimeAggregate.hour:
-//       durationToAdd = Duration(hours: 1);
-//       break;
-//   }
-//   while (currentTime.isBefore(endTime)) {
-//     timeBucket[STANDARD_DATE_TIME_FORMAT.format(currentTime)] = 0;
-//     currentTime = currentTime.add(durationToAdd);
-//   }
-
-//   return timeBucket;
-// }
+  return false;
+}
 
 // Render methods
 void handleNavToAnalysis() {
@@ -547,21 +343,32 @@ void _computeChartDataAndRender() {
             chart.title,
             chart.narrative,
             chart.colors,
+            chart.data_label,
             chart.fields.labels,
-            chart.fields.values.map((_) => [10, 20]).toList(),
+            chart.fields.values.map((_) => [0, 0]).toList(),
             ['a', 'b']);
         computedCharts.add(computedChart);
         break;
+      case model.ChartType.map:
+        var computedChart = model.ComputedMapChart(
+            chart.data_path,
+            chart.title,
+            chart.narrative,
+            chart.colors ?? chart_helper.chartDefaultColors,
+            chart.fields.values,
+            chart.fields.values.map((_) => [0, 0]).toList(),
+            ['a', 'b'],
+            [chart.geography.country, chart.geography.regionLevel.name]);
+        computedCharts.add(computedChart);
+        break;
       case model.ChartType.time_series:
-        var buckets = {
-          DateTime.now(): [10, 20],
-          DateTime.now().add(Duration(days: 1)): [20, 30]
-        };
+        var buckets = Map<DateTime, List<num>>();
         var computedChart = model.ComputedTimeSeriesChart(
             chart.data_path,
             chart.title,
             chart.narrative,
             chart.colors,
+            chart.data_label,
             chart.fields.labels,
             buckets);
         computedCharts.add(computedChart);
@@ -585,10 +392,10 @@ void _computeChartDataAndRender() {
   }
 
   // compute data
-  // survey status
   for (var i = 0; i < charts.length; ++i) {
     var chart = charts[i];
     var computedChart = computedCharts[i];
+    // funnel chart
     if (computedChart is model.ComputedFunnelChart) {
       switch (chart.data_path) {
         case model.DataPath.survey_status:
@@ -603,6 +410,79 @@ void _computeChartDataAndRender() {
           logger
               .error('computed funnel chart doesnt support ${chart.data_path}');
       }
+    }
+    // time series chart
+    else if (computedChart is model.ComputedTimeSeriesChart) {
+      switch (chart.data_path) {
+        case model.DataPath.message_stats:
+          var buckets = _messageStats.map((_, valueObj) {
+            var values =
+                chart.fields.values.map((e) => valueObj[e] as num).toList();
+            return MapEntry(
+                DateTime.parse(valueObj[chart.timestamp.key]), values);
+          });
+          computedChart.buckets = buckets;
+          break;
+        default:
+          logger.error(
+              'computed time series chart doesnt support ${chart.data_path}');
+      }
+    }
+    // bar chart
+    else if (computedChart is model.ComputedBarChart) {
+      switch (chart.data_path) {
+        case model.DataPath.interactions:
+          _allInteractions.forEach((_, interaction) {
+            var addToPrimaryBucket =
+                _interactionMatchesFilters(interaction, _activeFilterValues);
+            var addToComparisonBucket = _interactionMatchesFilters(
+                interaction, _activeComparisonFilterValues);
+
+            for (var i = 0; i < chart.fields.values.length; ++i) {
+              if (!_interactionMatchesOperation(
+                  interaction, chart.fields.key, chart.fields.values[i])) {
+                continue;
+              }
+              if (addToPrimaryBucket) {
+                ++computedChart.buckets[i][0];
+              }
+              if (addToComparisonBucket) {
+                ++computedChart.buckets[i][1];
+              }
+            }
+          });
+          break;
+        default:
+      }
+    }
+    // map chart
+    else if (computedChart is model.ComputedMapChart) {
+      switch (chart.data_path) {
+        case model.DataPath.interactions:
+          _allInteractions.forEach((_, interaction) {
+            var addToPrimaryBucket =
+                _interactionMatchesFilters(interaction, _activeFilterValues);
+            var addToComparisonBucket = _interactionMatchesFilters(
+                interaction, _activeComparisonFilterValues);
+
+            for (var i = 0; i < chart.fields.values.length; ++i) {
+              if (!_interactionMatchesOperation(
+                  interaction, chart.fields.key, chart.fields.values[i])) {
+                continue;
+              }
+              if (addToPrimaryBucket) {
+                ++computedChart.buckets[i][0];
+              }
+              if (addToComparisonBucket) {
+                ++computedChart.buckets[i][1];
+              }
+            }
+          });
+          break;
+        default:
+      }
+    } else {
+      logger.error('computed chart not supported');
     }
   }
 
@@ -630,76 +510,36 @@ void _computeChartDataAndRender() {
           computedChart.stages,
           computedChart.values,
           computedChart.isCoupled);
+    } else if (computedChart is model.ComputedMapChart) {
+      var mapFilterValues = Map<String, List<num>>();
+      var mapComparisonFilterValues = Map<String, List<num>>();
+
+      // todo: fix the normalisation (1)
+      for (var i = 0; i < computedChart.labels.length; ++i) {
+        mapFilterValues[computedChart.labels[i]] = [
+          computedChart.buckets[i][0],
+          1
+        ];
+        mapComparisonFilterValues[computedChart.labels[i]] = [
+          computedChart.buckets[i][1],
+          1
+        ];
+      }
+
+      view.renderGeoMap(
+          computedChart.title,
+          computedChart.narrative,
+          _mapsGeoJSON[computedChart.mapPath[0]][computedChart.mapPath[1]],
+          mapFilterValues,
+          mapComparisonFilterValues,
+          _dataComparisonEnabled,
+          _dataNormalisationEnabled,
+          computedChart.colors);
     } else {
       logger.error('No chart type to render');
     }
   }
 }
-
-// void _computeChartBucketsAndRender() {
-//   var charts = _config.tabs[_selectedAnalysisTabIndex].charts;
-//   _computeChartBuckets(charts);
-
-//   for (var chart in charts) {
-//     switch (chart.type) {
-//       case model.ChartType.bar:
-//         view.renderChart(
-//             chart.title,
-//             chart.narrative,
-//             chart_helper.generateBarChartConfig(
-//                 chart,
-//                 _dataComparisonEnabled,
-//                 _dataNormalisationEnabled,
-//                 _activeFilterValues,
-//                 _activeComparisonFilterValues));
-//         break;
-//       case model.ChartType.time_series:
-//         view.renderChart(
-//             chart.title,
-//             chart.narrative,
-//             chart_helper.generateTimeSeriesChartConfig(
-//                 chart, _dataNormalisationEnabled, _stackTimeSeriesEnabled));
-//         break;
-//       case model.ChartType.map:
-//         var mapData =
-//             _mapsGeoJSON[chart.geography.country][chart.geography.regionLevel];
-//         var mapValues = Map<String, List<num>>();
-//         var mapComparisonValues = Map<String, List<num>>();
-//         for (var field in chart.fields) {
-//           var regionName = field.field.value.toString();
-//           var normalisationValue =
-//               _dataNormalisationEnabled ? 100 : _filterValuesCount;
-//           var comparisonNormalisationValue =
-//               _dataNormalisationEnabled ? 100 : _comparisonFilterValuesCount;
-
-//           mapValues[regionName] = [
-//             field.bucket[0],
-//             field.bucket[0] / normalisationValue,
-//           ];
-//           mapComparisonValues[regionName] = [
-//             field.bucket[1],
-//             field.bucket[1] / comparisonNormalisationValue
-//           ];
-//         }
-
-//         view.renderGeoMap(
-//           chart.title,
-//           chart.narrative,
-//           mapData,
-//           mapValues,
-//           mapComparisonValues,
-//           _dataComparisonEnabled,
-//           _dataNormalisationEnabled,
-//           chart.colors ?? chart_helper.barChartDefaultColors,
-//         );
-//         break;
-//       default:
-//         logger.error('No such chart type ${chart.type}');
-//         view.showAlert(
-//             'Warning: Chart type ${chart.type} listed in your config is not supported.');
-//     }
-//   }
-// }
 
 void handleNavToSettings() {
   view.clearContentTab();
@@ -708,41 +548,6 @@ void handleNavToSettings() {
   view.renderSettingsConfigEditor(configString);
   view.renderSettingsConfigUtility(_uniqueFieldCategoryValues);
 }
-
-// void _updateFiltersInView() {
-//   var filterKeys = _config.filters.map((filter) => filter.key).toList();
-//   var selectedTab = _config.tabs[_selectedAnalysisTabIndex];
-//   var excludeKeys = selectedTab.exclude_filters ?? [];
-//   for (var key in filterKeys) {
-//     if (!_activeFilters.contains(key)) {
-//       view.disableFilterOption(key);
-//       view.disableFilterDropdown(key);
-//       view.disableFilterDropdown(key, comparison: true);
-//     } else {
-//       view.enableFilterOption(key);
-//       view.enableFilterDropdown(key);
-//       view.enableFilterDropdown(key, comparison: true);
-//     }
-
-//     view.setFilterDropdownValue(
-//         key, _filterValues[key] ?? DEFAULT_FILTER_SELECT_VALUE);
-//     view.setFilterDropdownValue(
-//         key, _comparisonFilterValues[key] ?? DEFAULT_FILTER_SELECT_VALUE,
-//         comparison: true);
-
-//     if (_dataComparisonEnabled) {
-//       view.showFilterDropdown(key, comparison: true);
-//     } else {
-//       view.hideFilterDropdown(key, comparison: true);
-//     }
-
-//     if (excludeKeys.contains(key)) {
-//       view.hideFilterRow(key);
-//     } else {
-//       view.showFilterRow(key);
-//     }
-//   }
-// }
 
 // User actions
 void command(UIAction action, Data data) async {
@@ -776,7 +581,7 @@ void command(UIAction action, Data data) async {
       view.removeAllChartWrappers();
       _computeFilterDropdownsAndRender(
           _config.tabs[_selectedAnalysisTabIndex].filters);
-      // _computeChartBucketsAndRender();
+      _computeChartDataAndRender();
       logger.debug('Data comparison changed to ${_dataComparisonEnabled}');
       break;
     case UIAction.toggleDataNormalisation:
@@ -793,7 +598,7 @@ void command(UIAction action, Data data) async {
       logger.debug(
           'Stack time series chart changed to ${_stackTimeSeriesEnabled}');
       view.removeAllChartWrappers();
-      // _computeChartBucketsAndRender();
+      _computeChartDataAndRender();
       break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
@@ -813,14 +618,14 @@ void command(UIAction action, Data data) async {
         logger.debug('Removed ${d.key} from active filters, ${_activeFilters}');
       }
       view.removeAllChartWrappers();
-      // _computeChartBucketsAndRender();
+      _computeChartDataAndRender();
       break;
     case UIAction.setFilterValue:
       var d = data as SetFilterValueData;
       _filterValues[d.key] = d.value;
       logger.debug('Set to filter values, ${_filterValues}');
       view.removeAllChartWrappers();
-      // _computeChartBucketsAndRender();
+      _computeChartDataAndRender();
       break;
     case UIAction.setComparisonFilterValue:
       var d = data as SetFilterValueData;
@@ -828,7 +633,7 @@ void command(UIAction action, Data data) async {
       logger
           .debug('Set to comparison filter values, ${_comparisonFilterValues}');
       view.removeAllChartWrappers();
-      // _computeChartBucketsAndRender();
+      _computeChartDataAndRender();
       break;
     case UIAction.saveConfigToFirebase:
       var d = data as SaveConfigToFirebaseData;

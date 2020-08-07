@@ -79,6 +79,7 @@ typedef void TabCollectionListener(
 class Chart {
   String docId;
   DataPath data_path;
+  String data_label;
   String doc_name;
   Field fields;
   String narrative;
@@ -96,6 +97,7 @@ class Chart {
     if (data == null) return null;
     return (modelObj ?? Chart())
       ..data_path = DataPath.fromString(data['data_path'] as String)
+      ..data_label = String_fromData(data['data_label'])
       ..doc_name = String_fromData(data['doc_name'])
       ..fields = Field.fromData(data['fields'])
       ..narrative = String_fromData(data['narrative'])
@@ -113,6 +115,7 @@ class Chart {
   Map<String, dynamic> toData() {
     return {
       if (data_path != null) 'data_path': data_path.toString(),
+      if (data_label != null) 'data_label': data_label,
       if (doc_name != null) 'doc_name': doc_name,
       if (fields != null) 'fields': fields.toData(),
       if (narrative != null) 'narrative': narrative,

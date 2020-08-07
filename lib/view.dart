@@ -228,12 +228,12 @@ void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled,
   });
   optionsCol.append(comparisonCheckbox);
 
-  var normalisationCheckbox = _getCheckboxWithLabel(
-      'normalisation-option', 'Normalise data', normalisationEnabled,
-      (bool checked) {
-    command(UIAction.toggleDataNormalisation, ToggleOptionEnabledData(checked));
-  });
-  optionsCol.append(normalisationCheckbox);
+  // var normalisationCheckbox = _getCheckboxWithLabel(
+  //     'normalisation-option', 'Normalise data', normalisationEnabled,
+  //     (bool checked) {
+  //   command(UIAction.toggleDataNormalisation, ToggleOptionEnabledData(checked));
+  // });
+  // optionsCol.append(normalisationCheckbox);
 
   var stackTimeseriesCheckbox = _getCheckboxWithLabel(
       'stack-timeseries',

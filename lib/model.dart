@@ -23,22 +23,31 @@ class ComputedChart {
 }
 
 class ComputedBarChart extends ComputedChart {
+  String dataLabel;
   List<String> labels;
   List<List<num>> buckets;
   List<List<num>> normaliseValues;
   List<String> seriesNames;
 
-  ComputedBarChart(DataPath dataPath, String title, String narrative,
-      List<String> colors, this.labels, this.buckets, this.seriesNames)
+  ComputedBarChart(
+      DataPath dataPath,
+      String title,
+      String narrative,
+      List<String> colors,
+      this.dataLabel,
+      this.labels,
+      this.buckets,
+      this.seriesNames)
       : super(dataPath, title, narrative, ChartType.bar, colors);
 }
 
 class ComputedTimeSeriesChart extends ComputedChart {
+  String dataLabel;
   List<String> seriesLabels;
   Map<DateTime, List<num>> buckets;
 
   ComputedTimeSeriesChart(DataPath dataPath, String title, String narrative,
-      List<String> colors, this.seriesLabels, this.buckets)
+      List<String> colors, this.dataLabel, this.seriesLabels, this.buckets)
       : super(dataPath, title, narrative, ChartType.time_series, colors);
 }
 
@@ -50,4 +59,23 @@ class ComputedFunnelChart extends ComputedChart {
   ComputedFunnelChart(DataPath dataPath, String title, String narrative,
       List<String> colors, this.stages, this.values, this.isCoupled)
       : super(dataPath, title, narrative, ChartType.funnel, colors);
+}
+
+class ComputedMapChart extends ComputedChart {
+  List<String> labels;
+  List<List<num>> buckets;
+  List<List<num>> normaliseValues;
+  List<String> seriesNames;
+  List<String> mapPath;
+
+  ComputedMapChart(
+      DataPath dataPath,
+      String title,
+      String narrative,
+      List<String> colors,
+      this.labels,
+      this.buckets,
+      this.seriesNames,
+      this.mapPath)
+      : super(dataPath, title, narrative, ChartType.map, colors);
 }

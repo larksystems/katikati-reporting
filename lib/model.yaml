@@ -9,6 +9,7 @@ Tab:
 
 Chart:
   data_path: DataPath
+  data_label: "string"
   doc_name: "string"
   fields: Field
   narrative: "string"

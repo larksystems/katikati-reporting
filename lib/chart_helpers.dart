@@ -56,9 +56,10 @@ ChartDataSets _generateBarChartDataset(
       data: data);
 }
 
-ChartOptions _generateBarChartOptions(bool dataNormalisationEnabled) {
+ChartOptions _generateBarChartOptions(
+    bool dataNormalisationEnabled, String dataLabel) {
   var labelPrepend = dataNormalisationEnabled ? 'Percentage' : 'Number';
-  var labelString = '${labelPrepend} of interactions';
+  var labelString = '${labelPrepend} of ${dataLabel}';
   var chartX = ChartXAxe()
     ..stacked = false
     ..barPercentage = 1
@@ -119,13 +120,14 @@ ChartConfiguration generateBarChartConfig(
   return ChartConfiguration(
       type: 'bar',
       data: dataset,
-      options: _generateBarChartOptions(dataNormalisationEnabled));
+      options:
+          _generateBarChartOptions(dataNormalisationEnabled, chart.dataLabel));
 }
 
-ChartOptions _generateTimeSeriesChartOptions(
-    bool dataNormalisationEnabled, bool stackTimeseriesEnabled) {
+ChartOptions _generateTimeSeriesChartOptions(bool dataNormalisationEnabled,
+    bool stackTimeseriesEnabled, String dataLabel) {
   var labelPrepend = dataNormalisationEnabled ? 'Percentage' : 'Number';
-  var labelString = '${labelPrepend} of interactions';
+  var labelString = '${labelPrepend} of ${dataLabel}';
   var chartX = ChartXAxe()
     ..stacked = false
     ..ticks = (LinearTickOptions()
@@ -201,5 +203,5 @@ ChartConfiguration generateTimeSeriesChartConfig(
               .toList(),
           datasets: datasets),
       options: _generateTimeSeriesChartOptions(
-          dataNormalisationEnabled, stackTimeseriesEnabled));
+          dataNormalisationEnabled, stackTimeseriesEnabled, chart.dataLabel));
 }
