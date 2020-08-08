@@ -1,16 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /datasets/covid19-som/metadata/{document=**} {
+    match /datasets/{project_id}/metadata/chart-config {
     	allow write: if
-        request.auth != null &&
       	request.auth.token.email_verified &&
         (request.auth.token.email.matches(".*@africasvoices.org$") ||
         request.auth.token.email.matches(".*@lark.systems$"));
     }
     match /{document=**} {
       allow read: if
-        request.auth != null &&
       	request.auth.token.email_verified &&
         (request.auth.token.email.matches(".*@africasvoices.org$") ||
         request.auth.token.email.matches(".*@lark.systems$"));

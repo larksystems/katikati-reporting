@@ -10,7 +10,7 @@ Future<File> fetchConfigFile(String path, String type) async {
   return file;
 }
 
-void main({List<String> arguments}) async {
+void main(List<String> args) async {
   var baseConfigFile = await fetchConfigFile('config/base_config.json', 'base');
   var baseConfigRaw = await baseConfigFile.readAsString();
   Map<String, dynamic> baseConfig = jsonDecode(baseConfigRaw);
@@ -22,12 +22,12 @@ void main({List<String> arguments}) async {
 
   var projName;
 
-  if (arguments == null) {
+  if (args == null) {
     projName = projConfig.keys.first;
     print(
         '''No project specified. Usage: dart dev.dart <proj-name-from-project_config.json>\nConsidering the first project under config/project_config ** ${projName} **''');
   } else {
-    projName = arguments[0];
+    projName = args[0];
     if (projName == null || projConfig[projName] == null) {
       throw StateError(
           'No such ${projName} project found in project_config.json');
@@ -36,5 +36,6 @@ void main({List<String> arguments}) async {
 
   var newConfig = {...baseConfig, ...projConfig[projName]};
   var newFile = File('web/assets/constants.json');
+  print('''Finished writing config for project ${projName}''');
   newFile.writeAsStringSync(jsonEncode(newConfig));
 }
