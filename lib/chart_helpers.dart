@@ -131,6 +131,8 @@ ChartOptions _generateTimeSeriesChartOptions(bool dataNormalisationEnabled,
   var chartX = ChartXAxe()
     ..stacked = false
     ..ticks = (LinearTickOptions()
+      ..maxTicksLimit = 30
+      ..autoSkip = true
       ..minRotation = 0
       ..maxRotation = 90);
 
