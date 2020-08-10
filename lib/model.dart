@@ -1,6 +1,5 @@
 export 'package:dashboard/model.g.dart';
 
-import 'package:dashboard/controller.dart';
 import 'package:dashboard/model.g.dart';
 
 class Link {
@@ -11,6 +10,19 @@ class Link {
   Link(this.pathname, this.label, this.render);
 }
 
+class FilterValue {
+  DataPath dataPath;
+  String key;
+  DataType type;
+  List<String> options;
+  String value;
+  bool isActive;
+
+  FilterValue(this.dataPath, this.key, this.type, this.options, this.value,
+      this.isActive);
+}
+
+// Convert it to Abstract class / Interface
 class ComputedChart {
   DataPath dataPath;
   String title;

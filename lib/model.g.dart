@@ -248,6 +248,7 @@ class Filter {
   String docId;
   String key;
   DataPath data_path;
+  DataType type;
 
   static Filter fromSnapshot(DocSnapshot doc, [Filter modelObj]) =>
       fromData(doc.data, modelObj)..docId = doc.id;
@@ -256,7 +257,8 @@ class Filter {
     if (data == null) return null;
     return (modelObj ?? Filter())
       ..key = String_fromData(data['key'])
-      ..data_path = DataPath.fromString(data['data_path'] as String);
+      ..data_path = DataPath.fromString(data['data_path'] as String)
+      ..type = DataType.fromString(data['type'] as String);
   }
 
   static void listen(DocStorage docStorage, FilterCollectionListener listener, String collectionRoot) =>
@@ -266,6 +268,7 @@ class Filter {
     return {
       if (key != null) 'key': key,
       if (data_path != null) 'data_path': data_path.toString(),
+      if (type != null) 'type': type.toString(),
     };
   }
 
@@ -414,6 +417,37 @@ class TimeAggregate {
   String toString() => 'TimeAggregate.$name';
 }
 TimeAggregate Function(String text) TimeAggregate_fromStringOverride;
+
+class DataType {
+  static const string = DataType('string');
+  static const datetime = DataType('datetime');
+
+  static const values = <DataType>[
+    string,
+    datetime,
+  ];
+
+  static DataType fromString(String text, [DataType defaultValue = DataType.string]) {
+    if (DataType_fromStringOverride != null) {
+      var value = DataType_fromStringOverride(text);
+      if (value != null) return value;
+    }
+    if (text != null) {
+      const prefix = 'DataType.';
+      String valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
+      for (var value in values) {
+        if (value.name == valueName) return value;
+      }
+    }
+    log.warning('unknown DataType $text');
+    return defaultValue;
+  }
+
+  final String name;
+  const DataType(this.name);
+  String toString() => 'DataType.$name';
+}
+DataType Function(String text) DataType_fromStringOverride;
 
 // ======================================================================
 // Core firebase/yaml utilities

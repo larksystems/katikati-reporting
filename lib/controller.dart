@@ -35,6 +35,8 @@ int _selectedAnalysisTabIndex;
 bool _dataComparisonEnabled = true;
 bool _dataNormalisationEnabled = false;
 bool _stackTimeSeriesEnabled = true;
+List<model.FilterValue> _filterVals = [];
+
 Set<String> _activeFilters = {};
 Map<String, String> _filterValues = {};
 Map<String, String> _comparisonFilterValues = {};
@@ -99,15 +101,17 @@ class ToggleOptionEnabledData extends Data {
 }
 
 class ToggleActiveFilterData extends Data {
+  String dataPath;
   String key;
   bool enabled;
-  ToggleActiveFilterData(this.key, this.enabled);
+  ToggleActiveFilterData(this.dataPath, this.key, this.enabled);
 }
 
 class SetFilterValueData extends Data {
+  String dataPath;
   String key;
   String value;
-  SetFilterValueData(this.key, this.value);
+  SetFilterValueData(this.dataPath, this.key, this.value);
 }
 
 class SaveConfigToFirebaseData extends Data {
@@ -136,7 +140,7 @@ void onLoginCompleted() async {
   view.showLoading();
 
   await loadFirebaseData();
-  if (_config.data_paths == null) {
+  if (_config.data_paths == null || _config.tabs == null) {
     view.hideLoading();
     return;
   }
@@ -145,8 +149,6 @@ void onLoginCompleted() async {
 
   _uniqueFieldValues = computeUniqueFieldValues(
       _config.tabs.map((t) => t.filters ?? []).expand((e) => e).toList());
-  // // todo: make this more generic
-  // _allInteractionsDateRange = computeDateRanges(_allInteractions);
   _selectedAnalysisTabIndex = 0;
 
   view.setNavlinkSelected(_currentNavLink);
@@ -258,6 +260,9 @@ Map<model.DataPath, Map<String, Set>> computeUniqueFieldValues(
           });
         });
         break;
+      case model.DataPath.message_stats:
+        logger.debug('message_stats uniqueFieldValues need not be computed');
+        break;
       default:
         throw UnimplementedError(
             'computeUniqueFieldValues ${dataPath} not handled');
@@ -319,24 +324,34 @@ void handleNavToAnalysis() {
 void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
   filters = filters ?? [];
 
-  var filterPaths = List<String>();
-  var filterKeys = List<String>();
-  var filterOptions = Map<String, List<String>>();
-  filters.forEach((filter) {
-    filterPaths.add(filter.data_path.name);
-    filterKeys.add(filter.key);
-    filterOptions[filter.key] = _uniqueFieldValues[filter.data_path][filter.key]
-        .map((e) => e.toString())
-        .toList()
-          ..add(DEFAULT_FILTER_SELECT_VALUE);
+  _filterVals = [];
+  filters.forEach((f) {
+    var filterOptions = List<String>();
+    var defaultValue = DEFAULT_FILTER_SELECT_VALUE;
+    if (f.type == model.DataType.string) {
+      filterOptions = _uniqueFieldValues[f.data_path][f.key]
+          .map((e) => e.toString())
+          .toList()
+            ..add(DEFAULT_FILTER_SELECT_VALUE);
+    } else if (f.type == model.DataType.datetime) {
+      filterOptions = [];
+      switch (f.data_path) {
+        case model.DataPath.message_stats:
+          var dates = _messageStats.keys.toList()..sort();
+          filterOptions = [dates.first, dates.last];
+          defaultValue = dates.first.toString().split('T').first +
+              '_' +
+              dates.last.toString().split('T').first;
+          break;
+        default:
+      }
+    }
+
+    _filterVals.add(model.FilterValue(
+        f.data_path, f.key, f.type, filterOptions, defaultValue, false));
   });
 
-  var initialFilterValues = {
-    for (var key in filterKeys) key: DEFAULT_FILTER_SELECT_VALUE
-  };
-
-  view.renderFilterDropdowns(filterPaths, filterOptions, _activeFilters,
-      initialFilterValues, initialFilterValues, _dataComparisonEnabled);
+  view.renderNewFilterDropdowns(_filterVals);
 }
 
 void _computeChartDataAndRender() {
@@ -609,28 +624,26 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
-      if (d.enabled) {
-        _activeFilters.add(d.key);
-        view.enableFilterDropdown(d.key);
-        if (_dataComparisonEnabled) {
-          view.enableFilterDropdown(d.key, comparison: true);
+      for (var filter in _filterVals) {
+        if (filter.dataPath.name == d.dataPath && filter.key == d.key) {
+          filter.isActive = !filter.isActive;
         }
-        logger.debug('Added ${d.key} to active filters, ${_activeFilters}');
-      } else {
-        _activeFilters.removeWhere((filter) => filter == d.key);
-        view.disableFilterDropdown(d.key);
-        if (_dataComparisonEnabled) {
-          view.disableFilterDropdown(d.key, comparison: true);
-        }
-        logger.debug('Removed ${d.key} from active filters, ${_activeFilters}');
       }
+      d.enabled
+          ? view.enableFilterOptions(d.dataPath, d.key)
+          : view.disableFilterOptions(d.dataPath, d.key);
+
       view.removeAllChartWrappers();
       _computeChartDataAndRender();
       break;
     case UIAction.setFilterValue:
       var d = data as SetFilterValueData;
-      _filterValues[d.key] = d.value;
-      logger.debug('Set to filter values, ${_filterValues}');
+      for (var filter in _filterVals) {
+        if (filter.dataPath.name == d.dataPath && filter.key == d.key) {
+          filter.value = d.value;
+        }
+      }
+
       view.removeAllChartWrappers();
       _computeChartDataAndRender();
       break;

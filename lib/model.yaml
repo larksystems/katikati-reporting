@@ -32,6 +32,7 @@ Timestamp:
   aggregate: "TimeAggregate"
   key: "string"
 
+# Aggregate method
 Field:
   summary: "array string"
   key: "string"
@@ -42,6 +43,7 @@ Field:
 Filter:
   key: "string"
   data_path: DataPath
+  type: DataType
 
 Geography:
   country: "string"
@@ -73,3 +75,10 @@ TimeAggregate:
     - day
     - hour
     - none
+
+DataType:
+  dartType: "enum"
+  defaultValue: "string"
+  dartValues:
+    - string
+    - datetime

@@ -1,3 +1,4 @@
+import 'package:dashboard/model.dart' as model;
 import 'dart:html' as html;
 import 'dart:svg' as svg;
 import 'package:uuid/uuid.dart';
@@ -56,7 +57,8 @@ html.DivElement get configSettingsAlert =>
     html.querySelector('#${CONFIG_SETTINGS_ALERT_ID}');
 
 String _generateFilterRowID(String key) => 'filter-row-${key}';
-String _generateFilterDropdownID(String key) => 'filter-dropdown-${key}';
+String _generateFilterOptionID(String dataPath, String key) =>
+    'filter-dropdown-${dataPath}_${key}';
 String _generateComparisonFilterDropdownID(String key) =>
     'comparison-filter-dropdown-${key}';
 String _generateFilterCheckboxID(String key) => 'filter-option-${key}';
@@ -267,73 +269,65 @@ void hideFilterRow(String filterKey) {
   }
 }
 
-html.SelectElement _getFilterDropdown(String filterKey, {bool comparison}) {
-  var dropdownID = comparison == true
-      ? _generateComparisonFilterDropdownID(filterKey)
-      : _generateFilterDropdownID(filterKey);
-  return html.querySelector('#${dropdownID}') as html.SelectElement;
+// html.SelectElement _getFilterDropdown(String filterKey, {bool comparison}) {
+//   var dropdownID = comparison == true
+//       ? _generateComparisonFilterDropdownID(filterKey)
+//       : _generateFilterOptionID(filterKey);
+//   return html.querySelector('#${dropdownID}') as html.SelectElement;
+// }
+
+// void enableFilterDropdown(String filterKey, {bool comparison}) {
+//   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+//   if (dropdown.disabled != false) {
+//     dropdown.disabled = false;
+//   }
+// }
+
+// void disableFilterDropdown(String filterKey, {bool comparison}) {
+//   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+//   if (dropdown.disabled != true) {
+//     dropdown.disabled = true;
+//   }
+// }
+
+void enableFilterOptions(String dataPath, String filterKey) {
+  var id = _generateFilterOptionID(dataPath, filterKey);
+  var options = html.querySelectorAll('#${id}');
+  options.forEach((e) {
+    if (e is html.InputElement) e.disabled = false;
+    if (e is html.SelectElement) e.disabled = false;
+  });
 }
 
-void enableFilterDropdown(String filterKey, {bool comparison}) {
-  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  if (dropdown.disabled != false) {
-    dropdown.disabled = false;
-  }
+void disableFilterOptions(String dataPath, String filterKey) {
+  var id = _generateFilterOptionID(dataPath, filterKey);
+  var options = html.querySelectorAll('#${id}');
+  options.forEach((e) {
+    if (e is html.InputElement) e.disabled = true;
+    if (e is html.SelectElement) e.disabled = true;
+  });
 }
 
-void disableFilterDropdown(String filterKey, {bool comparison}) {
-  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  if (dropdown.disabled != true) {
-    dropdown.disabled = true;
-  }
-}
+// void hideFilterDropdown(String filterKey, {bool comparison}) {
+//   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+//   if (dropdown.hidden != true) {
+//     dropdown.hidden = true;
+//   }
+// }
 
-void hideFilterDropdown(String filterKey, {bool comparison}) {
-  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  if (dropdown.hidden != true) {
-    dropdown.hidden = true;
-  }
-}
+// void showFilterDropdown(String filterKey, {bool comparison}) {
+//   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+//   if (dropdown.hidden != false) {
+//     dropdown.hidden = false;
+//   }
+// }
 
-void showFilterDropdown(String filterKey, {bool comparison}) {
-  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  if (dropdown.hidden != false) {
-    dropdown.hidden = false;
-  }
-}
+// void setFilterDropdownValue(String filterKey, String value, {bool comparison}) {
+//   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
+//   dropdown.value = value;
+// }
 
-void setFilterDropdownValue(String filterKey, String value, {bool comparison}) {
-  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  dropdown.value = value;
-}
-
-html.CheckboxInputElement _getFilterOptionCheckbox(String filterKey) {
-  var filterCheckboxID = _generateFilterCheckboxID(filterKey);
-  return html.querySelector('#${filterCheckboxID}')
-      as html.CheckboxInputElement;
-}
-
-void enableFilterOption(String filterKey) {
-  var filterCheckbox = _getFilterOptionCheckbox(filterKey);
-  if (filterCheckbox.checked != true) {
-    filterCheckbox.checked = true;
-  }
-}
-
-void disableFilterOption(String filterKey) {
-  var filterCheckbox = _getFilterOptionCheckbox(filterKey);
-  if (filterCheckbox.checked != false) {
-    filterCheckbox.checked = false;
-  }
-}
-
-void renderFilterDropdowns(
-    List<String> dataPaths,
-    Map<String, List<String>> filterOptions,
-    Set<String> activeKeys,
-    Map<String, String> initialFilterValues,
-    Map<String, String> initialFilterComparisonValues,
-    bool shouldRenderComparisonFilters) {
+void renderNewFilterDropdowns(List<model.FilterValue> filters) {
   var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME])
     ..id = FILTERS_WRAPPER_ID;
   var labelCol =
@@ -341,45 +335,71 @@ void renderFilterDropdowns(
         ..innerText = 'Filters';
   var optionsCol = generateGridOptionsColumnElement();
 
-  for (var key in filterOptions.keys) {
-    var filterRow = generateGridRowElement(id: _generateFilterRowID(key));
+  for (var filter in filters) {
+    var filterRow = generateGridRowElement(
+        id: _generateFilterRowID(filter.dataPath.name + filter.key));
     var checkboxCol = html.DivElement()..classes = ['col-3'];
     var filterCol = html.DivElement()..classes = ['col-3'];
 
+    // todo: render comparison filters
+
     var checkboxWithLabel = _getCheckboxWithLabel(
-        _generateFilterCheckboxID(key), key, activeKeys.contains(key),
-        (bool checked) {
-      command(
-          UIAction.toggleActiveFilter, ToggleActiveFilterData(key, checked));
+        _generateFilterCheckboxID(filter.dataPath.name + filter.key),
+        filter.dataPath.name + ' / ' + filter.key,
+        filter.isActive, (bool checked) {
+      command(UIAction.toggleActiveFilter,
+          ToggleActiveFilterData(filter.dataPath.name, filter.key, checked));
     });
+
+    switch (filter.type) {
+      case model.DataType.datetime:
+        var startDateChooser = html.InputElement()
+          ..disabled = !filter.isActive
+          ..id = _generateFilterOptionID(filter.dataPath.name, filter.key)
+          ..type = 'date'
+          ..min = filter.options.first.split('T').first
+          ..max = filter.options.last.split('T').first
+          ..value = filter.value.split('_').first
+          ..onChange.listen((event) {
+            var newValue =
+                '${(event.target as html.InputElement).value}_${filter.value.split('_').last}';
+            command(UIAction.setFilterValue,
+                SetFilterValueData(filter.dataPath.name, filter.key, newValue));
+          });
+        var endDateChooser = html.InputElement()
+          ..disabled = !filter.isActive
+          ..id = _generateFilterOptionID(filter.dataPath.name, filter.key)
+          ..type = 'date'
+          ..min = filter.options.first.split('T').first
+          ..max = filter.options.last.split('T').first
+          ..value = filter.value.split('_').last
+          ..onChange.listen((event) {
+            var newValue =
+                '${filter.value.split('_').first}_${(event.target as html.InputElement).value}';
+            command(UIAction.setFilterValue,
+                SetFilterValueData(filter.dataPath.name, filter.key, newValue));
+          });
+        filterCol.append(startDateChooser);
+        filterCol.append(endDateChooser);
+        break;
+      case model.DataType.string:
+        var filterDropdown = _getDropdown(
+            _generateFilterOptionID(filter.dataPath.name, filter.key),
+            filter.options,
+            filter.value,
+            !filter.isActive, (String value) {
+          command(UIAction.setFilterValue,
+              SetFilterValueData(filter.dataPath.name, filter.key, value));
+        });
+        filterCol.append(filterDropdown);
+        break;
+      default:
+    }
+
     checkboxCol.append(checkboxWithLabel);
-
-    var filterDropdown = _getDropdown(
-        _generateFilterDropdownID(key),
-        filterOptions[key].toList(),
-        initialFilterValues[key],
-        !activeKeys.contains(key), (String value) {
-      command(UIAction.setFilterValue, SetFilterValueData(key, value));
-    });
-    filterCol.append(filterDropdown);
-
     filterRow.append(checkboxCol);
     filterRow.append(filterCol);
     optionsCol.append(filterRow);
-
-    if (!shouldRenderComparisonFilters) continue;
-    var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
-
-    var comparisonFilterDropdown = _getDropdown(
-        _generateComparisonFilterDropdownID(key),
-        filterOptions[key].toList(),
-        initialFilterComparisonValues[key],
-        !activeKeys.contains(key), (String value) {
-      command(
-          UIAction.setComparisonFilterValue, SetFilterValueData(key, value));
-    });
-    comparisonFilterCol.append(comparisonFilterDropdown);
-    filterRow.append(comparisonFilterCol);
   }
 
   wrapper.append(labelCol);
