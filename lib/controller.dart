@@ -272,19 +272,29 @@ Map<model.DataPath, Map<String, Set>> computeUniqueFieldValues(
   return uniqueFieldValues;
 }
 
-bool _interactionMatchesFilters(
-    Map<String, dynamic> interaction, Map<String, String> filters) {
-  for (var entry in filters.entries) {
-    var interactionValue = interaction[entry.key];
-    var interactionMatch = interactionValue is List
-        ? interactionValue.contains(entry.value)
-        : interactionValue == entry.value;
-
+bool _interactionMatchesFilterValues(
+    Map<String, dynamic> interaction, List<model.FilterValue> filterValues) {
+  for (var filter in filterValues) {
+    if (!filter.isActive) continue;
+    if (filter.value == DEFAULT_FILTER_SELECT_VALUE) continue;
+    var interactionMatch;
+    var interactionValue = interaction[filter.key];
+    print('${interactionValue}, ${filter.key}, ${filter.value}');
+    if (interactionValue is List) {
+      interactionMatch = interactionValue.contains(filter.value);
+    } else if (interactionValue is DateTime) {
+      var startDate = DateTime.parse(filter.value.split('_').first);
+      var endDate =
+          DateTime.parse(filter.value.split('_').last).add(Duration(days: 1));
+      interactionMatch = interactionValue.isAfter(startDate) &&
+          interactionValue.isBefore(endDate);
+    } else if (interactionValue is String) {
+      interactionMatch = interactionValue == filter.value;
+    }
     if (!interactionMatch) {
       return false;
     }
   }
-
   return true;
 }
 
@@ -438,7 +448,23 @@ void _computeChartDataAndRender() {
     else if (computedChart is model.ComputedTimeSeriesChart) {
       switch (chart.data_path) {
         case model.DataPath.message_stats:
-          var buckets = _messageStats.map((_, valueObj) {
+          var messageStats = Map.from(_messageStats);
+          var toRemove = [];
+          messageStats.forEach((dateStr, _) {
+            var date = DateTime.parse(dateStr);
+            for (var filter in _filterVals) {
+              if (filter.type == model.DataType.datetime) {
+                var startDate = DateTime.parse(filter.value.split('_').first);
+                var endDate = DateTime.parse(filter.value.split('_').last)
+                    .add(Duration(days: 1));
+                if (date.isBefore(startDate) || date.isAfter(endDate)) {
+                  toRemove.add(dateStr);
+                }
+              }
+            }
+          });
+          messageStats.removeWhere((key, value) => toRemove.contains(key));
+          var buckets = messageStats.map((_, valueObj) {
             var values =
                 chart.fields.values.map((e) => valueObj[e] as num).toList();
             return MapEntry(
@@ -457,9 +483,9 @@ void _computeChartDataAndRender() {
         case model.DataPath.interactions:
           _allInteractions.forEach((_, interaction) {
             var addToPrimaryBucket =
-                _interactionMatchesFilters(interaction, _activeFilterValues);
-            var addToComparisonBucket = _interactionMatchesFilters(
-                interaction, _activeComparisonFilterValues);
+                _interactionMatchesFilterValues(interaction, _filterVals);
+            // todo: add comparision buckets
+            var addToComparisonBucket = false;
 
             for (var i = 0; i < chart.fields.values.length; ++i) {
               if (!_interactionMatchesOperation(
@@ -484,9 +510,9 @@ void _computeChartDataAndRender() {
         case model.DataPath.interactions:
           _allInteractions.forEach((_, interaction) {
             var addToPrimaryBucket =
-                _interactionMatchesFilters(interaction, _activeFilterValues);
-            var addToComparisonBucket = _interactionMatchesFilters(
-                interaction, _activeComparisonFilterValues);
+                _interactionMatchesFilterValues(interaction, _filterVals);
+            // todo: compute comparison bucket
+            var addToComparisonBucket = false;
 
             for (var i = 0; i < chart.fields.values.length; ++i) {
               if (!_interactionMatchesOperation(
@@ -612,7 +638,7 @@ void command(UIAction action, Data data) async {
       logger
           .debug('Data normalisation changed to ${_dataNormalisationEnabled}');
       view.removeAllChartWrappers();
-      // _computeChartBucketsAndRender();
+      _computeChartDataAndRender();
       break;
     case UIAction.toggleStackTimeseries:
       var d = data as ToggleOptionEnabledData;
