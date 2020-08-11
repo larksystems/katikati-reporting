@@ -347,7 +347,7 @@ class Filter {
       ..key = String_fromData(data['key'])
       ..label = String_fromData(data['label'])
       ..tooltip = String_fromData(data['tooltip'])
-      ..exclude_values = List_fromData<dynamic>(data['exclude_values'], null);
+      ..exclude_values = List_fromData<dynamic>(data['exclude_values'], dynamic_fromData);
   }
 
   static Filter required(Map data, String fieldName, String className) {
@@ -445,10 +445,6 @@ class GeoRegionLevel {
   ];
 
   static GeoRegionLevel fromString(String text, [GeoRegionLevel defaultValue = GeoRegionLevel.state]) {
-    if (GeoRegionLevel_fromStringOverride != null) {
-      var value = GeoRegionLevel_fromStringOverride(text);
-      if (value != null) return value;
-    }
     if (text != null) {
       const prefix = 'GeoRegionLevel.';
       var valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
@@ -488,7 +484,6 @@ class GeoRegionLevel {
   @override
   String toString() => toData();
 }
-GeoRegionLevel Function(String text) GeoRegionLevel_fromStringOverride;
 
 class FieldOperator {
   static const equals = FieldOperator('equals');
@@ -502,10 +497,6 @@ class FieldOperator {
   ];
 
   static FieldOperator fromString(String text, [FieldOperator defaultValue = FieldOperator.equals]) {
-    if (FieldOperator_fromStringOverride != null) {
-      var value = FieldOperator_fromStringOverride(text);
-      if (value != null) return value;
-    }
     if (text != null) {
       const prefix = 'FieldOperator.';
       var valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
@@ -545,7 +536,6 @@ class FieldOperator {
   @override
   String toString() => toData();
 }
-FieldOperator Function(String text) FieldOperator_fromStringOverride;
 
 class ChartType {
   static const bar = ChartType('bar');
@@ -563,10 +553,6 @@ class ChartType {
   ];
 
   static ChartType fromString(String text, [ChartType defaultValue = ChartType.bar]) {
-    if (ChartType_fromStringOverride != null) {
-      var value = ChartType_fromStringOverride(text);
-      if (value != null) return value;
-    }
     if (text != null) {
       const prefix = 'ChartType.';
       var valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
@@ -606,7 +592,6 @@ class ChartType {
   @override
   String toString() => toData();
 }
-ChartType Function(String text) ChartType_fromStringOverride;
 
 class TimeAggregate {
   static const day = TimeAggregate('day');
@@ -620,10 +605,6 @@ class TimeAggregate {
   ];
 
   static TimeAggregate fromString(String text, [TimeAggregate defaultValue = TimeAggregate.none]) {
-    if (TimeAggregate_fromStringOverride != null) {
-      var value = TimeAggregate_fromStringOverride(text);
-      if (value != null) return value;
-    }
     if (text != null) {
       const prefix = 'TimeAggregate.';
       var valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
@@ -663,7 +644,6 @@ class TimeAggregate {
   @override
   String toString() => toData();
 }
-TimeAggregate Function(String text) TimeAggregate_fromStringOverride;
 
 // ======================================================================
 // Core firebase/yaml utilities
@@ -956,21 +936,6 @@ abstract class DocBatchUpdate {
 abstract class DocPubSubUpdate {
   /// Publish the given opinion for the given namespace.
   Future<void> publishAddOpinion(String namespace, Map<String, dynamic> opinion);
-
-  /// Publish the given document list/set additions,
-  /// where [additions] is a mapping of field name to new values to be added to the list/set.
-  /// Callers should catch and handle IOException.
-  Future<void> publishDocAdd(String collectionName, List<String> docIds, Map<String, List<dynamic>> additions);
-
-  /// Publish the given document changes,
-  /// where [changes] is a mapping of field name to new value.
-  /// Callers should catch and handle IOException.
-  Future<void> publishDocChange(String collectionName, List<String> docIds, Map<String, dynamic> changes);
-
-  /// Publish the given document list/set removals,
-  /// where [removals] is a mapping of field name to old values to be removed from the list/set.
-  /// Callers should catch and handle IOException.
-  Future<void> publishDocRemove(String collectionName, List<String> docIds, Map<String, List<dynamic>> removals);
 }
 
 class ValueException implements Exception {
