@@ -361,6 +361,21 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
         f.data_path, f.key, f.type, filterOptions, defaultValue, false));
   });
 
+  // Fill filter params from url to filterVals
+  var uri = Uri.parse(html.window.location.href);
+  var queryParams = uri.queryParametersAll;
+  var urlFilters = queryParams['filters'] ?? [];
+  urlFilters.forEach((filter) {
+    var filterObj = convert.jsonDecode(filter);
+    _filterVals.forEach((filterVal) {
+      if (filterVal.key == filterObj['key'] &&
+          filterVal.dataPath.name == filterObj['dataPath']) {
+        filterVal.value = filterObj['value'];
+        filterVal.isActive = true;
+      }
+    });
+  });
+
   view.renderNewFilterDropdowns(_filterVals);
 }
 
@@ -597,6 +612,23 @@ void handleNavToSettings() {
   view.renderSettingsConfigEditor(configString);
 }
 
+void _replaceURLHashWithParams() {
+  var params = Map<String, dynamic>();
+  _filterVals.forEach((filterVal) {
+    if (filterVal.isActive) {
+      params['filters'] = params['filters'] ?? List();
+      params['filters'].add(convert.jsonEncode({
+        'key': filterVal.key,
+        'dataPath': filterVal.dataPath.name,
+        'value': filterVal.value
+      }));
+    }
+  });
+
+  var url = Uri(queryParameters: params);
+  html.window.history.replaceState(null, '', url.toString());
+}
+
 // User actions
 void command(UIAction action, Data data) async {
   switch (action) {
@@ -659,6 +691,7 @@ void command(UIAction action, Data data) async {
           ? view.enableFilterOptions(d.dataPath, d.key)
           : view.disableFilterOptions(d.dataPath, d.key);
 
+      _replaceURLHashWithParams();
       view.removeAllChartWrappers();
       _computeChartDataAndRender();
       break;
@@ -670,6 +703,7 @@ void command(UIAction action, Data data) async {
         }
       }
 
+      _replaceURLHashWithParams();
       view.removeAllChartWrappers();
       _computeChartDataAndRender();
       break;

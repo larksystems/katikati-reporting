@@ -22,16 +22,10 @@ void main(List<String> args) async {
 
   var projName;
 
-  if (args == null) {
-    projName = projConfig.keys.first;
-    print(
-        '''No project specified. Usage: dart dev.dart <proj-name-from-project_config.json>\nConsidering the first project under config/project_config ** ${projName} **''');
-  } else {
-    projName = args[0];
-    if (projName == null || projConfig[projName] == null) {
-      throw StateError(
-          'No such ${projName} project found in project_config.json');
-    }
+  projName = args[0];
+  if (projName == null || projConfig[projName] == null) {
+    throw StateError(
+        'No such ${projName} project found in project_config.json');
   }
 
   var newConfig = {...baseConfig, ...projConfig[projName]};
