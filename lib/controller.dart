@@ -279,7 +279,7 @@ bool _interactionMatchesFilterValues(
     if (filter.value == DEFAULT_FILTER_SELECT_VALUE) continue;
     var interactionMatch;
     var interactionValue = interaction[filter.key];
-    print('${interactionValue}, ${filter.key}, ${filter.value}');
+
     if (interactionValue is List) {
       interactionMatch = interactionValue.contains(filter.value);
     } else if (interactionValue is DateTime) {
@@ -319,9 +319,18 @@ void handleNavToAnalysis() {
   _filterValues = {};
   _comparisonFilterValues = {};
 
+  var uri = Uri.parse(html.window.location.href);
+  var queryParams = uri.queryParameters;
+  var queryTabLabel = queryParams['tab'] ?? _config.tabs.first.label;
+  queryTabLabel = Uri.decodeComponent(queryTabLabel);
+  _selectedAnalysisTabIndex =
+      _config.tabs.indexWhere((tab) => tab.label == queryTabLabel);
+  _selectedAnalysisTabIndex =
+      _selectedAnalysisTabIndex == -1 ? 0 : _selectedAnalysisTabIndex;
+
   var tabLabels =
       _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
-  view.renderAnalysisTabs(tabLabels);
+  view.renderAnalysisTabs(tabLabels, queryTabLabel);
   view.renderChartOptions(_dataComparisonEnabled, _dataNormalisationEnabled,
       _stackTimeSeriesEnabled);
 
@@ -614,6 +623,9 @@ void handleNavToSettings() {
 
 void _replaceURLHashWithParams() {
   var params = Map<String, dynamic>();
+  params['tab'] =
+      Uri.encodeComponent(_config.tabs[_selectedAnalysisTabIndex].label);
+
   _filterVals.forEach((filterVal) {
     if (filterVal.isActive) {
       params['filters'] = params['filters'] ?? List();
@@ -651,6 +663,7 @@ void command(UIAction action, Data data) async {
       view.removeAllChartWrappers();
       _computeFilterDropdownsAndRender(
           _config.tabs[_selectedAnalysisTabIndex].filters);
+      _replaceURLHashWithParams();
       _computeChartDataAndRender();
       logger.debug('Changed to analysis tab ${_selectedAnalysisTabIndex}');
       break;

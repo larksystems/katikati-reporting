@@ -181,7 +181,7 @@ html.DivElement generateGridOptionsColumnElement() {
     ..classes = ['col-lg-10', 'col-md-9', 'col-sm-12', 'col-xs-12'];
 }
 
-void renderAnalysisTabs(List<String> labels) {
+void renderAnalysisTabs(List<String> labels, String selected) {
   var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
   var labelCol =
       generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
@@ -196,7 +196,7 @@ void renderAnalysisTabs(List<String> labels) {
       ..name = 'analyse-tab-options'
       ..id = _generateAnalyseTabID(i.toString())
       ..classes = ['form-check-input']
-      ..checked = i == 0
+      ..checked = labels[i] == selected
       ..onChange.listen((e) {
         if (!(e.target as html.RadioButtonInputElement).checked) return;
         command(UIAction.changeAnalysisTab, AnalysisTabChangeData(i));
