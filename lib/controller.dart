@@ -35,20 +35,9 @@ int _selectedAnalysisTabIndex;
 bool _dataComparisonEnabled = true;
 bool _dataNormalisationEnabled = false;
 bool _stackTimeSeriesEnabled = true;
-List<model.FilterValue> _filterVals = [];
+List<model.FilterValue> _filters = [];
 
-Set<String> _activeFilters = {};
-Map<String, String> _filterValues = {};
-Map<String, String> _comparisonFilterValues = {};
-int _filterValuesCount = 0;
-int _comparisonFilterValuesCount = 0;
 Map<String, Map<String, dynamic>> _mapsGeoJSON = {};
-
-Map<String, String> get _activeFilterValues =>
-    {..._filterValues}..removeWhere((key, _) => !_activeFilters.contains(key));
-Map<String, String> get _activeComparisonFilterValues => {
-      ..._comparisonFilterValues
-    }..removeWhere((key, _) => !_activeFilters.contains(key));
 
 // Data
 Map<String, Map<String, dynamic>> _allInteractions;
@@ -57,10 +46,6 @@ Map<String, Map<String, dynamic>> _surveyStatus;
 
 Map<model.DataPath, Map<String, Set>> _uniqueFieldValues;
 
-Map<String, Set> _uniqueFieldCategoryValues;
-Map<String, List<DateTime>> _allInteractionsDateRange;
-Map<String, Map<model.TimeAggregate, Map<String, num>>>
-    _allInteractionDateBuckets;
 Map<String, dynamic> _configRaw;
 model.Config _config;
 
@@ -77,9 +62,7 @@ enum UIAction {
   toggleActiveFilter,
   setFilterValue,
   setComparisonFilterValue,
-  saveConfigToFirebase,
-  copyToClipboardConfigSkeleton,
-  copyToClipboardChartConfig
+  saveConfigToFirebase
 }
 
 // Action data
@@ -272,24 +255,30 @@ Map<model.DataPath, Map<String, Set>> computeUniqueFieldValues(
   return uniqueFieldValues;
 }
 
-bool _interactionMatchesFilterValues(
-    Map<String, dynamic> interaction, List<model.FilterValue> filterValues) {
+bool _interactionMatchesFilterValues(Map<String, dynamic> interaction,
+    List<model.FilterValue> filterValues, bool comparison) {
   for (var filter in filterValues) {
     if (!filter.isActive) continue;
     if (filter.value == DEFAULT_FILTER_SELECT_VALUE) continue;
+    if (comparison && filter.comparisonValue == DEFAULT_FILTER_SELECT_VALUE) {
+      continue;
+    }
+
     var interactionMatch;
     var interactionValue = interaction[filter.key];
 
+    var value = comparison ? filter.comparisonValue : filter.value;
+
     if (interactionValue is List) {
-      interactionMatch = interactionValue.contains(filter.value);
+      interactionMatch = interactionValue.contains(value);
     } else if (interactionValue is DateTime) {
-      var startDate = DateTime.parse(filter.value.split('_').first);
+      var startDate = DateTime.parse(value.split('_').first);
       var endDate =
-          DateTime.parse(filter.value.split('_').last).add(Duration(days: 1));
+          DateTime.parse(value.split('_').last).add(Duration(days: 1));
       interactionMatch = interactionValue.isAfter(startDate) &&
           interactionValue.isBefore(endDate);
     } else if (interactionValue is String) {
-      interactionMatch = interactionValue == filter.value;
+      interactionMatch = interactionValue == value;
     }
     if (!interactionMatch) {
       return false;
@@ -300,13 +289,10 @@ bool _interactionMatchesFilterValues(
 
 bool _interactionMatchesOperation(
     Map<String, dynamic> interaction, String key, String value) {
-  if (interaction[key] is List && interaction[key].contains(value)) {
-    return true;
-  }
+  if (value == DEFAULT_FILTER_SELECT_VALUE) return true;
+  if (interaction[key] is List && interaction[key].contains(value)) return true;
 
-  if (interaction[key] == value) {
-    return true;
-  }
+  if (interaction[key] == value) return true;
 
   return false;
 }
@@ -315,9 +301,7 @@ bool _interactionMatchesOperation(
 void handleNavToAnalysis() {
   view.clearContentTab();
   _selectedAnalysisTabIndex = 0;
-  _activeFilters = {};
-  _filterValues = {};
-  _comparisonFilterValues = {};
+  _filters = [];
 
   var uri = Uri.parse(html.window.location.href);
   var queryParams = uri.queryParameters;
@@ -337,13 +321,12 @@ void handleNavToAnalysis() {
   _computeFilterDropdownsAndRender(
       _config.tabs[_selectedAnalysisTabIndex].filters);
   _computeChartDataAndRender();
-  // _computeChartBucketsAndRender();
 }
 
 void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
   filters = filters ?? [];
 
-  _filterVals = [];
+  _filters = [];
   filters.forEach((f) {
     var filterOptions = List<String>();
     var defaultValue = DEFAULT_FILTER_SELECT_VALUE;
@@ -366,8 +349,8 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
       }
     }
 
-    _filterVals.add(model.FilterValue(
-        f.data_path, f.key, f.type, filterOptions, defaultValue, false));
+    _filters.add(model.FilterValue(f.data_path, f.key, f.type, filterOptions,
+        defaultValue, defaultValue, false));
   });
 
   // Fill filter params from url to filterVals
@@ -376,16 +359,18 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
   var urlFilters = queryParams['filters'] ?? [];
   urlFilters.forEach((filter) {
     var filterObj = convert.jsonDecode(filter);
-    _filterVals.forEach((filterVal) {
+    _filters.forEach((filterVal) {
       if (filterVal.key == filterObj['key'] &&
           filterVal.dataPath.name == filterObj['dataPath']) {
         filterVal.value = filterObj['value'];
+        filterVal.comparisonValue =
+            filterObj['comparisonValue'] ?? DEFAULT_FILTER_SELECT_VALUE;
         filterVal.isActive = true;
       }
     });
   });
 
-  view.renderNewFilterDropdowns(_filterVals);
+  view.renderNewFilterDropdowns(_filters, _dataComparisonEnabled);
 }
 
 void _computeChartDataAndRender() {
@@ -476,7 +461,7 @@ void _computeChartDataAndRender() {
           var toRemove = [];
           messageStats.forEach((dateStr, _) {
             var date = DateTime.parse(dateStr);
-            for (var filter in _filterVals) {
+            for (var filter in _filters) {
               if (filter.type == model.DataType.datetime) {
                 var startDate = DateTime.parse(filter.value.split('_').first);
                 var endDate = DateTime.parse(filter.value.split('_').last)
@@ -507,9 +492,9 @@ void _computeChartDataAndRender() {
         case model.DataPath.interactions:
           _allInteractions.forEach((_, interaction) {
             var addToPrimaryBucket =
-                _interactionMatchesFilterValues(interaction, _filterVals);
-            // todo: add comparision buckets
-            var addToComparisonBucket = false;
+                _interactionMatchesFilterValues(interaction, _filters, false);
+            var addToComparisonBucket =
+                _interactionMatchesFilterValues(interaction, _filters, true);
 
             for (var i = 0; i < chart.fields.values.length; ++i) {
               if (!_interactionMatchesOperation(
@@ -534,9 +519,9 @@ void _computeChartDataAndRender() {
         case model.DataPath.interactions:
           _allInteractions.forEach((_, interaction) {
             var addToPrimaryBucket =
-                _interactionMatchesFilterValues(interaction, _filterVals);
-            // todo: compute comparison bucket
-            var addToComparisonBucket = false;
+                _interactionMatchesFilterValues(interaction, _filters, false);
+            var addToComparisonBucket =
+                _interactionMatchesFilterValues(interaction, _filters, true);
 
             for (var i = 0; i < chart.fields.values.length; ++i) {
               if (!_interactionMatchesOperation(
@@ -562,12 +547,27 @@ void _computeChartDataAndRender() {
   // Render charts
   for (var computedChart in computedCharts) {
     if (computedChart is model.ComputedBarChart) {
+      var seriesLabels = [];
+      var seriesComparisonLabels = [];
+      _filters.forEach((filter) {
+        if (filter.isActive) {
+          seriesLabels.add('${filter.key}: ${filter.value}');
+          seriesComparisonLabels
+              .add('${filter.key}: ${filter.comparisonValue}');
+        }
+      });
+      var seriesLabelString =
+          seriesLabels.isEmpty ? 'All' : seriesLabels.join(', ');
+      var seriesComparisonLabelString = seriesComparisonLabels.isEmpty
+          ? 'All'
+          : seriesComparisonLabels.join(', ');
+
       var chartConfig = chart_helper.generateBarChartConfig(
           computedChart,
           _dataComparisonEnabled,
           _dataNormalisationEnabled,
-          _activeFilterValues,
-          _activeComparisonFilterValues);
+          seriesLabelString,
+          seriesComparisonLabelString);
       view.renderChart(
           computedChart.title, computedChart.narrative, chartConfig);
     } else if (computedChart is model.ComputedTimeSeriesChart) {
@@ -626,13 +626,14 @@ void _replaceURLHashWithParams() {
   params['tab'] =
       Uri.encodeComponent(_config.tabs[_selectedAnalysisTabIndex].label);
 
-  _filterVals.forEach((filterVal) {
+  _filters.forEach((filterVal) {
     if (filterVal.isActive) {
       params['filters'] = params['filters'] ?? List();
       params['filters'].add(convert.jsonEncode({
         'key': filterVal.key,
         'dataPath': filterVal.dataPath.name,
-        'value': filterVal.value
+        'value': filterVal.value,
+        'comparisonValue': filterVal.comparisonValue
       }));
     }
   });
@@ -645,7 +646,7 @@ void _replaceURLHashWithParams() {
 void command(UIAction action, Data data) async {
   switch (action) {
     case UIAction.signinWithGoogle:
-      fb.signInWithGoogle();
+      await fb.signInWithGoogle();
       break;
     case UIAction.changeNavTab:
       var d = data as NavChangeData;
@@ -656,9 +657,7 @@ void command(UIAction action, Data data) async {
     case UIAction.changeAnalysisTab:
       var d = data as AnalysisTabChangeData;
       _selectedAnalysisTabIndex = d.tabIndex;
-      _activeFilters = {};
-      _filterValues = {};
-      _comparisonFilterValues = {};
+      _filters = [];
       view.removeFiltersWrapper();
       view.removeAllChartWrappers();
       _computeFilterDropdownsAndRender(
@@ -695,7 +694,7 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
-      for (var filter in _filterVals) {
+      for (var filter in _filters) {
         if (filter.dataPath.name == d.dataPath && filter.key == d.key) {
           filter.isActive = !filter.isActive;
         }
@@ -710,7 +709,7 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.setFilterValue:
       var d = data as SetFilterValueData;
-      for (var filter in _filterVals) {
+      for (var filter in _filters) {
         if (filter.dataPath.name == d.dataPath && filter.key == d.key) {
           filter.value = d.value;
         }
@@ -722,9 +721,13 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.setComparisonFilterValue:
       var d = data as SetFilterValueData;
-      _comparisonFilterValues[d.key] = d.value;
-      logger
-          .debug('Set to comparison filter values, ${_comparisonFilterValues}');
+      for (var filter in _filters) {
+        if (filter.dataPath.name == d.dataPath && filter.key == d.key) {
+          filter.comparisonValue = d.value;
+        }
+      }
+
+      _replaceURLHashWithParams();
       view.removeAllChartWrappers();
       _computeChartDataAndRender();
       break;
@@ -758,46 +761,6 @@ void command(UIAction action, Data data) async {
       view.showConfigSettingsAlert('Config saved successfully', false);
       _configRaw = configJSON;
       _config = model.Config.fromData(_configRaw);
-      break;
-    case UIAction.copyToClipboardConfigSkeleton:
-      // var config = model.Config()
-      //   ..data_paths = {'interactions': ''}
-      //   ..filters = _uniqueFieldCategoryValues.keys
-      //       .map((key) => model.Filter()
-      //         ..key = key
-      //         ..label = key)
-      //       .toList()
-      //   ..tabs = List<int>.generate(2, (i) => i)
-      //       .map((i) => model.Tab()
-      //         ..label = 'Tab $i'
-      //         ..exclude_filters = []
-      //         ..charts = [])
-      //       .toList();
-      // var configStr = convert.jsonEncode(config.toData()).toString();
-      // _copyToClipboard(configStr);
-      break;
-    case UIAction.copyToClipboardChartConfig:
-      // var d = data as CopyToClipboardChartConfigData;
-      // var values = _uniqueFieldCategoryValues[d.key].toList();
-      // var valuesConfig = values
-      //     .map((value) => model.Field()
-      //       ..label = value
-      //       ..field = (model.FieldOperation()
-      //         ..key = d.key
-      //         ..operator = model.FieldOperator.equals
-      //         ..value = value))
-      //     .toList();
-      // var chartsConfig = model.Chart()
-      //   ..title = 'By ${d.key}'
-      //   ..narrative = ''
-      //   ..type = model.ChartType.bar
-      //   ..fields = valuesConfig;
-      // var configStr = convert.jsonEncode(chartsConfig.toData()).toString();
-      // // todo: replace this with @override toString() for enums
-      // ['ChartType.', 'FieldOperator.'].forEach((findStr) {
-      //   configStr = configStr.replaceAll(findStr, '');
-      // });
-      // _copyToClipboard(configStr);
       break;
     default:
   }

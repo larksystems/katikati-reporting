@@ -16,10 +16,11 @@ class FilterValue {
   DataType type;
   List<String> options;
   String value;
+  String comparisonValue;
   bool isActive;
 
   FilterValue(this.dataPath, this.key, this.type, this.options, this.value,
-      this.isActive);
+      this.comparisonValue, this.isActive);
 }
 
 // Convert it to Abstract class / Interface

@@ -269,27 +269,6 @@ void hideFilterRow(String filterKey) {
   }
 }
 
-// html.SelectElement _getFilterDropdown(String filterKey, {bool comparison}) {
-//   var dropdownID = comparison == true
-//       ? _generateComparisonFilterDropdownID(filterKey)
-//       : _generateFilterOptionID(filterKey);
-//   return html.querySelector('#${dropdownID}') as html.SelectElement;
-// }
-
-// void enableFilterDropdown(String filterKey, {bool comparison}) {
-//   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-//   if (dropdown.disabled != false) {
-//     dropdown.disabled = false;
-//   }
-// }
-
-// void disableFilterDropdown(String filterKey, {bool comparison}) {
-//   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-//   if (dropdown.disabled != true) {
-//     dropdown.disabled = true;
-//   }
-// }
-
 void enableFilterOptions(String dataPath, String filterKey) {
   var id = _generateFilterOptionID(dataPath, filterKey);
   var options = html.querySelectorAll('#${id}');
@@ -308,26 +287,8 @@ void disableFilterOptions(String dataPath, String filterKey) {
   });
 }
 
-// void hideFilterDropdown(String filterKey, {bool comparison}) {
-//   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-//   if (dropdown.hidden != true) {
-//     dropdown.hidden = true;
-//   }
-// }
-
-// void showFilterDropdown(String filterKey, {bool comparison}) {
-//   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-//   if (dropdown.hidden != false) {
-//     dropdown.hidden = false;
-//   }
-// }
-
-// void setFilterDropdownValue(String filterKey, String value, {bool comparison}) {
-//   var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-//   dropdown.value = value;
-// }
-
-void renderNewFilterDropdowns(List<model.FilterValue> filters) {
+void renderNewFilterDropdowns(
+    List<model.FilterValue> filters, bool comparisonEnabled) {
   var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME])
     ..id = FILTERS_WRAPPER_ID;
   var labelCol =
@@ -338,10 +299,9 @@ void renderNewFilterDropdowns(List<model.FilterValue> filters) {
   for (var filter in filters) {
     var filterRow = generateGridRowElement(
         id: _generateFilterRowID(filter.dataPath.name + filter.key));
-    var checkboxCol = html.DivElement()..classes = ['col-3'];
+    var checkboxCol = html.DivElement()..classes = ['col-4'];
     var filterCol = html.DivElement()..classes = ['col-3'];
-
-    // todo: render comparison filters
+    var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
 
     var checkboxWithLabel = _getCheckboxWithLabel(
         _generateFilterCheckboxID(filter.dataPath.name + filter.key),
@@ -392,6 +352,17 @@ void renderNewFilterDropdowns(List<model.FilterValue> filters) {
               SetFilterValueData(filter.dataPath.name, filter.key, value));
         });
         filterCol.append(filterDropdown);
+        if (!comparisonEnabled) break;
+
+        var comparisonFilterDropdown = _getDropdown(
+            _generateFilterOptionID(filter.dataPath.name, filter.key),
+            filter.options,
+            filter.comparisonValue,
+            !filter.isActive, (String value) {
+          command(UIAction.setComparisonFilterValue,
+              SetFilterValueData(filter.dataPath.name, filter.key, value));
+        });
+        comparisonFilterCol.append(comparisonFilterDropdown);
         break;
       default:
     }
@@ -399,6 +370,7 @@ void renderNewFilterDropdowns(List<model.FilterValue> filters) {
     checkboxCol.append(checkboxWithLabel);
     filterRow.append(checkboxCol);
     filterRow.append(filterCol);
+    filterRow.append(comparisonFilterCol);
     optionsCol.append(filterRow);
   }
 

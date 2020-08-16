@@ -95,8 +95,8 @@ ChartConfiguration generateBarChartConfig(
     model.ComputedBarChart chart,
     bool dataComparisonEnabled,
     bool dataNormalisationEnabled,
-    Map<String, String> activeFilterValues,
-    Map<String, String> activeComparisonFilterValues) {
+    String seriesLabel,
+    String comparisonSeriesLabel) {
   var labels = chart.labels;
   var filterData = chart.buckets.map((bucket) => bucket.first).toList();
   var comparisonFilterData =
@@ -105,15 +105,10 @@ ChartConfiguration generateBarChartConfig(
   var colors = chart.colors ?? chartDefaultColors;
 
   var datasets = [
-    _generateBarChartDataset(
-        _generateLegendLabelFromFilters(activeFilterValues),
-        filterData,
-        colors[0]),
+    _generateBarChartDataset(seriesLabel, filterData, colors[0]),
     if (dataComparisonEnabled)
       _generateBarChartDataset(
-          _generateLegendLabelFromFilters(activeComparisonFilterValues),
-          comparisonFilterData,
-          colors[1])
+          comparisonSeriesLabel, comparisonFilterData, colors[1])
   ];
 
   var dataset = ChartData(labels: labels, datasets: datasets);
