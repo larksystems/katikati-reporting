@@ -32,4 +32,10 @@ void main(List<String> args) async {
   var newFile = File('web/assets/constants.json');
   print('''Finished writing config for project ${projName}''');
   newFile.writeAsStringSync(jsonEncode(newConfig));
+
+  print('');
+  print(
+      'When using webdev serve, open http://localhost:8080/ in your browser.');
+  print('      .. 127.0.0.1 does not work for this app');
+  print('');
 }
