@@ -32,9 +32,8 @@ Timestamp:
   aggregate: "TimeAggregate"
   key: "string"
 
-# Aggregate method
 Field:
-  summary: "array string"
+  aggregateMethod: "array string"
   key: "string"
   values: "array string"
   labels: "array string"

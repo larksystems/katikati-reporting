@@ -23,8 +23,7 @@ class FilterValue {
       this.comparisonValue, this.isActive);
 }
 
-// Convert it to Abstract class / Interface
-class ComputedChart {
+abstract class ComputedChart {
   DataPath dataPath;
   String title;
   String narrative;

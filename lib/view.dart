@@ -27,7 +27,6 @@ const CARD_BODY_CLASSNAME = 'card-body';
 const CHART_WRAPPER_CLASSNAME = 'chart';
 const MAPBOX_COL_CLASSNAME = 'mapbox-col';
 const CONFIG_SETTINGS_ALERT_ID = 'config-settings-alert';
-const CONFIG_UNIQUE_VALUES_WRAPPER_CLASSNAME = 'unique-values-wrapper';
 
 const CONTENT_ID = 'content';
 
@@ -59,8 +58,6 @@ html.DivElement get configSettingsAlert =>
 String _generateFilterRowID(String key) => 'filter-row-${key}';
 String _generateFilterOptionID(String dataPath, String key) =>
     'filter-dropdown-${dataPath}_${key}';
-String _generateComparisonFilterDropdownID(String key) =>
-    'comparison-filter-dropdown-${key}';
 String _generateFilterCheckboxID(String key) => 'filter-option-${key}';
 String _generateAnalyseTabID(String key) => 'analyse-tab-options-${key}';
 

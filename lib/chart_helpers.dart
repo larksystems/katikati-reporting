@@ -38,11 +38,6 @@ const chartDefaultColors = [
 ];
 const allInteractionsLabel = 'All interactions';
 
-String _generateLegendLabelFromFilters(Map<String, String> filters) {
-  var label = filters.values.join(',');
-  return label != '' ? label : allInteractionsLabel;
-}
-
 ChartDataSets _generateBarChartDataset(
     String label, List<num> data, String barColor) {
   return ChartDataSets(

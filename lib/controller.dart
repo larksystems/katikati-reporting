@@ -8,7 +8,6 @@ import 'package:dashboard/firebase.dart' as fb;
 import 'package:dashboard/chart_helpers.dart' as chart_helper;
 import 'package:dashboard/extensions.dart';
 import 'package:dashboard/logger.dart';
-import 'package:intl/intl.dart' as intl;
 
 Logger logger = Logger('controller.dart');
 
@@ -16,8 +15,6 @@ Map<String, model.Link> _navLinks = {
   'analyse': model.Link('analyse', 'Analyse', handleNavToAnalysis),
   'settings': model.Link('settings', 'Settings', handleNavToSettings)
 };
-
-var STANDARD_DATE_TIME_FORMAT = intl.DateFormat('yyyy-MM-dd HH:mm:ss');
 
 const DEFAULT_FILTER_SELECT_VALUE = '__all';
 
@@ -49,7 +46,7 @@ Map<model.DataPath, Map<String, Set>> _uniqueFieldValues;
 Map<String, dynamic> _configRaw;
 model.Config _config;
 
-List<model.ComputedChart> computedCharts;
+List<model.ComputedChart> _computedCharts;
 
 // Actions
 enum UIAction {
@@ -220,11 +217,11 @@ void loadGeoMapsData() async {
 // Compute data methods
 Map<model.DataPath, Map<String, Set>> computeUniqueFieldValues(
     List<model.Filter> filters) {
-  var uniqueFieldValues = Map<model.DataPath, Map<String, Set>>();
+  var uniqueFieldValues = <model.DataPath, Map<String, Set>>{};
   filters.forEach((filter) {
     var dataPath = filter.data_path;
     uniqueFieldValues[dataPath] = uniqueFieldValues[dataPath] ?? {};
-    uniqueFieldValues[dataPath][filter.key] = Set();
+    uniqueFieldValues[dataPath][filter.key] = <dynamic>{};
   });
 
   uniqueFieldValues.forEach((dataPath, keysObj) {
@@ -328,7 +325,7 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
 
   _filters = [];
   filters.forEach((f) {
-    var filterOptions = List<String>();
+    var filterOptions = <String>[];
     var defaultValue = DEFAULT_FILTER_SELECT_VALUE;
     if (f.type == model.DataType.string) {
       filterOptions = _uniqueFieldValues[f.data_path][f.key]
@@ -375,7 +372,7 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
 
 void _computeChartDataAndRender() {
   var charts = _config.tabs[_selectedAnalysisTabIndex].charts;
-  computedCharts = [];
+  _computedCharts = [];
 
   // Initial data fields
   for (var chart in charts) {
@@ -390,22 +387,23 @@ void _computeChartDataAndRender() {
             chart.fields.labels,
             chart.fields.values.map((_) => [0, 0]).toList(),
             ['a', 'b']);
-        computedCharts.add(computedChart);
+        _computedCharts.add(computedChart);
         break;
       case model.ChartType.map:
+        var colors = chart.colors ?? chart_helper.chartDefaultColors;
         var computedChart = model.ComputedMapChart(
             chart.data_path,
             chart.title,
             chart.narrative,
-            chart.colors ?? chart_helper.chartDefaultColors,
+            colors,
             chart.fields.values,
             chart.fields.values.map((_) => [0, 0]).toList(),
             ['a', 'b'],
             [chart.geography.country, chart.geography.regionLevel.name]);
-        computedCharts.add(computedChart);
+        _computedCharts.add(computedChart);
         break;
       case model.ChartType.time_series:
-        var buckets = Map<DateTime, List<num>>();
+        var buckets = <DateTime, List<num>>{};
         var computedChart = model.ComputedTimeSeriesChart(
             chart.data_path,
             chart.title,
@@ -414,21 +412,21 @@ void _computeChartDataAndRender() {
             chart.data_label,
             chart.fields.labels,
             buckets);
-        computedCharts.add(computedChart);
+        _computedCharts.add(computedChart);
         break;
       case model.ChartType.funnel:
         var computedChart = model.ComputedFunnelChart(
             chart.data_path,
             chart.title,
             chart.narrative,
-            chart.colors,
+            chart.colors ?? chart_helper.chartDefaultColors,
             [],
             [],
             chart.is_paired);
-        computedCharts.add(computedChart);
+        _computedCharts.add(computedChart);
         break;
       default:
-        computedCharts.add(null);
+        _computedCharts.add(null);
         logger.error(
             '_computeChartDataAndRender Chart type ${chart.type} not computed');
     }
@@ -437,7 +435,7 @@ void _computeChartDataAndRender() {
   // compute data
   for (var i = 0; i < charts.length; ++i) {
     var chart = charts[i];
-    var computedChart = computedCharts[i];
+    var computedChart = _computedCharts[i];
     // funnel chart
     if (computedChart is model.ComputedFunnelChart) {
       switch (chart.data_path) {
@@ -486,7 +484,7 @@ void _computeChartDataAndRender() {
               'computed time series chart doesnt support ${chart.data_path}');
       }
     }
-    // bar chart
+    // bar chart todo: combine with map chart
     else if (computedChart is model.ComputedBarChart) {
       switch (chart.data_path) {
         case model.DataPath.interactions:
@@ -545,7 +543,7 @@ void _computeChartDataAndRender() {
   }
 
   // Render charts
-  for (var computedChart in computedCharts) {
+  for (var computedChart in _computedCharts) {
     if (computedChart is model.ComputedBarChart) {
       var seriesLabels = [];
       var seriesComparisonLabels = [];
@@ -584,8 +582,8 @@ void _computeChartDataAndRender() {
           computedChart.values,
           computedChart.isCoupled);
     } else if (computedChart is model.ComputedMapChart) {
-      var mapFilterValues = Map<String, List<num>>();
-      var mapComparisonFilterValues = Map<String, List<num>>();
+      var mapFilterValues = <String, List<num>>{};
+      var mapComparisonFilterValues = <String, List<num>>{};
 
       // todo: fix the normalisation (1)
       for (var i = 0; i < computedChart.labels.length; ++i) {
@@ -622,13 +620,13 @@ void handleNavToSettings() {
 }
 
 void _replaceURLHashWithParams() {
-  var params = Map<String, dynamic>();
+  var params = <String, dynamic>{};
   params['tab'] =
       Uri.encodeComponent(_config.tabs[_selectedAnalysisTabIndex].label);
 
   _filters.forEach((filterVal) {
     if (filterVal.isActive) {
-      params['filters'] = params['filters'] ?? List();
+      params['filters'] = params['filters'] ?? [];
       params['filters'].add(convert.jsonEncode({
         'key': filterVal.key,
         'dataPath': filterVal.dataPath.name,
@@ -767,62 +765,33 @@ void command(UIAction action, Data data) async {
 }
 
 void validateConfig(model.Config config) {
-  // todo: validate time_series chart
-  // Data paths
-  // if (config.data_paths == null) {
-  //   throw StateError('data_paths cannot be empty');
-  // }
+  if (config.data_paths == null) {
+    throw StateError('data_paths cannot be empty');
+  }
 
-  // if (config.data_paths['interactions'] == null) {
-  //   throw StateError('data_paths > interactions cannot be empty');
-  // }
+  if (config.tabs == null) {
+    throw StateError('tabs cannot be empty');
+  }
 
-  // // Filters
-  // if (config.filters == null) {
-  //   throw StateError('filters need to be an array');
-  // }
+  for (var tab in config.tabs) {
+    for (var chart in tab.charts) {
+      if (chart.data_path == null) {
+        throw StateError('Chart data_path cannot be empty');
+      }
+      var chartTypes = model.ChartType.values.map((e) => e.name).toList();
+      if (!chartTypes.contains(chart.type)) {
+        throw StateError('Chart type is not valid');
+      }
 
-  // for (var filter in config.filters) {
-  //   if (filter.key == null) {
-  //     throw StateError('filters {key} cannot be empty');
-  //   }
-  // }
+      if (chart.type == model.ChartType.map) {
+        if (chart.geography == null ||
+            chart.geography.country == null ||
+            chart.geography.regionLevel == null) {
+          throw StateError('Geography map not specified or invalid');
+        }
+      }
 
-  // // Tabs
-  // if (config.tabs == null) {
-  //   throw StateError('tabs cannot be empty');
-  // }
-
-  // for (var tab in config.tabs) {
-  //   for (var chart in tab.charts) {
-  //     for (var field in chart.fields) {
-  //       if (field.field.key == null) {
-  //         throw StateError('Chart field cannot be empty');
-  //       }
-  //       if (field.field.value == null) {
-  //         throw StateError('Chart field value cannot be empty');
-  //       }
-  //       // no need to check for operator, as it is caught by enums
-  //     }
-
-  //     // geography map
-  //     if (chart.type == model.ChartType.map) {
-  //       if (chart.geography == null ||
-  //           chart.geography.country == null ||
-  //           chart.geography.regionLevel == null) {
-  //         throw StateError('Geography map not specified');
-  //       }
-  //     }
-  //   }
-  // }
-}
-
-void _copyToClipboard(String str) {
-  final textarea = html.TextAreaElement()
-    ..readOnly = true
-    ..value = str;
-  html.document.body.append(textarea);
-  textarea.select();
-  html.document.execCommand('copy');
-  textarea.remove();
+      // todo: add more chart models validation
+    }
+  }
 }
