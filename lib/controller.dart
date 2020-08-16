@@ -386,7 +386,8 @@ void _computeChartDataAndRender() {
             chart.data_label,
             chart.fields.labels,
             chart.fields.values.map((_) => [0, 0]).toList(),
-            ['a', 'b']);
+            chart.fields.values.map((_) => [0, 0]).toList(),
+            ['', '']);
         _computedCharts.add(computedChart);
         break;
       case model.ChartType.map:
@@ -398,7 +399,8 @@ void _computeChartDataAndRender() {
             colors,
             chart.fields.values,
             chart.fields.values.map((_) => [0, 0]).toList(),
-            ['a', 'b'],
+            chart.fields.values.map((_) => [0, 0]).toList(),
+            ['', ''],
             [chart.geography.country, chart.geography.regionLevel.name]);
         _computedCharts.add(computedChart);
         break;
@@ -478,6 +480,22 @@ void _computeChartDataAndRender() {
                 DateTime.parse(valueObj[chart.timestamp.key]), values);
           });
           computedChart.buckets = buckets;
+
+          if (_dataNormalisationEnabled) {
+            for (var date in computedChart.buckets.keys) {
+              var bucket = computedChart.buckets[date];
+              var normaliseValue =
+                  bucket.reduce((value, element) => value + element);
+              if (normaliseValue == 0) {
+                normaliseValue = 1;
+              }
+              computedChart.buckets[date] =
+                  computedChart.buckets[date].map((value) {
+                return (value / normaliseValue * 100).roundToDecimal(2);
+              }).toList();
+            }
+          }
+
           break;
         default:
           logger.error(
@@ -495,6 +513,13 @@ void _computeChartDataAndRender() {
                 _interactionMatchesFilterValues(interaction, _filters, true);
 
             for (var i = 0; i < chart.fields.values.length; ++i) {
+              if (addToPrimaryBucket) {
+                ++computedChart.normaliseValues[i][0];
+              }
+              if (addToComparisonBucket) {
+                ++computedChart.normaliseValues[i][1];
+              }
+
               if (!_interactionMatchesOperation(
                   interaction, chart.fields.key, chart.fields.values[i])) {
                 continue;
@@ -522,6 +547,13 @@ void _computeChartDataAndRender() {
                 _interactionMatchesFilterValues(interaction, _filters, true);
 
             for (var i = 0; i < chart.fields.values.length; ++i) {
+              if (addToPrimaryBucket) {
+                ++computedChart.normaliseValues[i][0];
+              }
+              if (addToComparisonBucket) {
+                ++computedChart.normaliseValues[i][1];
+              }
+
               if (!_interactionMatchesOperation(
                   interaction, chart.fields.key, chart.fields.values[i])) {
                 continue;
@@ -559,6 +591,19 @@ void _computeChartDataAndRender() {
       var seriesComparisonLabelString = seriesComparisonLabels.isEmpty
           ? 'All'
           : seriesComparisonLabels.join(', ');
+
+      if (_dataNormalisationEnabled) {
+        for (var i = 0; i < computedChart.buckets.length; ++i) {
+          var bucket = computedChart.buckets[i];
+          for (var j = 0; j < bucket.length; ++j) {
+            // todo: fix expeced an int, but got double issue
+            computedChart.buckets[i][j] = (computedChart.buckets[i][j] /
+                    computedChart.normaliseValues[i][j] *
+                    100)
+                .ceil();
+          }
+        }
+      }
 
       var chartConfig = chart_helper.generateBarChartConfig(
           computedChart,

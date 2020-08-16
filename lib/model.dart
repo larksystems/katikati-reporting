@@ -49,6 +49,7 @@ class ComputedBarChart extends ComputedChart {
       this.dataLabel,
       this.labels,
       this.buckets,
+      this.normaliseValues,
       this.seriesNames)
       : super(dataPath, title, narrative, ChartType.bar, colors);
 }
@@ -87,6 +88,7 @@ class ComputedMapChart extends ComputedChart {
       List<String> colors,
       this.labels,
       this.buckets,
+      this.normaliseValues,
       this.seriesNames,
       this.mapPath)
       : super(dataPath, title, narrative, ChartType.map, colors);
