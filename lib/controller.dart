@@ -28,10 +28,7 @@ const UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG = 'Unable to fetch survey status';
 var _currentNavLink = _navLinks['analyse'].pathname;
 
 // UI States
-int _selectedAnalysisTabIndex;
-bool _dataComparisonEnabled = true;
-bool _dataNormalisationEnabled = false;
-bool _stackTimeSeriesEnabled = true;
+var _analyseOptions = model.AnalyseOptions(0, true, false, true);
 List<model.FilterValue> _filters = [];
 
 Map<String, Map<String, dynamic>> _mapsGeoJSON = {};
@@ -129,7 +126,7 @@ void onLoginCompleted() async {
 
   _uniqueFieldValues = computeUniqueFieldValues(
       _config.tabs.map((t) => t.filters ?? []).expand((e) => e).toList());
-  _selectedAnalysisTabIndex = 0;
+  _analyseOptions.selectedTabIndex = 0;
 
   view.setNavlinkSelected(_currentNavLink);
   _navLinks[_currentNavLink].render();
@@ -297,26 +294,34 @@ bool _interactionMatchesOperation(
 // Render methods
 void handleNavToAnalysis() {
   view.clearContentTab();
-  _selectedAnalysisTabIndex = 0;
+  _analyseOptions.selectedTabIndex = 0;
   _filters = [];
 
   var uri = Uri.parse(html.window.location.href);
   var queryParams = uri.queryParameters;
-  var queryTabLabel = queryParams['tab'] ?? _config.tabs.first.label;
-  queryTabLabel = Uri.decodeComponent(queryTabLabel);
-  _selectedAnalysisTabIndex =
-      _config.tabs.indexWhere((tab) => tab.label == queryTabLabel);
-  _selectedAnalysisTabIndex =
-      _selectedAnalysisTabIndex == -1 ? 0 : _selectedAnalysisTabIndex;
+  print(queryParams);
+  var chartOptions = convert.jsonDecode(queryParams['chartOptions'] ?? '{}');
+  _analyseOptions.updateFrom(chartOptions);
+
+  var queryTabLabel = _config.tabs[_analyseOptions.selectedTabIndex].label;
+  // queryParams['tab'] ?? _config.tabs.first.label;
+  // queryTabLabel = Uri.decodeComponent(queryTabLabel);
+  // _analyseOptions.selectedTabIndex =
+  //     _config.tabs.indexWhere((tab) => tab.label == queryTabLabel);
+  // if (_analyseOptions.selectedTabIndex == -1) {
+  //   _analyseOptions.selectedTabIndex = 0;
+  // }
 
   var tabLabels =
       _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
   view.renderAnalysisTabs(tabLabels, queryTabLabel);
-  view.renderChartOptions(_dataComparisonEnabled, _dataNormalisationEnabled,
-      _stackTimeSeriesEnabled);
+  view.renderChartOptions(
+      _analyseOptions.dataComparisonEnabled,
+      _analyseOptions.normaliseDataEnabled,
+      _analyseOptions.stackTimeseriesEnabled);
 
   _computeFilterDropdownsAndRender(
-      _config.tabs[_selectedAnalysisTabIndex].filters);
+      _config.tabs[_analyseOptions.selectedTabIndex].filters);
   _computeChartDataAndRender();
 }
 
@@ -367,11 +372,12 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
     });
   });
 
-  view.renderNewFilterDropdowns(_filters, _dataComparisonEnabled);
+  view.renderNewFilterDropdowns(
+      _filters, _analyseOptions.dataComparisonEnabled);
 }
 
 void _computeChartDataAndRender() {
-  var charts = _config.tabs[_selectedAnalysisTabIndex].charts;
+  var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
   _computedCharts = [];
 
   // Initial data fields
@@ -481,7 +487,7 @@ void _computeChartDataAndRender() {
           });
           computedChart.buckets = buckets;
 
-          if (_dataNormalisationEnabled) {
+          if (_analyseOptions.normaliseDataEnabled) {
             for (var date in computedChart.buckets.keys) {
               var bucket = computedChart.buckets[date];
               var normaliseValue =
@@ -592,7 +598,7 @@ void _computeChartDataAndRender() {
           ? 'All'
           : seriesComparisonLabels.join(', ');
 
-      if (_dataNormalisationEnabled) {
+      if (_analyseOptions.normaliseDataEnabled) {
         for (var i = 0; i < computedChart.buckets.length; ++i) {
           var bucket = computedChart.buckets[i];
           for (var j = 0; j < bucket.length; ++j) {
@@ -607,15 +613,17 @@ void _computeChartDataAndRender() {
 
       var chartConfig = chart_helper.generateBarChartConfig(
           computedChart,
-          _dataComparisonEnabled,
-          _dataNormalisationEnabled,
+          _analyseOptions.dataComparisonEnabled,
+          _analyseOptions.normaliseDataEnabled,
           seriesLabelString,
           seriesComparisonLabelString);
       view.renderChart(
           computedChart.title, computedChart.narrative, chartConfig);
     } else if (computedChart is model.ComputedTimeSeriesChart) {
       var chartConfig = chart_helper.generateTimeSeriesChartConfig(
-          computedChart, _dataNormalisationEnabled, _stackTimeSeriesEnabled);
+          computedChart,
+          _analyseOptions.normaliseDataEnabled,
+          _analyseOptions.stackTimeseriesEnabled);
       view.renderChart(
           computedChart.title, computedChart.narrative, chartConfig);
     } else if (computedChart is model.ComputedFunnelChart) {
@@ -648,8 +656,8 @@ void _computeChartDataAndRender() {
           _mapsGeoJSON[computedChart.mapPath[0]][computedChart.mapPath[1]],
           mapFilterValues,
           mapComparisonFilterValues,
-          _dataComparisonEnabled,
-          _dataNormalisationEnabled,
+          _analyseOptions.dataComparisonEnabled,
+          _analyseOptions.normaliseDataEnabled,
           computedChart.colors);
     } else {
       logger.error('No chart type to render');
@@ -666,9 +674,7 @@ void handleNavToSettings() {
 
 void _replaceURLHashWithParams() {
   var params = <String, dynamic>{};
-  params['tab'] =
-      Uri.encodeComponent(_config.tabs[_selectedAnalysisTabIndex].label);
-
+  params['chartOptions'] = convert.jsonEncode(_analyseOptions.toObject());
   _filters.forEach((filterVal) {
     if (filterVal.isActive) {
       params['filters'] = params['filters'] ?? [];
@@ -699,40 +705,45 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.changeAnalysisTab:
       var d = data as AnalysisTabChangeData;
-      _selectedAnalysisTabIndex = d.tabIndex;
+      _analyseOptions.selectedTabIndex = d.tabIndex;
       _filters = [];
       view.removeFiltersWrapper();
       view.removeAllChartWrappers();
       _computeFilterDropdownsAndRender(
-          _config.tabs[_selectedAnalysisTabIndex].filters);
+          _config.tabs[_analyseOptions.selectedTabIndex].filters);
       _replaceURLHashWithParams();
       _computeChartDataAndRender();
-      logger.debug('Changed to analysis tab ${_selectedAnalysisTabIndex}');
+      logger
+          .debug('Changed to analysis tab ${_analyseOptions.selectedTabIndex}');
       break;
     case UIAction.toggleDataComparison:
       var d = data as ToggleOptionEnabledData;
-      _dataComparisonEnabled = d.enabled;
+      _analyseOptions.dataComparisonEnabled = d.enabled;
       view.removeFiltersWrapper();
       view.removeAllChartWrappers();
       _computeFilterDropdownsAndRender(
-          _config.tabs[_selectedAnalysisTabIndex].filters);
+          _config.tabs[_analyseOptions.selectedTabIndex].filters);
+      _replaceURLHashWithParams();
       _computeChartDataAndRender();
-      logger.debug('Data comparison changed to ${_dataComparisonEnabled}');
+      logger.debug(
+          'Data comparison changed to ${_analyseOptions.dataComparisonEnabled}');
       break;
     case UIAction.toggleDataNormalisation:
       var d = data as ToggleOptionEnabledData;
-      _dataNormalisationEnabled = d.enabled;
-      logger
-          .debug('Data normalisation changed to ${_dataNormalisationEnabled}');
+      _analyseOptions.normaliseDataEnabled = d.enabled;
+      logger.debug(
+          'Data normalisation changed to ${_analyseOptions.normaliseDataEnabled}');
       view.removeAllChartWrappers();
+      _replaceURLHashWithParams();
       _computeChartDataAndRender();
       break;
     case UIAction.toggleStackTimeseries:
       var d = data as ToggleOptionEnabledData;
-      _stackTimeSeriesEnabled = d.enabled;
+      _analyseOptions.stackTimeseriesEnabled = d.enabled;
       logger.debug(
-          'Stack time series chart changed to ${_stackTimeSeriesEnabled}');
+          'Stack time series chart changed to ${_analyseOptions.stackTimeseriesEnabled}');
       view.removeAllChartWrappers();
+      _replaceURLHashWithParams();
       _computeChartDataAndRender();
       break;
     case UIAction.toggleActiveFilter:

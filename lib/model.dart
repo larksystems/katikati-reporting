@@ -2,6 +2,35 @@ export 'package:dashboard/model.g.dart';
 
 import 'package:dashboard/model.g.dart';
 
+class AnalyseOptions {
+  int selectedTabIndex;
+  bool dataComparisonEnabled;
+  bool normaliseDataEnabled;
+  bool stackTimeseriesEnabled;
+
+  AnalyseOptions(this.selectedTabIndex, this.dataComparisonEnabled,
+      this.normaliseDataEnabled, this.stackTimeseriesEnabled);
+
+  void updateFrom(Map<String, dynamic> object) {
+    selectedTabIndex = object['selectedTabIndex'] ?? selectedTabIndex;
+    dataComparisonEnabled =
+        object['dataComparisonEnabled'] ?? dataComparisonEnabled;
+    normaliseDataEnabled =
+        object['normaliseDataEnabled'] ?? normaliseDataEnabled;
+    stackTimeseriesEnabled =
+        object['stackTimeseriesEnabled'] ?? stackTimeseriesEnabled;
+  }
+
+  Map<String, dynamic> toObject() {
+    return {
+      'selectedTabIndex': selectedTabIndex,
+      'dataComparisonEnabled': dataComparisonEnabled,
+      'normaliseDataEnabled': normaliseDataEnabled,
+      'stackTimeseriesEnabled': stackTimeseriesEnabled
+    };
+  }
+}
+
 class Link {
   String pathname;
   String label;
