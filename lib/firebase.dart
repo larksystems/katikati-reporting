@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:html' as html;
-
 import 'package:firebase/firebase.dart' as firebase;
 import 'package:dashboard/firebase_constants.dart' as fb_constants;
 import 'package:dashboard/view.dart' as view;
