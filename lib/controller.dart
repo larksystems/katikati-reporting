@@ -35,7 +35,7 @@ Map<String, Map<String, dynamic>> _mapsGeoJSON = {};
 
 // Data
 Map<String, Map<String, dynamic>> _allInteractions;
-Map<String, Map<String, dynamic>> _messageStats;
+Map<String, Map<String, Map<String, dynamic>>> _messageStats;
 Map<String, Map<String, dynamic>> _surveyStatus;
 
 Map<model.DataPath, Map<String, Set>> _uniqueFieldValues;
@@ -152,8 +152,8 @@ void loadFirebaseData() async {
     return;
   }
 
-  var interactionsPath = _config.data_paths['interactions'];
-  if (interactionsPath != null) {
+  if (_config.data_paths['interactions'] != null) {
+    var interactionsPath = _config.data_paths['interactions']['data'];
     try {
       _allInteractions = await fb.fetchInteractions(interactionsPath);
     } catch (e) {
@@ -163,19 +163,23 @@ void loadFirebaseData() async {
     }
   }
 
-  var messageStatusPath = _config.data_paths['message_stats'];
-  if (messageStatusPath != null) {
-    try {
-      _messageStats = await fb.fetchMessageStats(messageStatusPath);
-    } catch (e) {
-      view.showAlert(UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG);
-      logger.error(e);
-      rethrow;
+  var messageStatusPathMap = _config.data_paths['message_stats'];
+  _messageStats = {};
+  if (messageStatusPathMap != null) {
+    for (var pathKey in messageStatusPathMap.keys) {
+      try {
+        _messageStats[pathKey] =
+            await fb.fetchMessageStats(messageStatusPathMap[pathKey]);
+      } catch (e) {
+        view.showAlert(UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG);
+        logger.error(e);
+        rethrow;
+      }
     }
   }
 
-  var surveyStatusPath = _config.data_paths['survey_status'];
-  if (surveyStatusPath != null) {
+  if (_config.data_paths['survey_status'] != null) {
+    var surveyStatusPath = _config.data_paths['survey_status']['data'];
     try {
       _surveyStatus = await fb.fetchSurveyStats(surveyStatusPath);
     } catch (e) {
@@ -299,18 +303,10 @@ void handleNavToAnalysis() {
 
   var uri = Uri.parse(html.window.location.href);
   var queryParams = uri.queryParameters;
-  print(queryParams);
   var chartOptions = convert.jsonDecode(queryParams['chartOptions'] ?? '{}');
   _analyseOptions.updateFrom(chartOptions);
 
   var queryTabLabel = _config.tabs[_analyseOptions.selectedTabIndex].label;
-  // queryParams['tab'] ?? _config.tabs.first.label;
-  // queryTabLabel = Uri.decodeComponent(queryTabLabel);
-  // _analyseOptions.selectedTabIndex =
-  //     _config.tabs.indexWhere((tab) => tab.label == queryTabLabel);
-  // if (_analyseOptions.selectedTabIndex == -1) {
-  //   _analyseOptions.selectedTabIndex = 0;
-  // }
 
   var tabLabels =
       _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
@@ -341,7 +337,8 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
       filterOptions = [];
       switch (f.data_path) {
         case model.DataPath.message_stats:
-          var dates = _messageStats.keys.toList()..sort();
+          // todo: check across all _messageStats, not just the first
+          var dates = _messageStats.values.first.keys.toList()..sort();
           filterOptions = [dates.first, dates.last];
           defaultValue = dates.first.toString().split('T').first +
               '_' +
@@ -414,6 +411,7 @@ void _computeChartDataAndRender() {
         var buckets = <DateTime, List<num>>{};
         var computedChart = model.ComputedTimeSeriesChart(
             chart.data_path,
+            chart.doc_name,
             chart.title,
             chart.narrative,
             chart.colors,
@@ -463,7 +461,7 @@ void _computeChartDataAndRender() {
     else if (computedChart is model.ComputedTimeSeriesChart) {
       switch (chart.data_path) {
         case model.DataPath.message_stats:
-          var messageStats = Map.from(_messageStats);
+          var messageStats = Map.from(_messageStats[chart.doc_name]);
           var toRemove = [];
           messageStats.forEach((dateStr, _) {
             var date = DateTime.parse(dateStr);

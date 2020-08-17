@@ -1,7 +1,3 @@
-Config:
-  data_paths: "map string"
-  tabs: "array Tab"
-
 Tab:
   label: "string"
   filters: "array Filter"

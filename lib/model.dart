@@ -2,6 +2,28 @@ export 'package:dashboard/model.g.dart';
 
 import 'package:dashboard/model.g.dart';
 
+class Config {
+  String docId;
+  Map<String, Map<String, String>> data_paths;
+  List<Tab> tabs;
+
+  static Config fromData(data, [Config modelObj]) {
+    if (data == null) return null;
+
+    var data_paths = <String, Map<String, String>>{};
+    data['data_paths'].forEach((key, mapValue) {
+      data_paths[key] = {};
+      mapValue.forEach((k, v) {
+        data_paths[key][k] = v.toString();
+      });
+    });
+
+    return (modelObj ?? Config())
+      ..data_paths = data_paths
+      ..tabs = List_fromData<Tab>(data['tabs'], Tab.fromData);
+  }
+}
+
 class AnalyseOptions {
   int selectedTabIndex;
   bool dataComparisonEnabled;
@@ -85,11 +107,19 @@ class ComputedBarChart extends ComputedChart {
 
 class ComputedTimeSeriesChart extends ComputedChart {
   String dataLabel;
+  String docName;
   List<String> seriesLabels;
   Map<DateTime, List<num>> buckets;
 
-  ComputedTimeSeriesChart(DataPath dataPath, String title, String narrative,
-      List<String> colors, this.dataLabel, this.seriesLabels, this.buckets)
+  ComputedTimeSeriesChart(
+      DataPath dataPath,
+      this.docName,
+      String title,
+      String narrative,
+      List<String> colors,
+      this.dataLabel,
+      this.seriesLabels,
+      this.buckets)
       : super(dataPath, title, narrative, ChartType.time_series, colors);
 }
 

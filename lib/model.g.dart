@@ -7,39 +7,6 @@ import 'logger.dart';
 
 Logger log = Logger('model.g.dart');
 
-class Config {
-  String docId;
-  Map<String, String> data_paths;
-  List<Tab> tabs;
-
-  static Config fromSnapshot(DocSnapshot doc, [Config modelObj]) =>
-      fromData(doc.data, modelObj)..docId = doc.id;
-
-  static Config fromData(data, [Config modelObj]) {
-    if (data == null) return null;
-    return (modelObj ?? Config())
-      ..data_paths = Map_fromData<String>(data['data_paths'], String_fromData)
-      ..tabs = List_fromData<Tab>(data['tabs'], Tab.fromData);
-  }
-
-  static void listen(DocStorage docStorage, ConfigCollectionListener listener, String collectionRoot) =>
-      listenForUpdates<Config>(docStorage, listener, collectionRoot, Config.fromSnapshot);
-
-  Map<String, dynamic> toData() {
-    return {
-      if (data_paths != null) 'data_paths': data_paths,
-      if (tabs != null) 'tabs': tabs.map((elem) => elem?.toData()).toList(),
-    };
-  }
-
-  String toString() => 'Config [$docId]: ${toData().toString()}';
-}
-typedef void ConfigCollectionListener(
-  List<Config> added,
-  List<Config> modified,
-  List<Config> removed,
-);
-
 class Tab {
   String docId;
   String label;
