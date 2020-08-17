@@ -1,0 +1,7 @@
+@import "./bootstrap.min.css";
+
+textarea {
+  margin-bottom: 32px;
+  width: 100%;
+  font-family: monospace;
+}
