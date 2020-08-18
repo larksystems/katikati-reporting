@@ -144,6 +144,7 @@ void loadFirebaseData() async {
     _config = model.Config.fromData(_configRaw);
   } catch (e) {
     view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
+    view.hideLoading();
     logger.error(e);
     rethrow;
   }
@@ -388,8 +389,8 @@ void _computeChartDataAndRender() {
             chart.colors,
             chart.data_label,
             chart.fields.labels,
-            chart.fields.values.map((_) => [0, 0]).toList(),
-            chart.fields.values.map((_) => [0, 0]).toList(),
+            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
+            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
             ['', '']);
         _computedCharts.add(computedChart);
         break;
@@ -401,8 +402,8 @@ void _computeChartDataAndRender() {
             chart.narrative,
             colors,
             chart.fields.values,
-            chart.fields.values.map((_) => [0, 0]).toList(),
-            chart.fields.values.map((_) => [0, 0]).toList(),
+            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
+            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
             ['', ''],
             [chart.geography.country, chart.geography.regionLevel.name]);
         _computedCharts.add(computedChart);
@@ -600,11 +601,9 @@ void _computeChartDataAndRender() {
         for (var i = 0; i < computedChart.buckets.length; ++i) {
           var bucket = computedChart.buckets[i];
           for (var j = 0; j < bucket.length; ++j) {
-            // todo: fix expeced an int, but got double issue
-            computedChart.buckets[i][j] = (computedChart.buckets[i][j] /
-                    computedChart.normaliseValues[i][j] *
-                    100)
-                .ceil();
+            computedChart.buckets[i][j] = ((computedChart.buckets[i][j] * 100) /
+                    computedChart.normaliseValues[i][j])
+                .roundToDecimal(2);
           }
         }
       }
@@ -799,6 +798,7 @@ void command(UIAction action, Data data) async {
         } else {
           view.showConfigSettingsAlert(e.toString(), true);
         }
+        view.hideLoading();
         return;
       }
 
@@ -832,7 +832,7 @@ void validateConfig(model.Config config) {
       if (chart.data_path == null) {
         throw StateError('Chart data_path cannot be empty');
       }
-      var chartTypes = model.ChartType.values.map((e) => e.name).toList();
+      var chartTypes = model.ChartType.values;
       if (!chartTypes.contains(chart.type)) {
         throw StateError('Chart type is not valid');
       }
