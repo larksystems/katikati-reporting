@@ -2,6 +2,7 @@ library controller;
 
 import 'dart:convert' as convert;
 import 'dart:html' as html;
+import 'package:chartjs/chartjs.dart';
 import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
@@ -635,15 +636,22 @@ void _computeChartDataAndRender() {
       var mapFilterValues = <String, List<num>>{};
       var mapComparisonFilterValues = <String, List<num>>{};
 
-      // todo: fix the normalisation (1)
       for (var i = 0; i < computedChart.labels.length; ++i) {
         mapFilterValues[computedChart.labels[i]] = [
-          computedChart.buckets[i][0],
-          1
+          _analyseOptions.normaliseDataEnabled
+              ? ((computedChart.buckets[i][0] * 100) /
+                      computedChart.normaliseValues[i][0])
+                  .roundToDecimal(2)
+              : computedChart.buckets[i][0],
+          computedChart.buckets[i][0] / computedChart.normaliseValues[i][0]
         ];
         mapComparisonFilterValues[computedChart.labels[i]] = [
-          computedChart.buckets[i][1],
-          1
+          _analyseOptions.normaliseDataEnabled
+              ? ((computedChart.buckets[i][1] * 100) /
+                      computedChart.normaliseValues[i][1])
+                  .roundToDecimal(2)
+              : computedChart.buckets[i][1],
+          computedChart.buckets[i][1] / computedChart.normaliseValues[i][1]
         ];
       }
 
