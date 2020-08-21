@@ -133,6 +133,7 @@ void onLoginCompleted() async {
 }
 
 void _handleInteractionsChanges() {
+  if (_config.data_paths['interactions'] == null) return;
   var interactionsPath = _config.data_paths['interactions']['data'];
   if (interactionsPath != null) {
     fb.listenToInteractions(interactionsPath, (QuerySnapshot querySnapshot) {
@@ -150,6 +151,7 @@ void _handleInteractionsChanges() {
 }
 
 void _handleSurveyStatusChanges() {
+  if (_config.data_paths['survey_status'] == null) return;
   var surveyStatusPath = _config.data_paths['survey_status']['data'];
   if (surveyStatusPath != null) {
     fb.listenToSurveyStatus(surveyStatusPath, (QuerySnapshot querySnapshot) {
@@ -192,10 +194,10 @@ void _handleMessageStatusChanges() {
 
 void _handleDataChanges() {
   if (_configRaw == null) return;
-  if (_config.data_paths['interactions']['data'] != null &&
-      _allInteractions == null) return;
-  if (_config.data_paths['survey_status']['data'] != null &&
-      _surveyStatus == null) {
+  if (_config.data_paths['interactions'] != null && _allInteractions == null) {
+    return;
+  }
+  if (_config.data_paths['survey_status'] != null && _surveyStatus == null) {
     return;
   }
   if (_config.data_paths['message_status'] != null &&
