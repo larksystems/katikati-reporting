@@ -1,25 +1,32 @@
 export 'package:dashboard/model.g.dart';
-
 import 'package:dashboard/model.g.dart';
 
 class Config {
   String docId;
-  Map<String, Map<String, String>> data_paths;
+  Map<String, String> data_collections;
+  Map<String, String> data_documents;
   List<Tab> tabs;
 
   static Config fromData(data, [Config modelObj]) {
     if (data == null) return null;
 
-    var data_paths = <String, Map<String, String>>{};
-    data['data_paths'].forEach((key, mapValue) {
-      data_paths[key] = {};
+    var data_collections = <String, String>{};
+    data['data_collections'].forEach((key, mapValue) {
       mapValue.forEach((k, v) {
-        data_paths[key][k] = v.toString();
+        data_collections[key] = v.toString();
+      });
+    });
+
+    var data_documents = <String, String>{};
+    data['data_documents'].forEach((key, mapValue) {
+      mapValue.forEach((k, v) {
+        data_documents[key] = v.toString();
       });
     });
 
     return (modelObj ?? Config())
-      ..data_paths = data_paths
+      ..data_collections = data_collections
+      ..data_documents = data_documents
       ..tabs = List_fromData<Tab>(data['tabs'], Tab.fromData);
   }
 }

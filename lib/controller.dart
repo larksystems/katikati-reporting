@@ -2,7 +2,6 @@ library controller;
 
 import 'dart:convert' as convert;
 import 'dart:html' as html;
-import 'package:chartjs/chartjs.dart';
 import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
@@ -35,9 +34,12 @@ List<model.FilterValue> _filters = [];
 Map<String, Map<String, dynamic>> _mapsGeoJSON = {};
 
 // Data
-Map<String, Map<String, dynamic>> _allInteractions;
-Map<String, Map<String, Map<String, dynamic>>> _messageStats;
-Map<String, Map<String, dynamic>> _surveyStatus;
+Map<String, Map<String, Map<String, dynamic>>> _dataCollections;
+Map<String, Map<String, Map<String, dynamic>>> _dataDocuments;
+
+// Map<String, Map<String, dynamic>> _allInteractions;
+// Map<String, Map<String, Map<String, dynamic>>> _messageStats;
+// Map<String, Map<String, dynamic>> _surveyStatus;
 
 Map<model.DataPath, Map<String, Set>> _uniqueFieldValues;
 
@@ -118,7 +120,7 @@ void onLoginCompleted() async {
   view.showLoading();
 
   await loadFirebaseData();
-  if (_config.data_paths == null || _config.tabs == null) {
+  if (_config.data_collections == null || _config.tabs == null) {
     view.hideLoading();
     return;
   }
@@ -150,8 +152,17 @@ void loadFirebaseData() async {
     rethrow;
   }
 
-  if (_config.data_paths == null) {
+  if (_config.data_collections == null) {
     return;
+  }
+
+  for (var key in _config.data_collections.keys) {
+    _dataCollections[key] = {};
+    var path = _config.data_collections[key];
+    try {
+      _dataCollections[key] = await fb.fetc
+    } catch (e) {
+    }
   }
 
   if (_config.data_paths['interactions'] != null) {
@@ -508,7 +519,7 @@ void _computeChartDataAndRender() {
               'computed time series chart doesnt support ${chart.data_path}');
       }
     }
-    // bar chart todo: combine with map chart
+    // bar chart
     else if (computedChart is model.ComputedBarChart) {
       switch (chart.data_path) {
         case model.DataPath.interactions:
