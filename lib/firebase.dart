@@ -3,6 +3,8 @@ import 'package:firebase/firestore.dart' as firestore;
 import 'package:dashboard/firebase_constants.dart' as fb_constants;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/logger.dart';
+import 'dart:html' as html;
+import 'dart:convert' as convert;
 
 Logger logger = Logger('firebase.dart');
 
@@ -73,6 +75,58 @@ void _fbAuthChanged(
   view.hideLoginModal();
 
   loginCallback();
+}
+
+Future<Map<String, Map<String, dynamic>>> fetchCollection(String path) async {
+  if (path == null || path == '') {
+    throw ArgumentError(
+        'Path for fetching collections cannot be empty or null');
+  }
+
+  var ref = firebase.firestore().collection(path);
+
+  var snapshot = await ref.get();
+  logger.debug('Fetched ${snapshot.size} for path ${path}');
+
+  var dataMap = <String, Map<String, dynamic>>{};
+  snapshot.forEach((doc) {
+    dataMap[doc.id] = doc.data();
+  });
+
+  return dataMap;
+}
+
+Future<Map<String, dynamic>> fetchDocument(String path) async {
+  if (path == null || path == '') {
+    throw ArgumentError(
+        'Path for fetching collections cannot be empty or null');
+  }
+
+  if (path == 'datasets/covid19-som/metadata/chart-config-v2') {
+    var configStr = await html.HttpRequest.getString('/assets/config.json');
+    return convert.jsonDecode(configStr);
+  }
+
+  logger.debug('Fetching config from firebase ..');
+  var ref = firebase.firestore().doc(path);
+  var snapshot = await ref.get();
+  return snapshot.data();
+}
+
+void listenToCollection(
+    String path,
+    void Function(firestore.QuerySnapshot) onData,
+    Function(Object error) onError) {
+  var ref = firebase.firestore().collection(path);
+  ref.onSnapshot.listen(onData, onError: onError);
+}
+
+void listenToDocument(
+    String path,
+    void Function(firestore.DocumentSnapshot) onData,
+    Function(Object error) onError) async {
+  var chartsConfigRef = firebase.firestore().doc(path);
+  chartsConfigRef.onSnapshot.listen(onData, onError: onError);
 }
 
 // Listen to data changes

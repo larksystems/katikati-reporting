@@ -5,7 +5,9 @@ import 'dart:html' as html;
 import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
+import 'package:dashboard/firebase_constants.dart' as fb_constants;
 import 'package:dashboard/chart_helpers.dart' as chart_helper;
+import 'package:firebase/firebase.dart' as firebase;
 import 'package:firebase/firestore.dart';
 import 'package:dashboard/extensions.dart';
 import 'package:dashboard/logger.dart';
@@ -27,25 +29,26 @@ const UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG =
     'Unable to fetch message status';
 const UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG = 'Unable to fetch survey status';
 
-var _currentNavLink = _navLinks['analyse'].pathname;
+// var _currentNavLink = _navLinks['analyse'].pathname;
 
 // UI States
+var _activeNav = _navLinks['analyse'].pathname;
 var _analyseOptions = model.AnalyseOptions(0, true, false, true);
 List<model.FilterValue> _filters = [];
 
-Map<String, Map<String, dynamic>> _mapsGeoJSON = {};
-
 // Data
+Map<String, dynamic> _configRaw;
+model.Config _config;
+Map<String, Map<String, Map<String, dynamic>>> _dataCollections = {};
+Map<String, Map<String, dynamic>> _mapsGeoJSON = {};
+List<model.ComputedChart> _computedCharts;
+
+// Old data
 Map<String, Map<String, dynamic>> _allInteractions;
 Map<String, Map<String, Map<String, dynamic>>> _messageStats;
 Map<String, Map<String, dynamic>> _surveyStatus;
 
 Map<model.DataPath, Map<String, Set>> _uniqueFieldValues;
-
-Map<String, dynamic> _configRaw;
-model.Config _config;
-
-List<model.ComputedChart> _computedCharts;
 
 // Actions
 enum UIAction {
@@ -108,7 +111,7 @@ void init() async {
   view.init();
   view.showLoginModal();
   _navLinks.forEach((_, n) {
-    view.appendNavLink(n.pathname, n.label, _currentNavLink == n.pathname);
+    view.appendNavLink(n.pathname, n.label, _activeNav == n.pathname);
   });
 
   await fb.init('assets/constants.json', onLoginCompleted, onLogoutCompleted);
@@ -118,18 +121,60 @@ void init() async {
 void onLoginCompleted() async {
   view.showLoading();
 
-  fb.listenToConfig((DocumentSnapshot documentSnapshot) async {
-    _configRaw = documentSnapshot.data();
-    _config = model.Config.fromData(_configRaw);
+  _configRaw = await fb.fetchDocument(fb_constants.metadataPath);
+  _config = model.Config.fromData(_configRaw);
 
-    await loadGeoMapsData();
-    _handleInteractionsChanges();
-    _handleSurveyStatusChanges();
-    _handleMessageStatusChanges();
-  }, (error) {
-    view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
-    logger.error(error.toString());
-  });
+  await loadGeoMapsData();
+
+  // fetch and listen to all data collections
+  for (var key in _config.data_collections.keys) {
+    var dataPath = _config.data_collections[key];
+    fb.listenToCollection(dataPath, (QuerySnapshot querySnapshot) {
+      var dataMap = _dataCollections[key] ?? {};
+      querySnapshot.docChanges().forEach((docChange) {
+        if (docChange.type == 'added' || docChange.type == 'modified') {
+          dataMap[docChange.doc.id] = docChange.doc.data();
+        }
+        if (docChange.type == 'removed') {
+          dataMap.remove(docChange.doc.id);
+        }
+      });
+      _dataCollections[key] = dataMap;
+      _reactToDataChanges();
+    }, (error) {
+      view.showAlert('Unable to fetch ${dataPath}');
+    });
+  }
+
+  _mapHashToActiveTab();
+}
+
+void _reactToDataChanges() {
+  // check if all the data is filled
+  for (var key in _config.data_collections.keys) {
+    if (_dataCollections[key] == null) {
+      return;
+    }
+  }
+
+  view.hideLoading();
+
+  print('All data collections are fetched, reacting to new changes..');
+  for (var value in _dataCollections.values) {
+    print(value);
+  }
+}
+
+void _mapHashToActiveTab() {
+  _activeNav = html.window.location.hash;
+  var allPaths = _navLinks.values.map((nav) => nav.pathname);
+  print(allPaths);
+  if (!allPaths.contains(_activeNav)) {
+    // todo: render 404
+    _activeNav = _navLinks['analyse'].pathname;
+  }
+
+  command(UIAction.changeNavTab, NavChangeData(_activeNav));
 }
 
 void _handleInteractionsChanges() {
@@ -206,10 +251,10 @@ void _handleDataChanges() {
   _uniqueFieldValues = computeUniqueFieldValues(
       _config.tabs.map((t) => t.filters ?? []).expand((e) => e).toList());
 
-  view.setNavlinkSelected(_currentNavLink);
-  if (_navLinks[_currentNavLink].pathname == 'settings') {
+  view.setNavlinkSelected(_activeNav);
+  if (_navLinks[_activeNav].pathname == 'settings') {
     handleNavToSettings();
-  } else if (_navLinks[_currentNavLink].pathname == 'analyse') {
+  } else if (_navLinks[_activeNav].pathname == 'analyse') {
     handleNavToAnalysis(maintainFilters: true);
   }
 
@@ -380,6 +425,8 @@ bool _interactionMatchesOperation(
 
 // Render methods
 void handleNavToAnalysis({bool maintainFilters}) {
+  print('navigated to analysis tab');
+  return;
   view.clearContentTab();
 
   if (maintainFilters != true) {
@@ -792,9 +839,11 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.changeNavTab:
       var d = data as NavChangeData;
-      _currentNavLink = d.pathname;
-      view.setNavlinkSelected(_currentNavLink);
-      _navLinks[_currentNavLink].render();
+      _activeNav = d.pathname;
+      // _currentNavLink = d.pathname;
+      view.setNavlinkSelected(_activeNav);
+      _navLinks[_activeNav].render();
+      html.window.location.hash = d.pathname;
       break;
     case UIAction.changeAnalysisTab:
       var d = data as AnalysisTabChangeData;
