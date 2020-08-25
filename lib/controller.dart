@@ -432,6 +432,7 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
           if (!dates.first.toString().contains(splitCharacter)) {
             splitCharacter = ' ';
           }
+          // the default chosen value is the whole date range to start with
           defaultValue = dates.first.toString().split(splitCharacter).first +
               '_' +
               dates.last.toString().split(splitCharacter).first;
