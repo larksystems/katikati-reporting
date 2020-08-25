@@ -429,7 +429,7 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
           var dates = _messageStats.values.first.keys.toList()..sort();
           filterOptions = [dates.first, dates.last];
           var splitCharacter = 'T';
-          if (!dates.first.toString().contains('T')) {
+          if (!dates.first.toString().contains(splitCharacter)) {
             splitCharacter = ' ';
           }
           defaultValue = dates.first.toString().split(splitCharacter).first +
