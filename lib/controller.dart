@@ -2,18 +2,19 @@ library controller;
 
 import 'dart:convert' as convert;
 import 'dart:html' as html;
-import 'package:chartjs/chartjs.dart';
 import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
 import 'package:dashboard/chart_helpers.dart' as chart_helper;
+import 'package:firebase/firestore.dart';
 import 'package:dashboard/extensions.dart';
 import 'package:dashboard/logger.dart';
 
 Logger logger = Logger('controller.dart');
 
 Map<String, model.Link> _navLinks = {
-  'analyse': model.Link('analyse', 'Analyse', handleNavToAnalysis),
+  'analyse': model.Link(
+      'analyse', 'Analyse', () => handleNavToAnalysis(maintainFilters: false)),
   'settings': model.Link('settings', 'Settings', handleNavToSettings)
 };
 
@@ -117,20 +118,102 @@ void init() async {
 void onLoginCompleted() async {
   view.showLoading();
 
-  await loadFirebaseData();
-  if (_config.data_paths == null || _config.tabs == null) {
-    view.hideLoading();
+  fb.listenToConfig((DocumentSnapshot documentSnapshot) async {
+    _configRaw = documentSnapshot.data();
+    _config = model.Config.fromData(_configRaw);
+
+    await loadGeoMapsData();
+    _handleInteractionsChanges();
+    _handleSurveyStatusChanges();
+    _handleMessageStatusChanges();
+  }, (error) {
+    view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
+    logger.error(error.toString());
+  });
+}
+
+void _handleInteractionsChanges() {
+  if (_config.data_paths['interactions'] == null) return;
+  var interactionsPath = _config.data_paths['interactions']['data'];
+  if (interactionsPath != null) {
+    fb.listenToInteractions(interactionsPath, (QuerySnapshot querySnapshot) {
+      var interactionsMap = Map<String, Map<String, dynamic>>();
+      querySnapshot.forEach((doc) {
+        interactionsMap[doc.id] = doc.data();
+      });
+      _allInteractions = interactionsMap;
+      _handleDataChanges();
+    }, (error) {
+      view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
+      logger.error(error.toString());
+    });
+  }
+}
+
+void _handleSurveyStatusChanges() {
+  if (_config.data_paths['survey_status'] == null) return;
+  var surveyStatusPath = _config.data_paths['survey_status']['data'];
+  if (surveyStatusPath != null) {
+    fb.listenToSurveyStatus(surveyStatusPath, (QuerySnapshot querySnapshot) {
+      var statusMap = Map<String, Map<String, dynamic>>();
+      querySnapshot.forEach((doc) {
+        statusMap[doc.id] = doc.data();
+      });
+      _surveyStatus = statusMap;
+      _handleDataChanges();
+    }, (error) {
+      view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
+      logger.error(error.toString());
+    });
+  }
+}
+
+void _handleMessageStatusChanges() {
+  var messageStatusPathMap = _config.data_paths['message_stats'];
+  _messageStats = {};
+  if (messageStatusPathMap != null) {
+    for (var pathKey in messageStatusPathMap.keys) {
+      fb.listenToMessageStats(messageStatusPathMap[pathKey],
+          (QuerySnapshot querySnapshot) {
+        var messageStatsMap = Map<String, Map<String, dynamic>>();
+        querySnapshot.forEach((doc) {
+          messageStatsMap[doc.id] = doc.data();
+        });
+        _messageStats[pathKey] = messageStatsMap;
+        var scrollTop = html.document.documentElement.scrollTop;
+        print(scrollTop);
+        _handleDataChanges();
+        html.document.documentElement.scrollTo(0, scrollTop);
+      }, (error) {
+        view.showAlert(UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG);
+        logger.error(error);
+      });
+    }
+  }
+}
+
+void _handleDataChanges() {
+  if (_configRaw == null) return;
+  if (_config.data_paths['interactions'] != null && _allInteractions == null) {
+    return;
+  }
+  if (_config.data_paths['survey_status'] != null && _surveyStatus == null) {
+    return;
+  }
+  if (_config.data_paths['message_status'] != null &&
+      _messageStats.values.isEmpty) {
     return;
   }
 
-  await loadGeoMapsData();
-
   _uniqueFieldValues = computeUniqueFieldValues(
       _config.tabs.map((t) => t.filters ?? []).expand((e) => e).toList());
-  _analyseOptions.selectedTabIndex = 0;
 
   view.setNavlinkSelected(_currentNavLink);
-  _navLinks[_currentNavLink].render();
+  if (_navLinks[_currentNavLink].pathname == 'settings') {
+    handleNavToSettings();
+  } else if (_navLinks[_currentNavLink].pathname == 'analyse') {
+    handleNavToAnalysis(maintainFilters: true);
+  }
 
   view.hideLoading();
 }
@@ -298,10 +381,13 @@ bool _interactionMatchesOperation(
 }
 
 // Render methods
-void handleNavToAnalysis() {
+void handleNavToAnalysis({bool maintainFilters}) {
   view.clearContentTab();
-  _analyseOptions.selectedTabIndex = 0;
-  _filters = [];
+
+  if (maintainFilters != true) {
+    _analyseOptions = model.AnalyseOptions(0, true, false, true);
+    _filters = [];
+  }
 
   var uri = Uri.parse(html.window.location.href);
   var queryParams = uri.queryParameters;
@@ -342,9 +428,13 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
           // todo: check across all _messageStats, not just the first
           var dates = _messageStats.values.first.keys.toList()..sort();
           filterOptions = [dates.first, dates.last];
-          defaultValue = dates.first.toString().split('T').first +
+          var splitCharacter = 'T';
+          if (!dates.first.toString().contains(splitCharacter)) {
+            splitCharacter = ' ';
+          }
+          defaultValue = dates.first.toString().split(splitCharacter).first +
               '_' +
-              dates.last.toString().split('T').first;
+              dates.last.toString().split(splitCharacter).first;
           break;
         default:
       }

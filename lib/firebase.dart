@@ -1,4 +1,5 @@
 import 'package:firebase/firebase.dart' as firebase;
+import 'package:firebase/firestore.dart' as firestore;
 import 'package:dashboard/firebase_constants.dart' as fb_constants;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/logger.dart';
@@ -72,6 +73,41 @@ void _fbAuthChanged(
   view.hideLoginModal();
 
   loginCallback();
+}
+
+// Listen to data changes
+void listenToConfig(void Function(firestore.DocumentSnapshot) onData,
+    Function(Object error) onError) {
+  var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
+  chartsConfigRef.onSnapshot.listen(onData, onError: onError);
+}
+
+void listenToInteractions(
+    String path,
+    void Function(firestore.QuerySnapshot) onData,
+    Function(Object error) onError) {
+  var interactionsRef = firebase.firestore().collection(path);
+  interactionsRef.onSnapshot.listen(onData, onError: onError);
+}
+
+void listenToMessageStats(
+    String path,
+    void Function(firestore.QuerySnapshot) onData,
+    Function(Object error) onError) {
+  var ref = firebase.firestore().collection(path);
+  ref.onSnapshot.listen(onData, onError: onError);
+}
+
+void listenToSurveyStatus(
+    String path,
+    void Function(firestore.QuerySnapshot) onData,
+    Function(Object error) onError) {
+  if (path == null || path == '') {
+    throw ArgumentError(
+        'Path for fetching survey status cannot be empty or null');
+  }
+  var surveyStatusRef = firebase.firestore().collection(path);
+  surveyStatusRef.onSnapshot.listen(onData, onError: onError);
 }
 
 // Read data
