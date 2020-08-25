@@ -1,4 +1,6 @@
+import 'package:dashboard/model.dart' as model;
 import 'dart:html' as html;
+import 'dart:svg' as svg;
 import 'package:uuid/uuid.dart';
 import 'controller.dart';
 import 'package:chartjs/chartjs.dart' as chartjs;
@@ -25,7 +27,6 @@ const CARD_BODY_CLASSNAME = 'card-body';
 const CHART_WRAPPER_CLASSNAME = 'chart';
 const MAPBOX_COL_CLASSNAME = 'mapbox-col';
 const CONFIG_SETTINGS_ALERT_ID = 'config-settings-alert';
-const CONFIG_UNIQUE_VALUES_WRAPPER_CLASSNAME = 'unique-values-wrapper';
 
 const CONTENT_ID = 'content';
 
@@ -55,9 +56,8 @@ html.DivElement get configSettingsAlert =>
     html.querySelector('#${CONFIG_SETTINGS_ALERT_ID}');
 
 String _generateFilterRowID(String key) => 'filter-row-${key}';
-String _generateFilterDropdownID(String key) => 'filter-dropdown-${key}';
-String _generateComparisonFilterDropdownID(String key) =>
-    'comparison-filter-dropdown-${key}';
+String _generateFilterOptionID(String dataPath, String key) =>
+    'filter-dropdown-${dataPath}_${key}';
 String _generateFilterCheckboxID(String key) => 'filter-option-${key}';
 String _generateAnalyseTabID(String key) => 'analyse-tab-options-${key}';
 
@@ -178,7 +178,7 @@ html.DivElement generateGridOptionsColumnElement() {
     ..classes = ['col-lg-10', 'col-md-9', 'col-sm-12', 'col-xs-12'];
 }
 
-void renderAnalysisTabs(List<String> labels) {
+void renderAnalysisTabs(List<String> labels, String selected) {
   var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
   var labelCol =
       generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
@@ -193,7 +193,7 @@ void renderAnalysisTabs(List<String> labels) {
       ..name = 'analyse-tab-options'
       ..id = _generateAnalyseTabID(i.toString())
       ..classes = ['form-check-input']
-      ..checked = i == 0
+      ..checked = labels[i] == selected
       ..onChange.listen((e) {
         if (!(e.target as html.RadioButtonInputElement).checked) return;
         command(UIAction.changeAnalysisTab, AnalysisTabChangeData(i));
@@ -266,73 +266,26 @@ void hideFilterRow(String filterKey) {
   }
 }
 
-html.SelectElement _getFilterDropdown(String filterKey, {bool comparison}) {
-  var dropdownID = comparison == true
-      ? _generateComparisonFilterDropdownID(filterKey)
-      : _generateFilterDropdownID(filterKey);
-  return html.querySelector('#${dropdownID}') as html.SelectElement;
+void enableFilterOptions(String dataPath, String filterKey) {
+  var id = _generateFilterOptionID(dataPath, filterKey);
+  var options = html.querySelectorAll('#${id}');
+  options.forEach((e) {
+    if (e is html.InputElement) e.disabled = false;
+    if (e is html.SelectElement) e.disabled = false;
+  });
 }
 
-void enableFilterDropdown(String filterKey, {bool comparison}) {
-  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  if (dropdown.disabled != false) {
-    dropdown.disabled = false;
-  }
+void disableFilterOptions(String dataPath, String filterKey) {
+  var id = _generateFilterOptionID(dataPath, filterKey);
+  var options = html.querySelectorAll('#${id}');
+  options.forEach((e) {
+    if (e is html.InputElement) e.disabled = true;
+    if (e is html.SelectElement) e.disabled = true;
+  });
 }
 
-void disableFilterDropdown(String filterKey, {bool comparison}) {
-  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  if (dropdown.disabled != true) {
-    dropdown.disabled = true;
-  }
-}
-
-void hideFilterDropdown(String filterKey, {bool comparison}) {
-  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  if (dropdown.hidden != true) {
-    dropdown.hidden = true;
-  }
-}
-
-void showFilterDropdown(String filterKey, {bool comparison}) {
-  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  if (dropdown.hidden != false) {
-    dropdown.hidden = false;
-  }
-}
-
-void setFilterDropdownValue(String filterKey, String value, {bool comparison}) {
-  var dropdown = _getFilterDropdown(filterKey, comparison: comparison);
-  dropdown.value = value;
-}
-
-html.CheckboxInputElement _getFilterOptionCheckbox(String filterKey) {
-  var filterCheckboxID = _generateFilterCheckboxID(filterKey);
-  return html.querySelector('#${filterCheckboxID}')
-      as html.CheckboxInputElement;
-}
-
-void enableFilterOption(String filterKey) {
-  var filterCheckbox = _getFilterOptionCheckbox(filterKey);
-  if (filterCheckbox.checked != true) {
-    filterCheckbox.checked = true;
-  }
-}
-
-void disableFilterOption(String filterKey) {
-  var filterCheckbox = _getFilterOptionCheckbox(filterKey);
-  if (filterCheckbox.checked != false) {
-    filterCheckbox.checked = false;
-  }
-}
-
-void renderFilterDropdowns(
-    List<String> filterKeys,
-    Map<String, List<String>> filterOptions,
-    Set<String> activeKeys,
-    Map<String, String> initialFilterValues,
-    Map<String, String> initialFilterComparisonValues,
-    bool shouldRenderComparisonFilters) {
+void renderNewFilterDropdowns(
+    List<model.FilterValue> filters, bool comparisonEnabled) {
   var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME])
     ..id = FILTERS_WRAPPER_ID;
   var labelCol =
@@ -340,45 +293,82 @@ void renderFilterDropdowns(
         ..innerText = 'Filters';
   var optionsCol = generateGridOptionsColumnElement();
 
-  for (var key in filterKeys) {
-    var filterRow = generateGridRowElement(id: _generateFilterRowID(key));
-    var checkboxCol = html.DivElement()..classes = ['col-3'];
+  for (var filter in filters) {
+    var filterRow = generateGridRowElement(
+        id: _generateFilterRowID(filter.dataPath.name + filter.key));
+    var checkboxCol = html.DivElement()..classes = ['col-4'];
     var filterCol = html.DivElement()..classes = ['col-3'];
-
-    var checkboxWithLabel = _getCheckboxWithLabel(
-        _generateFilterCheckboxID(key), key, activeKeys.contains(key),
-        (bool checked) {
-      command(
-          UIAction.toggleActiveFilter, ToggleActiveFilterData(key, checked));
-    });
-    checkboxCol.append(checkboxWithLabel);
-
-    var filterDropdown = _getDropdown(
-        _generateFilterDropdownID(key),
-        filterOptions[key].toList(),
-        initialFilterValues[key],
-        !activeKeys.contains(key), (String value) {
-      command(UIAction.setFilterValue, SetFilterValueData(key, value));
-    });
-    filterCol.append(filterDropdown);
-
-    filterRow.append(checkboxCol);
-    filterRow.append(filterCol);
-    optionsCol.append(filterRow);
-
-    if (!shouldRenderComparisonFilters) continue;
     var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
 
-    var comparisonFilterDropdown = _getDropdown(
-        _generateComparisonFilterDropdownID(key),
-        filterOptions[key].toList(),
-        initialFilterComparisonValues[key],
-        !activeKeys.contains(key), (String value) {
-      command(
-          UIAction.setComparisonFilterValue, SetFilterValueData(key, value));
+    var checkboxWithLabel = _getCheckboxWithLabel(
+        _generateFilterCheckboxID(filter.dataPath.name + filter.key),
+        filter.dataPath.name + ' / ' + filter.key,
+        filter.isActive, (bool checked) {
+      command(UIAction.toggleActiveFilter,
+          ToggleActiveFilterData(filter.dataPath.name, filter.key, checked));
     });
-    comparisonFilterCol.append(comparisonFilterDropdown);
+
+    switch (filter.type) {
+      case model.DataType.datetime:
+        var startDateChooser = html.InputElement()
+          ..disabled = !filter.isActive
+          ..id = _generateFilterOptionID(filter.dataPath.name, filter.key)
+          ..type = 'date'
+          ..min = filter.options.first.split('T').first
+          ..max = filter.options.last.split('T').first
+          ..value = filter.value.split('_').first
+          ..onChange.listen((event) {
+            var newValue =
+                '${(event.target as html.InputElement).value}_${filter.value.split('_').last}';
+            command(UIAction.setFilterValue,
+                SetFilterValueData(filter.dataPath.name, filter.key, newValue));
+          });
+        var endDateChooser = html.InputElement()
+          ..disabled = !filter.isActive
+          ..id = _generateFilterOptionID(filter.dataPath.name, filter.key)
+          ..type = 'date'
+          ..min = filter.options.first.split('T').first
+          ..max = filter.options.last.split('T').first
+          ..value = filter.value.split('_').last
+          ..onChange.listen((event) {
+            var newValue =
+                '${filter.value.split('_').first}_${(event.target as html.InputElement).value}';
+            command(UIAction.setFilterValue,
+                SetFilterValueData(filter.dataPath.name, filter.key, newValue));
+          });
+        filterCol.append(startDateChooser);
+        filterCol.append(endDateChooser);
+        break;
+      case model.DataType.string:
+        var filterDropdown = _getDropdown(
+            _generateFilterOptionID(filter.dataPath.name, filter.key),
+            filter.options,
+            filter.value,
+            !filter.isActive, (String value) {
+          command(UIAction.setFilterValue,
+              SetFilterValueData(filter.dataPath.name, filter.key, value));
+        });
+        filterCol.append(filterDropdown);
+        if (!comparisonEnabled) break;
+
+        var comparisonFilterDropdown = _getDropdown(
+            _generateFilterOptionID(filter.dataPath.name, filter.key),
+            filter.options,
+            filter.comparisonValue,
+            !filter.isActive, (String value) {
+          command(UIAction.setComparisonFilterValue,
+              SetFilterValueData(filter.dataPath.name, filter.key, value));
+        });
+        comparisonFilterCol.append(comparisonFilterDropdown);
+        break;
+      default:
+    }
+
+    checkboxCol.append(checkboxWithLabel);
+    filterRow.append(checkboxCol);
+    filterRow.append(filterCol);
     filterRow.append(comparisonFilterCol);
+    optionsCol.append(filterRow);
   }
 
   wrapper.append(labelCol);
@@ -390,6 +380,185 @@ void renderChart(
     String title, String narrative, chartjs.ChartConfiguration chartConfig) {
   var chart = _generateChart(title, narrative, chartConfig);
   content.append(chart);
+}
+
+void renderFunnelChart(String title, String narrative, List<String> colors,
+    List<String> stages, List<num> values, bool isPaired) {
+  var chart =
+      _generateFunnelChart(title, narrative, colors, stages, values, isPaired);
+  content.append(chart);
+}
+
+html.DivElement _generateFunnelChart(String title, String narrative,
+    List<String> colors, List<String> stages, List<num> values, bool isPaired) {
+  var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];
+
+  var titleElement = html.HeadingElement.h5()..text = title;
+  var narrativeElement = html.ParagraphElement()..text = narrative;
+  wrapper.append(titleElement);
+  wrapper.append(narrativeElement);
+
+  var card = html.DivElement()..classes = [CARD_CLASSNAME];
+  var cardBody = html.DivElement()..classes = [CARD_BODY_CLASSNAME];
+  card.append(cardBody);
+  wrapper.append(card);
+
+  var maxDataValue = values.first;
+  var chartHeight = 360;
+  var maxHeight = 300;
+  var width = 96;
+  var xOffset = 30;
+  var yOffset = 30;
+  var increment = isPaired ? 2 : 1;
+  var colorsIndex = 0;
+  var defaultOpacity = '0.8';
+  var hoverOpacity = '1.0';
+
+  var svgWrapper = svg.SvgSvgElement()
+    ..setAttribute('width', '100%')
+    ..setAttribute('height', chartHeight.toString());
+
+  for (var i = 0; i < values.length - 1; i = i + increment) {
+    var curr = values[i];
+    var next = values[i + 1];
+
+    var leftHeight = curr / maxDataValue * maxHeight;
+    var leftDiff = yOffset + (maxHeight - leftHeight) / 2;
+    var rightHeight = next / maxDataValue * maxHeight;
+    var rightDiff = (maxHeight - rightHeight) / 2 + yOffset;
+    var leftOffset = xOffset + (i / 2) * width;
+
+    var x1 = leftOffset;
+    var y1 = leftDiff;
+    var x2 = leftOffset;
+    var y2 = leftDiff + leftHeight;
+    var x3 = leftOffset + width;
+    var y3 = rightDiff + rightHeight;
+    var x4 = leftOffset + width;
+    var y4 = rightDiff;
+
+    var points = ['$x1,$y1', '$x2,$y2', '$x3,$y3', '$x4,$y4'];
+
+    var topLabel = svg.TextElement()
+      ..setAttribute('x', x1.toString())
+      ..setAttribute('y', (y1 - 4).toString())
+      ..setAttribute('font-size', '12px')
+      ..setAttribute('visibility', 'hidden')
+      ..innerHtml = '${stages[i]} (${values[i]})';
+    var bottomLabel = svg.TextElement()
+      ..setAttribute('x', x3.toString())
+      ..setAttribute('y', (y3 + 12).toString())
+      ..setAttribute('font-size', '12px')
+      ..setAttribute('visibility', 'hidden')
+      ..innerHtml = '${stages[i + 1]} (${values[i + 1]})';
+
+    var percent = ((next - curr) * 100 / curr).round();
+    var percentLabel = svg.TextElement()
+      ..setAttribute('x', ((x1 + x4) / 2).toString())
+      ..setAttribute('y', ((y3 + y4) / 2 + 6).toString())
+      ..setAttribute('font-size', '12px')
+      ..setAttribute('text-anchor', 'middle')
+      ..setAttribute('pointer-events', 'none')
+      ..innerHtml = '${percent}%';
+
+    var funnel = svg.PolygonElement()
+      ..setAttribute('points', points.join(' '))
+      ..setAttribute('fill', colors[colorsIndex++])
+      ..setAttribute('opacity', defaultOpacity)
+      ..onMouseEnter.listen((event) {
+        topLabel.setAttribute('visibility', 'visible');
+        bottomLabel.setAttribute('visibility', 'visible');
+        (event.target as svg.PolygonElement)
+            .setAttribute('opacity', hoverOpacity);
+      })
+      ..onMouseLeave.listen((event) {
+        topLabel.setAttribute('visibility', 'hidden');
+        bottomLabel.setAttribute('visibility', 'hidden');
+        (event.target as svg.PolygonElement)
+            .setAttribute('opacity', defaultOpacity);
+      });
+
+    svgWrapper.append(funnel);
+    svgWrapper.append(topLabel);
+    svgWrapper.append(bottomLabel);
+    svgWrapper.append(percentLabel);
+  }
+
+  if (isPaired) {
+    if (values.length.isOdd) {
+      var leftHeight = values.last / maxDataValue * maxHeight;
+      var leftDiff = (maxHeight - leftHeight) / 2 + yOffset;
+      var leftOffset = xOffset + ((values.length - 1) / 2) * width;
+      var points = [
+        '$leftOffset,$leftDiff',
+        '$leftOffset,${leftDiff + leftHeight}',
+        '${leftOffset + width / 2},${leftDiff + leftHeight}',
+        '${leftOffset + width / 2},$leftDiff'
+      ];
+      var label = svg.TextElement()
+        ..setAttribute('x', (leftOffset + width / 2).toString())
+        ..setAttribute('y', (leftDiff + leftHeight / 2 + 6).toString())
+        ..setAttribute('font-size', '12px')
+        ..setAttribute('visibility', 'hidden')
+        ..innerHtml = '${stages.last} (${values.last})';
+      var funnel = svg.PolygonElement()
+        ..setAttribute('points', points.join(' '))
+        ..setAttribute('fill', colors[colorsIndex++])
+        ..setAttribute('opacity', defaultOpacity)
+        ..onMouseEnter.listen((event) {
+          label.setAttribute('visibility', 'visible');
+          (event.target as svg.PolygonElement)
+              .setAttribute('opacity', hoverOpacity);
+        })
+        ..onMouseLeave.listen((event) {
+          label.setAttribute('visibility', 'hidden');
+          (event.target as svg.PolygonElement)
+              .setAttribute('opacity', defaultOpacity);
+        });
+      svgWrapper.append(funnel);
+      svgWrapper.append(label);
+    }
+  }
+
+  colorsIndex = 0;
+  var legendWrapper = html.DivElement();
+  for (var i = 0; i < values.length - 1; i = i + increment) {
+    var labelWrapper = html.SpanElement()..style.paddingRight = '24px';
+
+    var label = html.SpanElement()
+      ..innerText = isPaired ? '${stages[i]} → ${stages[i + 1]}' : stages[i];
+    var icon = html.SpanElement()
+      ..style.backgroundColor = colors[colorsIndex++]
+      ..style.marginRight = '4px'
+      ..style.height = '12px'
+      ..style.width = '12px'
+      ..style.display = 'inline-block';
+    labelWrapper.append(icon);
+    labelWrapper.append(label);
+
+    legendWrapper.append(labelWrapper);
+  }
+
+  if (isPaired) {
+    if (values.length.isOdd) {
+      var labelWrapper = html.SpanElement()..style.paddingRight = '24px';
+      var label = html.SpanElement()..innerText = stages.last;
+      var icon = html.SpanElement()
+        ..style.backgroundColor = colors[colorsIndex++]
+        ..style.marginRight = '4px'
+        ..style.height = '12px'
+        ..style.width = '12px'
+        ..style.display = 'inline-block';
+      labelWrapper.append(icon);
+      labelWrapper.append(label);
+
+      legendWrapper.append(labelWrapper);
+    }
+  }
+
+  cardBody.append(svgWrapper);
+  cardBody.append(legendWrapper);
+  return wrapper;
 }
 
 void renderGeoMap(
@@ -594,65 +763,6 @@ void renderSettingsConfigEditor(String config) {
       command(UIAction.saveConfigToFirebase, SaveConfigToFirebaseData(data));
     });
   wrapper.append(saveButton);
-}
-
-void renderSettingsConfigUtility(Map<String, Set> uniqueValues) {
-  var wrapper = html.DivElement()
-    ..classes = [CONFIG_UNIQUE_VALUES_WRAPPER_CLASSNAME];
-  content.append(wrapper);
-
-  var skeletonHeader = html.HeadingElement.h5()
-    ..text = 'Step 1: Skeleton of config';
-  var skeletonCopyButton = html.ButtonElement()
-    ..classes = ['btn', 'btn-outline-secondary']
-    ..innerText = 'Copy config skeleton'
-    ..onClick
-        .listen((_) => command(UIAction.copyToClipboardConfigSkeleton, null));
-  var skeletonInstructions = html.OListElement()..type = 'a';
-  [
-    'Fill <code>interactions</code> under data_paths',
-    'Optionally fill <code>label</code> for each of the filters',
-    'Fill <code>label</code> for each of the tabs',
-    'Fill <code>exclude_filters: ["filter_key"]</code> for each of the tabs'
-  ].forEach(
-      (i) => skeletonInstructions.append(html.LIElement()..innerHtml = i));
-  wrapper.append(skeletonHeader);
-  wrapper.append(skeletonCopyButton);
-  wrapper.append(skeletonInstructions);
-
-  var chartConfigTitle = html.HeadingElement.h5()
-    ..innerText = 'Step 2: Chart config / tabs > charts: []';
-  var chartConfigInstructions = html.OListElement()..type = 'a';
-  [
-    'Optionally fill <code>label</code> for each of the field keys',
-    'Optionally delete the unwanted fields from the chart config (esp. for themes)',
-    'Optionally edit the chart type (defaults to bar)'
-  ].forEach(
-      (i) => chartConfigInstructions.append(html.LIElement()..innerHtml = i));
-  var chartConfigTable = html.TableElement()
-    ..classes = ['table', 'table-bordered'];
-  uniqueValues.forEach((key, value) {
-    var tableRow = html.TableRowElement();
-    var fieldCol = html.TableCellElement()..innerText = key;
-    var valuesCol = html.TableCellElement()
-      ..innerText = (value.toList()..sort()).join(', ');
-    var copyCol = html.TableCellElement();
-    var copyButton = html.ButtonElement()
-      ..classes = ['btn', 'btn-outline-secondary']
-      ..innerText = 'Copy chart config'
-      ..onClick.listen((_) => command(UIAction.copyToClipboardChartConfig,
-          CopyToClipboardChartConfigData(key)));
-    copyCol.append(copyButton);
-
-    tableRow.append(fieldCol);
-    tableRow.append(valuesCol);
-    tableRow.append(copyCol);
-    chartConfigTable.append(tableRow);
-  });
-
-  wrapper.append(chartConfigTitle);
-  wrapper.append(chartConfigInstructions);
-  wrapper.append(chartConfigTable);
 }
 
 void showConfigSettingsAlert(String message, bool isError) {

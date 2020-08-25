@@ -44,4 +44,26 @@ void main() async {
   });
 
   print('''---------- Build report ----------\n${buildStatus}\n\n''');
+
+  var linksList = projConfig.keys.map((key) {
+    return '<li><a href="/${key}/web">${key}</a></li>';
+  }).join('');
+  var landingTemplate = '''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>KatiKati-Reporting</title>
+    </head>
+    <body>
+      <ul>
+        ${linksList}
+      </ul>
+    </body>
+    </html>
+  ''';
+
+  await File('build/index.html').writeAsString(landingTemplate);
+  print('DONE');
 }

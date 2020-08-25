@@ -1,6 +1,26 @@
 {
   "covid19-som": {
-    "metadataPath": "datasets/covid19-som/metadata/chart-config",
+    "metadataPath": "datasets/covid19-som/metadata/chart-config-v2",
+    "allowedEmailDomains": ["lark.systems", "africasvoices.org"]
+  },
+  "KK-Project-2020-COVID19-KE": {
+    "metadataPath": "datasets/KK-Project-2020-COVID19-KE/metadata/chart-config",
+    "allowedEmailDomains": ["lark.systems", "africasvoices.org"]
+  },
+  "KK-Project-2020-COVID19-KE-URBAN": {
+    "metadataPath": "datasets/KK-Project-2020-COVID19-KE-URBAN/metadata/chart-config",
+    "allowedEmailDomains": ["lark.systems", "africasvoices.org"]
+  },
+  "KK-Project-2020-COVID19-SOM-CC": {
+    "metadataPath": "datasets/KK-Project-2020-COVID19-SOM-CC/metadata/chart-config",
+    "allowedEmailDomains": ["lark.systems", "africasvoices.org"]
+  },
+  "KK-Project-2020-COVID19-SOM-IMAQAL": {
+    "metadataPath": "datasets/KK-Project-2020-COVID19-SOM-IMAQAL/metadata/chart-config",
+    "allowedEmailDomains": ["lark.systems", "africasvoices.org"]
+  },
+  "KK-Project-2020-COVID19-SOM-UNICEF": {
+    "metadataPath": "datasets/KK-Project-2020-COVID19-SOM-UNICEF/metadata/chart-config",
     "allowedEmailDomains": ["lark.systems", "africasvoices.org"]
   }
 }

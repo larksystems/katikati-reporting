@@ -1,44 +1,44 @@
-Config:
-  data_paths: "map string"
-  filters: "array Filter"
-  tabs: "array Tab"
-
 Tab:
   label: "string"
-  exclude_filters: "array string" #optional
+  filters: "array Filter"
   charts: "array Chart"
 
 Chart:
+  data_path: DataPath
+  data_label: "string"
+  doc_name: "string"
+  fields: Field
+  narrative: "string"
+  title: "string"
   type: ChartType
-  timestamp: "Timestamp" #optional
-  title: "string" #optional
-  narrative: "string" #optional
-  fields: "array Field"
-  colors: "array string" #optional
-  geography: "Geography" #optional
+  colors: "array string"
+  geography: "Geography"
+  timestamp: Timestamp
+  is_paired: "bool"
+
+DataPath:
+  dartType: "enum"
+  defaultValue: "interactions"
+  dartValues:
+    - interactions
+    - message_stats
+    - survey_status
 
 Timestamp:
   aggregate: "TimeAggregate"
   key: "string"
 
 Field:
-  label: "string" #optional
-  tooltip: "string" #optional
-  bucket: "array num" #computed
-  # todo: make this Map<DateTime, num> when Infrastructure permits
-  time_bucket: "map num" #computed
-  field: FieldOperation
-
-FieldOperation:
+  aggregateMethod: "array string"
   key: "string"
-  operator: FieldOperator
-  value: "dynamic"
+  values: "array string"
+  labels: "array string"
+  tooltip: "array string"
 
 Filter:
   key: "string"
-  label: "string" #optional
-  tooltip: "string" #optional
-  exclude_values: "array dynamic" #optional
+  data_path: DataPath
+  type: DataType
 
 Geography:
   country: "string"
@@ -52,14 +52,6 @@ GeoRegionLevel:
     - state
     - country
 
-FieldOperator:
-  dartType: "enum"
-  defaultValue: "equals"
-  dartValues:
-    - equals
-    - contains
-    - not_contains
-
 ChartType:
   dartType: "enum"
   defaultValue: "bar"
@@ -68,6 +60,8 @@ ChartType:
     - line
     - map
     - time_series
+    - summary
+    - funnel
 
 TimeAggregate:
   dartType: "enum"
@@ -76,3 +70,10 @@ TimeAggregate:
     - day
     - hour
     - none
+
+DataType:
+  dartType: "enum"
+  defaultValue: "string"
+  dartValues:
+    - string
+    - datetime

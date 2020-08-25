@@ -1,4 +1,5 @@
 import 'package:firebase/firebase.dart' as firebase;
+import 'package:firebase/firestore.dart' as firestore;
 import 'package:dashboard/firebase_constants.dart' as fb_constants;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/logger.dart';
@@ -74,9 +75,45 @@ void _fbAuthChanged(
   loginCallback();
 }
 
+// Listen to data changes
+void listenToConfig(void Function(firestore.DocumentSnapshot) onData,
+    Function(Object error) onError) {
+  var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
+  chartsConfigRef.onSnapshot.listen(onData, onError: onError);
+}
+
+void listenToInteractions(
+    String path,
+    void Function(firestore.QuerySnapshot) onData,
+    Function(Object error) onError) {
+  var interactionsRef = firebase.firestore().collection(path);
+  interactionsRef.onSnapshot.listen(onData, onError: onError);
+}
+
+void listenToMessageStats(
+    String path,
+    void Function(firestore.QuerySnapshot) onData,
+    Function(Object error) onError) {
+  var ref = firebase.firestore().collection(path);
+  ref.onSnapshot.listen(onData, onError: onError);
+}
+
+void listenToSurveyStatus(
+    String path,
+    void Function(firestore.QuerySnapshot) onData,
+    Function(Object error) onError) {
+  if (path == null || path == '') {
+    throw ArgumentError(
+        'Path for fetching survey status cannot be empty or null');
+  }
+  var surveyStatusRef = firebase.firestore().collection(path);
+  surveyStatusRef.onSnapshot.listen(onData, onError: onError);
+}
+
 // Read data
 Future<Map<String, dynamic>> fetchConfig() async {
   logger.debug('Fetching config from firebase ..');
+
   var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
   var configSnapshot = await chartsConfigRef.get();
   return configSnapshot.data();
@@ -94,7 +131,6 @@ Future<Map<String, Map<String, dynamic>>> fetchInteractions(String path) async {
         'Path for fetching interactions cannot be empty or null');
   }
 
-  logger.debug('Fetching interactions from firebase ..');
   var _interactionsRef = firebase.firestore().collection(path);
 
   var interactionsSnapshot = await _interactionsRef.get();
@@ -106,4 +142,42 @@ Future<Map<String, Map<String, dynamic>>> fetchInteractions(String path) async {
   });
 
   return interactionsMap;
+}
+
+Future<Map<String, Map<String, dynamic>>> fetchMessageStats(String path) async {
+  if (path == null || path == '') {
+    throw ArgumentError(
+        'Path for fetching message stats cannot be empty or null');
+  }
+
+  var messageStatsRef = firebase.firestore().collection(path);
+
+  var messageStatsSnapshot = await messageStatsRef.get();
+  logger.debug('Fetched ${messageStatsSnapshot.size} message stats');
+
+  var messageStatsMap = Map<String, Map<String, dynamic>>();
+  messageStatsSnapshot.forEach((doc) {
+    messageStatsMap[doc.id] = doc.data();
+  });
+
+  return messageStatsMap;
+}
+
+Future<Map<String, Map<String, dynamic>>> fetchSurveyStats(String path) async {
+  if (path == null || path == '') {
+    throw ArgumentError(
+        'Path for fetching survey stats cannot be empty or null');
+  }
+
+  var surveyStatusRef = firebase.firestore().collection(path);
+
+  var surveyStatusSnapshot = await surveyStatusRef.get();
+  logger.debug('Fetched ${surveyStatusSnapshot.size} survey stats');
+
+  var surveyStatusMap = Map<String, Map<String, dynamic>>();
+  surveyStatusSnapshot.forEach((doc) {
+    surveyStatusMap[doc.id] = doc.data();
+  });
+
+  return surveyStatusMap;
 }
