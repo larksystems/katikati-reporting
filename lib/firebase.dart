@@ -1,7 +1,9 @@
+import 'dart:html' as html;
 import 'package:firebase/firebase.dart' as firebase;
 import 'package:firebase/firestore.dart' as firestore;
 import 'package:dashboard/firebase_constants.dart' as fb_constants;
 import 'package:dashboard/view.dart' as view;
+import 'dart:convert' as convert;
 import 'package:dashboard/logger.dart';
 
 Logger logger = Logger('firebase.dart');
@@ -82,6 +84,14 @@ void listenToConfig(void Function(firestore.DocumentSnapshot) onData,
   chartsConfigRef.onSnapshot.listen(onData, onError: onError);
 }
 
+void listenToCollections(
+    String path,
+    void Function(firestore.QuerySnapshot) onData,
+    Function(Object error) onError) {
+  var ref = firebase.firestore().collection(path);
+  ref.onSnapshot.listen(onData, onError: onError);
+}
+
 void listenToInteractions(
     String path,
     void Function(firestore.QuerySnapshot) onData,
@@ -113,6 +123,8 @@ void listenToSurveyStatus(
 // Read data
 Future<Map<String, dynamic>> fetchConfig() async {
   logger.debug('Fetching config from firebase ..');
+  var str = await html.HttpRequest.getString('assets/config.json');
+  return convert.jsonDecode(str);
 
   var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
   var configSnapshot = await chartsConfigRef.get();

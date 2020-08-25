@@ -6,6 +6,7 @@ import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
 import 'package:dashboard/chart_helpers.dart' as chart_helper;
+import 'package:dashboard/charts.dart' as chart_model;
 import 'package:firebase/firestore.dart';
 import 'package:dashboard/extensions.dart';
 import 'package:dashboard/logger.dart';
@@ -36,14 +37,16 @@ List<model.FilterValue> _filters = [];
 Map<String, Map<String, dynamic>> _mapsGeoJSON = {};
 
 // Data
-Map<String, Map<String, dynamic>> _allInteractions;
-Map<String, Map<String, Map<String, dynamic>>> _messageStats;
-Map<String, Map<String, dynamic>> _surveyStatus;
+Map<String, Map<String, Map<String, dynamic>>> _dataCollections = {};
+// Map<String, Map<String, dynamic>> _allInteractions;
+// Map<String, Map<String, Map<String, dynamic>>> _messageStats;
+// Map<String, Map<String, dynamic>> _surveyStatus;
 
 Map<model.DataPath, Map<String, Set>> _uniqueFieldValues;
 
 Map<String, dynamic> _configRaw;
 model.Config _config;
+List<chart_model.Chart> _chartsInView = [];
 
 List<model.ComputedChart> _computedCharts;
 
@@ -118,161 +121,60 @@ void init() async {
 void onLoginCompleted() async {
   view.showLoading();
 
-  fb.listenToConfig((DocumentSnapshot documentSnapshot) async {
-    _configRaw = documentSnapshot.data();
+  var _configRaw = await fb.fetchConfig();
+  try {
     _config = model.Config.fromData(_configRaw);
-
-    await loadGeoMapsData();
-    _handleInteractionsChanges();
-    _handleSurveyStatusChanges();
-    _handleMessageStatusChanges();
-  }, (error) {
+  } catch (e) {
     view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
-    logger.error(error.toString());
-  });
-}
+    logger.error(e.toString());
+    view.hideLoading();
+  }
 
-void _handleInteractionsChanges() {
-  if (_config.data_paths['interactions'] == null) return;
-  var interactionsPath = _config.data_paths['interactions']['data'];
-  if (interactionsPath != null) {
-    fb.listenToInteractions(interactionsPath, (QuerySnapshot querySnapshot) {
-      var interactionsMap = Map<String, Map<String, dynamic>>();
-      querySnapshot.forEach((doc) {
-        interactionsMap[doc.id] = doc.data();
+  handleNavToAnalysis();
+
+  await loadGeoMapsData();
+
+  for (var pathname in _config.data_collections.keys) {
+    var path = _config.data_collections[pathname];
+    fb.listenToCollections(path, (QuerySnapshot querySnapshot) {
+      var dataMap = _dataCollections[pathname] ?? {};
+      querySnapshot.docChanges().forEach((docChange) {
+        if (docChange.type == 'added' || docChange.type == 'modified') {
+          dataMap[docChange.doc.id] = docChange.doc.data();
+        }
+        if (docChange.type == 'removed') {
+          dataMap.remove(docChange.doc.id);
+        }
       });
-      _allInteractions = interactionsMap;
-      _handleDataChanges();
-    }, (error) {
-      view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
-      logger.error(error.toString());
+      _dataCollections[pathname] = dataMap;
+      _reactToDataChanges();
+    }, (e) {
+      view.showAlert('Unable to fetch ${pathname} data');
+      logger.error(e.toString());
     });
   }
 }
 
-void _handleSurveyStatusChanges() {
-  if (_config.data_paths['survey_status'] == null) return;
-  var surveyStatusPath = _config.data_paths['survey_status']['data'];
-  if (surveyStatusPath != null) {
-    fb.listenToSurveyStatus(surveyStatusPath, (QuerySnapshot querySnapshot) {
-      var statusMap = Map<String, Map<String, dynamic>>();
-      querySnapshot.forEach((doc) {
-        statusMap[doc.id] = doc.data();
-      });
-      _surveyStatus = statusMap;
-      _handleDataChanges();
-    }, (error) {
-      view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
-      logger.error(error.toString());
-    });
-  }
-}
-
-void _handleMessageStatusChanges() {
-  var messageStatusPathMap = _config.data_paths['message_stats'];
-  _messageStats = {};
-  if (messageStatusPathMap != null) {
-    for (var pathKey in messageStatusPathMap.keys) {
-      fb.listenToMessageStats(messageStatusPathMap[pathKey],
-          (QuerySnapshot querySnapshot) {
-        var messageStatsMap = Map<String, Map<String, dynamic>>();
-        querySnapshot.forEach((doc) {
-          messageStatsMap[doc.id] = doc.data();
-        });
-        _messageStats[pathKey] = messageStatsMap;
-        var scrollTop = html.document.documentElement.scrollTop;
-        print(scrollTop);
-        _handleDataChanges();
-        html.document.documentElement.scrollTo(0, scrollTop);
-      }, (error) {
-        view.showAlert(UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG);
-        logger.error(error);
-      });
+void _reactToDataChanges() {
+  // check if all the data is filled
+  for (var key in _config.data_collections.keys) {
+    if (_dataCollections[key] == null) {
+      return;
     }
-  }
-}
-
-void _handleDataChanges() {
-  if (_configRaw == null) return;
-  if (_config.data_paths['interactions'] != null && _allInteractions == null) {
-    return;
-  }
-  if (_config.data_paths['survey_status'] != null && _surveyStatus == null) {
-    return;
-  }
-  if (_config.data_paths['message_status'] != null &&
-      _messageStats.values.isEmpty) {
-    return;
-  }
-
-  _uniqueFieldValues = computeUniqueFieldValues(
-      _config.tabs.map((t) => t.filters ?? []).expand((e) => e).toList());
-
-  view.setNavlinkSelected(_currentNavLink);
-  if (_navLinks[_currentNavLink].pathname == 'settings') {
-    handleNavToSettings();
-  } else if (_navLinks[_currentNavLink].pathname == 'analyse') {
-    handleNavToAnalysis(maintainFilters: true);
   }
 
   view.hideLoading();
+
+  print('All data collections are fetched, reacting to new changes..');
+  for (var value in _dataCollections.values) {
+    print(value);
+  }
+  _computeCharts();
+  _updateCharts();
 }
 
 void onLogoutCompleted() async {
   logger.debug('Delete all local data');
-}
-
-void loadFirebaseData() async {
-  try {
-    _configRaw = await fb.fetchConfig();
-    _config = model.Config.fromData(_configRaw);
-  } catch (e) {
-    view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
-    view.hideLoading();
-    logger.error(e);
-    rethrow;
-  }
-
-  if (_config.data_paths == null) {
-    return;
-  }
-
-  if (_config.data_paths['interactions'] != null) {
-    var interactionsPath = _config.data_paths['interactions']['data'];
-    try {
-      _allInteractions = await fb.fetchInteractions(interactionsPath);
-    } catch (e) {
-      view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
-      logger.error(e);
-      rethrow;
-    }
-  }
-
-  var messageStatusPathMap = _config.data_paths['message_stats'];
-  _messageStats = {};
-  if (messageStatusPathMap != null) {
-    for (var pathKey in messageStatusPathMap.keys) {
-      try {
-        _messageStats[pathKey] =
-            await fb.fetchMessageStats(messageStatusPathMap[pathKey]);
-      } catch (e) {
-        view.showAlert(UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG);
-        logger.error(e);
-        rethrow;
-      }
-    }
-  }
-
-  if (_config.data_paths['survey_status'] != null) {
-    var surveyStatusPath = _config.data_paths['survey_status']['data'];
-    try {
-      _surveyStatus = await fb.fetchSurveyStats(surveyStatusPath);
-    } catch (e) {
-      view.showAlert(UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG);
-      logger.error(e);
-      rethrow;
-    }
-  }
 }
 
 void loadGeoMapsData() async {
@@ -313,18 +215,18 @@ Map<model.DataPath, Map<String, Set>> computeUniqueFieldValues(
   uniqueFieldValues.forEach((dataPath, keysObj) {
     switch (dataPath) {
       case model.DataPath.interactions:
-        _allInteractions.forEach((_, interaction) {
-          keysObj.keys.forEach((key) {
-            var interactionValue = interaction[key];
-            if (interactionValue is List) {
-              interactionValue.forEach((interactionVal) {
-                uniqueFieldValues[dataPath][key].add(interactionVal);
-              });
-            } else {
-              uniqueFieldValues[dataPath][key].add(interactionValue);
-            }
-          });
-        });
+        // _allInteractions.forEach((_, interaction) {
+        //   keysObj.keys.forEach((key) {
+        //     var interactionValue = interaction[key];
+        //     if (interactionValue is List) {
+        //       interactionValue.forEach((interactionVal) {
+        //         uniqueFieldValues[dataPath][key].add(interactionVal);
+        //       });
+        //     } else {
+        //       uniqueFieldValues[dataPath][key].add(interactionValue);
+        //     }
+        //   });
+        // });
         break;
       case model.DataPath.message_stats:
         logger.debug('message_stats uniqueFieldValues need not be computed');
@@ -406,7 +308,10 @@ void handleNavToAnalysis({bool maintainFilters}) {
 
   _computeFilterDropdownsAndRender(
       _config.tabs[_analyseOptions.selectedTabIndex].filters);
-  _computeChartDataAndRender();
+
+  _initialiseCharts();
+  _computeCharts();
+  _updateCharts();
 }
 
 void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
@@ -425,8 +330,11 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
       filterOptions = [];
       switch (f.data_path) {
         case model.DataPath.message_stats:
+          if (_dataCollections.values.isEmpty) {
+            return;
+          }
           // todo: check across all _messageStats, not just the first
-          var dates = _messageStats.values.first.keys.toList()..sort();
+          var dates = _dataCollections.values.first.keys.toList()..sort();
           filterOptions = [dates.first, dates.last];
           var splitCharacter = 'T';
           if (!dates.first.toString().contains(splitCharacter)) {
@@ -466,297 +374,87 @@ void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
       _filters, _analyseOptions.dataComparisonEnabled);
 }
 
-void _computeChartDataAndRender() {
+void _initialiseCharts() {
+  _chartsInView = [];
   var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
-  _computedCharts = [];
-
-  // Initial data fields
   for (var chart in charts) {
     switch (chart.type) {
-      case model.ChartType.bar:
-        var computedChart = model.ComputedBarChart(
-            chart.data_path,
-            chart.title,
-            chart.narrative,
-            chart.colors,
-            chart.data_label,
-            chart.fields.labels,
-            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
-            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
-            ['', '']);
-        _computedCharts.add(computedChart);
-        break;
-      case model.ChartType.map:
-        var colors = chart.colors ?? chart_helper.chartDefaultColors;
-        var computedChart = model.ComputedMapChart(
-            chart.data_path,
-            chart.title,
-            chart.narrative,
-            colors,
-            chart.fields.values,
-            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
-            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
-            ['', ''],
-            [chart.geography.country, chart.geography.regionLevel.name]);
-        _computedCharts.add(computedChart);
-        break;
       case model.ChartType.time_series:
-        var buckets = <DateTime, List<num>>{};
-        var computedChart = model.ComputedTimeSeriesChart(
+        var newChart = chart_model.TimeSeriesLineChart(
+            chart.title,
             chart.data_path,
             chart.doc_name,
-            chart.title,
-            chart.narrative,
-            chart.colors,
-            chart.data_label,
             chart.fields.labels,
-            buckets);
-        _computedCharts.add(computedChart);
-        break;
-      case model.ChartType.funnel:
-        var computedChart = model.ComputedFunnelChart(
-            chart.data_path,
-            chart.title,
-            chart.narrative,
-            chart.colors ?? chart_helper.chartDefaultColors,
-            [],
-            [],
-            chart.is_paired);
-        _computedCharts.add(computedChart);
+            chart.colors, <DateTime, List<num>>{});
+        _chartsInView.add(newChart);
         break;
       default:
-        _computedCharts.add(null);
-        logger.error(
-            '_computeChartDataAndRender Chart type ${chart.type} not computed');
     }
   }
 
-  // compute data
+  view.appendCharts(_chartsInView.map((e) => e.container).toList());
+}
+
+void _computeCharts() {
+  var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
+
   for (var i = 0; i < charts.length; ++i) {
     var chart = charts[i];
-    var computedChart = _computedCharts[i];
-    // funnel chart
-    if (computedChart is model.ComputedFunnelChart) {
-      switch (chart.data_path) {
-        case model.DataPath.survey_status:
-          var data = _surveyStatus[chart.doc_name][chart.fields.key] as List;
-          data.forEach((e) {
-            computedChart.stages.add(e[chart.fields.labels.first]);
-            computedChart.values.add(e[chart.fields.values.first]);
-          });
-          break;
-        default:
-          logger
-              .error('computed funnel chart doesnt support ${chart.data_path}');
-      }
-    }
-    // time series chart
-    else if (computedChart is model.ComputedTimeSeriesChart) {
-      switch (chart.data_path) {
-        case model.DataPath.message_stats:
-          var messageStats = Map.from(_messageStats[chart.doc_name]);
-          var toRemove = [];
-          messageStats.forEach((dateStr, _) {
-            var date = DateTime.parse(dateStr);
-            for (var filter in _filters) {
-              if (filter.type == model.DataType.datetime) {
-                var startDate = DateTime.parse(filter.value.split('_').first);
-                var endDate = DateTime.parse(filter.value.split('_').last)
-                    .add(Duration(days: 1));
-                if (date.isBefore(startDate) || date.isAfter(endDate)) {
-                  toRemove.add(dateStr);
-                }
+    switch (chart.type) {
+      case model.ChartType.time_series:
+        if (_dataCollections[chart.doc_name] == null) continue;
+        var messageStats = Map.from(_dataCollections[chart.doc_name]);
+        var toRemove = [];
+        messageStats.forEach((dateStr, _) {
+          var date = DateTime.parse(dateStr);
+          for (var filter in _filters) {
+            if (filter.type == model.DataType.datetime) {
+              var startDate = DateTime.parse(filter.value.split('_').first);
+              var endDate = DateTime.parse(filter.value.split('_').last)
+                  .add(Duration(days: 1));
+              if (date.isBefore(startDate) || date.isAfter(endDate)) {
+                toRemove.add(dateStr);
               }
-            }
-          });
-          messageStats.removeWhere((key, value) => toRemove.contains(key));
-          var buckets = messageStats.map((_, valueObj) {
-            var values =
-                chart.fields.values.map((e) => valueObj[e] as num).toList();
-            return MapEntry(
-                DateTime.parse(valueObj[chart.timestamp.key]), values);
-          });
-          computedChart.buckets = buckets;
-
-          if (_analyseOptions.normaliseDataEnabled) {
-            for (var date in computedChart.buckets.keys) {
-              var bucket = computedChart.buckets[date];
-              var normaliseValue =
-                  bucket.reduce((value, element) => value + element);
-              if (normaliseValue == 0) {
-                normaliseValue = 1;
-              }
-              computedChart.buckets[date] =
-                  computedChart.buckets[date].map((value) {
-                return (value / normaliseValue * 100).roundToDecimal(2);
-              }).toList();
             }
           }
+        });
+        messageStats.removeWhere((key, value) => toRemove.contains(key));
+        var buckets = messageStats.map((_, valueObj) {
+          var values =
+              chart.fields.values.map((e) => valueObj[e] as num).toList();
+          return MapEntry(
+              DateTime.parse(valueObj[chart.timestamp.key]), values);
+        });
+        var chartInView = (_chartsInView[i] as chart_model.TimeSeriesLineChart);
+        chartInView.buckets = buckets;
 
-          break;
-        default:
-          logger.error(
-              'computed time series chart doesnt support ${chart.data_path}');
-      }
-    }
-    // bar chart todo: combine with map chart
-    else if (computedChart is model.ComputedBarChart) {
-      switch (chart.data_path) {
-        case model.DataPath.interactions:
-          _allInteractions.forEach((_, interaction) {
-            var addToPrimaryBucket =
-                _interactionMatchesFilterValues(interaction, _filters, false);
-            var addToComparisonBucket =
-                _interactionMatchesFilterValues(interaction, _filters, true);
-
-            for (var i = 0; i < chart.fields.values.length; ++i) {
-              if (addToPrimaryBucket) {
-                ++computedChart.normaliseValues[i][0];
-              }
-              if (addToComparisonBucket) {
-                ++computedChart.normaliseValues[i][1];
-              }
-
-              if (!_interactionMatchesOperation(
-                  interaction, chart.fields.key, chart.fields.values[i])) {
-                continue;
-              }
-              if (addToPrimaryBucket) {
-                ++computedChart.buckets[i][0];
-              }
-              if (addToComparisonBucket) {
-                ++computedChart.buckets[i][1];
-              }
+        if (_analyseOptions.normaliseDataEnabled) {
+          for (var date in chartInView.buckets.keys) {
+            var bucket = chartInView.buckets[date];
+            var normaliseValue =
+                bucket.reduce((value, element) => value + element);
+            if (normaliseValue == 0) {
+              normaliseValue = 1;
             }
-          });
-          break;
-        default:
-      }
-    }
-    // map chart
-    else if (computedChart is model.ComputedMapChart) {
-      switch (chart.data_path) {
-        case model.DataPath.interactions:
-          _allInteractions.forEach((_, interaction) {
-            var addToPrimaryBucket =
-                _interactionMatchesFilterValues(interaction, _filters, false);
-            var addToComparisonBucket =
-                _interactionMatchesFilterValues(interaction, _filters, true);
-
-            for (var i = 0; i < chart.fields.values.length; ++i) {
-              if (addToPrimaryBucket) {
-                ++computedChart.normaliseValues[i][0];
-              }
-              if (addToComparisonBucket) {
-                ++computedChart.normaliseValues[i][1];
-              }
-
-              if (!_interactionMatchesOperation(
-                  interaction, chart.fields.key, chart.fields.values[i])) {
-                continue;
-              }
-              if (addToPrimaryBucket) {
-                ++computedChart.buckets[i][0];
-              }
-              if (addToComparisonBucket) {
-                ++computedChart.buckets[i][1];
-              }
-            }
-          });
-          break;
-        default:
-      }
-    } else {
-      logger.error('computed chart not supported');
+            chartInView.buckets[date] = chartInView.buckets[date].map((value) {
+              return (value / normaliseValue * 100).roundToDecimal(2);
+            }).toList();
+          }
+        }
+        break;
+      default:
     }
   }
+}
 
-  // Render charts
-  for (var computedChart in _computedCharts) {
-    if (computedChart is model.ComputedBarChart) {
-      var seriesLabels = [];
-      var seriesComparisonLabels = [];
-      _filters.forEach((filter) {
-        if (filter.isActive) {
-          seriesLabels.add('${filter.key}: ${filter.value}');
-          seriesComparisonLabels
-              .add('${filter.key}: ${filter.comparisonValue}');
-        }
-      });
-      var seriesLabelString =
-          seriesLabels.isEmpty ? 'All' : seriesLabels.join(', ');
-      var seriesComparisonLabelString = seriesComparisonLabels.isEmpty
-          ? 'All'
-          : seriesComparisonLabels.join(', ');
+void _updateCharts() {
+  var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
 
-      if (_analyseOptions.normaliseDataEnabled) {
-        for (var i = 0; i < computedChart.buckets.length; ++i) {
-          var bucket = computedChart.buckets[i];
-          for (var j = 0; j < bucket.length; ++j) {
-            computedChart.buckets[i][j] = ((computedChart.buckets[i][j] * 100) /
-                    computedChart.normaliseValues[i][j])
-                .roundToDecimal(2);
-          }
-        }
-      }
-
-      var chartConfig = chart_helper.generateBarChartConfig(
-          computedChart,
-          _analyseOptions.dataComparisonEnabled,
-          _analyseOptions.normaliseDataEnabled,
-          seriesLabelString,
-          seriesComparisonLabelString);
-      view.renderChart(
-          computedChart.title, computedChart.narrative, chartConfig);
-    } else if (computedChart is model.ComputedTimeSeriesChart) {
-      var chartConfig = chart_helper.generateTimeSeriesChartConfig(
-          computedChart,
+  for (var i = 0; i < charts.length; ++i) {
+    if (_chartsInView[i] is chart_model.TimeSeriesLineChart) {
+      (_chartsInView[i] as chart_model.TimeSeriesLineChart).updateChart(
           _analyseOptions.normaliseDataEnabled,
           _analyseOptions.stackTimeseriesEnabled);
-      view.renderChart(
-          computedChart.title, computedChart.narrative, chartConfig);
-    } else if (computedChart is model.ComputedFunnelChart) {
-      view.renderFunnelChart(
-          computedChart.title,
-          computedChart.narrative,
-          computedChart.colors ?? chart_helper.chartDefaultColors,
-          computedChart.stages,
-          computedChart.values,
-          computedChart.isCoupled);
-    } else if (computedChart is model.ComputedMapChart) {
-      var mapFilterValues = <String, List<num>>{};
-      var mapComparisonFilterValues = <String, List<num>>{};
-
-      for (var i = 0; i < computedChart.labels.length; ++i) {
-        mapFilterValues[computedChart.labels[i]] = [
-          _analyseOptions.normaliseDataEnabled
-              ? ((computedChart.buckets[i][0] * 100) /
-                      computedChart.normaliseValues[i][0])
-                  .roundToDecimal(2)
-              : computedChart.buckets[i][0],
-          computedChart.buckets[i][0] / computedChart.normaliseValues[i][0]
-        ];
-        mapComparisonFilterValues[computedChart.labels[i]] = [
-          _analyseOptions.normaliseDataEnabled
-              ? ((computedChart.buckets[i][1] * 100) /
-                      computedChart.normaliseValues[i][1])
-                  .roundToDecimal(2)
-              : computedChart.buckets[i][1],
-          computedChart.buckets[i][1] / computedChart.normaliseValues[i][1]
-        ];
-      }
-
-      view.renderGeoMap(
-          computedChart.title,
-          computedChart.narrative,
-          _mapsGeoJSON[computedChart.mapPath[0]][computedChart.mapPath[1]],
-          mapFilterValues,
-          mapComparisonFilterValues,
-          _analyseOptions.dataComparisonEnabled,
-          _analyseOptions.normaliseDataEnabled,
-          computedChart.colors);
-    } else {
-      logger.error('No chart type to render');
     }
   }
 }
@@ -808,7 +506,10 @@ void command(UIAction action, Data data) async {
       _computeFilterDropdownsAndRender(
           _config.tabs[_analyseOptions.selectedTabIndex].filters);
       _replaceURLHashWithParams();
-      _computeChartDataAndRender();
+      // _computeChartDataAndRender();
+      _initialiseCharts();
+      _computeCharts();
+      _updateCharts();
       logger
           .debug('Changed to analysis tab ${_analyseOptions.selectedTabIndex}');
       break;
@@ -820,7 +521,8 @@ void command(UIAction action, Data data) async {
       _computeFilterDropdownsAndRender(
           _config.tabs[_analyseOptions.selectedTabIndex].filters);
       _replaceURLHashWithParams();
-      _computeChartDataAndRender();
+      _computeCharts();
+      _updateCharts();
       logger.debug(
           'Data comparison changed to ${_analyseOptions.dataComparisonEnabled}');
       break;
@@ -831,7 +533,8 @@ void command(UIAction action, Data data) async {
           'Data normalisation changed to ${_analyseOptions.normaliseDataEnabled}');
       view.removeAllChartWrappers();
       _replaceURLHashWithParams();
-      _computeChartDataAndRender();
+      _computeCharts();
+      _updateCharts();
       break;
     case UIAction.toggleStackTimeseries:
       var d = data as ToggleOptionEnabledData;
@@ -840,7 +543,8 @@ void command(UIAction action, Data data) async {
           'Stack time series chart changed to ${_analyseOptions.stackTimeseriesEnabled}');
       view.removeAllChartWrappers();
       _replaceURLHashWithParams();
-      _computeChartDataAndRender();
+      _computeCharts();
+      _updateCharts();
       break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
@@ -854,8 +558,9 @@ void command(UIAction action, Data data) async {
           : view.disableFilterOptions(d.dataPath, d.key);
 
       _replaceURLHashWithParams();
-      view.removeAllChartWrappers();
-      _computeChartDataAndRender();
+      // view.removeAllChartWrappers();
+      _computeCharts();
+      _updateCharts();
       break;
     case UIAction.setFilterValue:
       var d = data as SetFilterValueData;
@@ -866,8 +571,9 @@ void command(UIAction action, Data data) async {
       }
 
       _replaceURLHashWithParams();
-      view.removeAllChartWrappers();
-      _computeChartDataAndRender();
+      // view.removeAllChartWrappers();
+      _computeCharts();
+      _updateCharts();
       break;
     case UIAction.setComparisonFilterValue:
       var d = data as SetFilterValueData;
@@ -878,8 +584,9 @@ void command(UIAction action, Data data) async {
       }
 
       _replaceURLHashWithParams();
-      view.removeAllChartWrappers();
-      _computeChartDataAndRender();
+      // view.removeAllChartWrappers();
+      _computeCharts();
+      _updateCharts();
       break;
     case UIAction.saveConfigToFirebase:
       var d = data as SaveConfigToFirebaseData;

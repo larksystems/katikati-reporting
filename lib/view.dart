@@ -664,6 +664,12 @@ html.DivElement _generateChart(
   return wrapper;
 }
 
+void appendCharts(List<html.DivElement> containers) {
+  for (var container in containers) {
+    content.append(container);
+  }
+}
+
 html.DivElement _generateGeoMapPlaceholder(
     String id, String title, String narrative, bool comparisonEnabled) {
   var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];

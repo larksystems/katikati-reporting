@@ -4,11 +4,17 @@ import 'package:dashboard/model.g.dart';
 
 class Config {
   String docId;
+  Map<String, String> data_collections;
   Map<String, Map<String, String>> data_paths;
   List<Tab> tabs;
 
   static Config fromData(data, [Config modelObj]) {
     if (data == null) return null;
+
+    var data_collections = <String, String>{};
+    data['data_collections'].forEach((key, path) {
+      data_collections[key] = path;
+    });
 
     var data_paths = <String, Map<String, String>>{};
     data['data_paths'].forEach((key, mapValue) {
@@ -19,6 +25,7 @@ class Config {
     });
 
     return (modelObj ?? Config())
+      ..data_collections = data_collections
       ..data_paths = data_paths
       ..tabs = List_fromData<Tab>(data['tabs'], Tab.fromData);
   }

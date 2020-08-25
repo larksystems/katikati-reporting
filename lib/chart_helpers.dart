@@ -152,7 +152,7 @@ ChartOptions _generateTimeSeriesChartOptions(bool dataNormalisationEnabled,
       scales: ChartScales(display: true, xAxes: [chartX], yAxes: [chartY]));
 }
 
-ChartDataSets _generateTimeSeriesChartDataset(
+ChartDataSets generateTimeSeriesChartDataset(
     String label, List<num> data, String lineColor, dynamic filled) {
   return ChartDataSets(
       label: label,
@@ -180,7 +180,7 @@ ChartConfiguration generateTimeSeriesChartConfig(
     var seriesData = chart.buckets.values.map((valueList) {
       return valueList[index];
     }).toList();
-    return _generateTimeSeriesChartDataset(
+    return generateTimeSeriesChartDataset(
         seriesLabel,
         seriesData,
         colors[index],
