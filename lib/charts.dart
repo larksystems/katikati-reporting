@@ -1,3 +1,4 @@
+import 'dart:js';
 import 'dart:html' as html;
 import 'package:chartjs/chartjs.dart' as chartjs;
 import 'package:dashboard/chart_helpers.dart' as chart_helpers;
@@ -9,7 +10,7 @@ class Chart {
 }
 
 class TimeSeriesLineChart extends Chart {
-  chartjs.ChartData data;
+  chartjs.ChartData chartData;
   chartjs.Chart chart;
   html.CanvasElement canvas;
 
@@ -29,7 +30,7 @@ class TimeSeriesLineChart extends Chart {
     var card = html.DivElement()..classes = ['card'];
     var cardBody = html.DivElement()..classes = ['card-body'];
 
-    var heading = html.HeadingElement.h5();
+    var heading = html.HeadingElement.h5()..innerText = title;
     container.append(heading);
     card.append(cardBody);
     cardBody.append(canvas);
@@ -37,43 +38,69 @@ class TimeSeriesLineChart extends Chart {
 
     var chartDatasets = <chartjs.ChartDataSets>[];
     for (var i = 0; i < seriesNames.length; ++i) {
-      chartDatasets.add(chartjs.ChartDataSets(
-          label: seriesNames[i], borderColor: colors[i], data: []));
+      chartDatasets.add(chart_helpers.generateTimeSeriesChartDataset(
+          seriesNames[i], [1, 2, 3], colors[i], false));
     }
 
-    data = chartjs.ChartData(labels: [], datasets: chartDatasets);
+    chartData =
+        chartjs.ChartData(labels: ['a', 'b', 'c'], datasets: chartDatasets);
 
     var chartOptions = chartjs.ChartOptions(
-        legend: chartjs.ChartLegendOptions(display: false),
+        responsive: true,
+        tooltips: chartjs.ChartTooltipOptions(mode: 'index'),
+        legend: chartjs.ChartLegendOptions(
+            position: 'bottom',
+            labels: chartjs.ChartLegendLabelOptions(boxWidth: 12)),
         scales: chartjs.LinearScale(xAxes: [
           chartjs.ChartXAxe()
+            ..stacked = false
+            ..ticks = (chartjs.LinearTickOptions()
+              ..maxTicksLimit = 30
+              ..autoSkip = true
+              ..minRotation = 0
+              ..maxRotation = 90)
         ], yAxes: [
           chartjs.ChartYAxe()
-            ..ticks = (chartjs.LinearTickOptions()..beginAtZero = true)
+            ..stacked = false
+            ..scaleLabel = chartjs.ScaleTitleOptions(
+                labelString: 'Messages', display: true)
+            ..ticks = (chartjs.LinearTickOptions()..min = 0)
         ]),
         hover: chartjs.ChartHoverOptions()..animationDuration = 0);
 
     var chartConfig = chartjs.ChartConfiguration(
-        type: 'line', data: data, options: chartOptions);
+        type: 'line', data: chartData, options: chartOptions);
     chart = chartjs.Chart(canvas.getContext('2d'), chartConfig);
   }
 
   void updateChart(bool isNormalised, bool isStacked) {
-    var labels = buckets.keys
+    chart.data.labels = buckets.keys
         .map((date) => intl.DateFormat('dd MMM').format(date))
         .toList();
-    var datasets = seriesNames.asMap().entries.map((e) {
-      var index = e.key;
-      var seriesLabel = e.value;
-      var seriesData = buckets.values.map((valueList) {
-        return valueList[index];
-      }).toList();
-      return chart_helpers.generateTimeSeriesChartDataset(
-          seriesLabel, seriesData, colors[index], false);
-    }).toList();
 
-    data = chartjs.ChartData(labels: labels, datasets: datasets);
-    chart.data = data;
+    var tooltipLabelCallback =
+        (chartjs.ChartTooltipItem tooltipItem, chartjs.ChartData data) {
+      var xLabel = data.datasets[tooltipItem.datasetIndex].label;
+      var yLabel = tooltipItem.yLabel;
+      var suffix = isNormalised ? '%' : '';
+      return '${xLabel}: ${yLabel}${suffix}';
+    };
+
+    var yScale = chart.options.scales.yAxes[0];
+    yScale.stacked = isStacked;
+
+    chart.options.tooltips = chartjs.ChartTooltipOptions(
+        mode: 'index',
+        callbacks: chartjs.ChartTooltipCallback(
+            label: allowInterop(tooltipLabelCallback)));
+
+    for (var i = 0; i < seriesNames.length; ++i) {
+      chart.data.datasets[i].fill =
+          isStacked ? (i == 0 ? 'origin' : '-1') : false;
+      chart.data.datasets[i].data =
+          buckets.values.map((value) => value[i]).toList();
+    }
+
     chart.update(chartjs.ChartUpdateProps(duration: 0));
   }
 }

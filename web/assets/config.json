@@ -1,0 +1,214 @@
+{
+  "data_collections": {
+    "messages_summary": "datasets/KK-Project-2020-COVID19-SOM-IMAQAL/messages_summary",
+    "summary": "datasets/KK-Project-2020-COVID19-SOM-IMAQAL/summary",
+    "turns_summary": "datasets/KK-Project-2020-COVID19-SOM-IMAQAL/turns_summary"
+  },
+  "data_paths": {
+    "message_stats": {
+      "messages_summary": "datasets/KK-Project-2020-COVID19-SOM-IMAQAL/messages_summary",
+      "summary": "datasets/KK-Project-2020-COVID19-SOM-IMAQAL/summary",
+      "turns_summary": "datasets/KK-Project-2020-COVID19-SOM-IMAQAL/turns_summary"
+    }
+  },
+  "tabs": [
+    {
+      "charts": [
+        {
+          "colors": ["#673AB7"],
+          "data_label": "outgoing messages",
+          "data_collection": "summary",
+          "data_path": "message_stats",
+          "doc_name": "summary",
+          "fields": {
+            "labels": ["Outgoing messages"],
+            "values": ["messages_out_count"]
+          },
+          "narrative": "",
+          "timestamp": {
+            "aggregate": "none",
+            "key": "date"
+          },
+          "title": "Outgoing messages",
+          "type": "time_series"
+        },
+        {
+          "colors": ["#2196F3"],
+          "data_label": "incoming messages",
+          "data_path": "message_stats",
+          "doc_name": "summary",
+          "data_collection": "summary",
+          "fields": {
+            "labels": ["Incoming messages"],
+            "values": ["messages_in_count"]
+          },
+          "narrative": "",
+          "timestamp": {
+            "aggregate": "none",
+            "key": "date"
+          },
+          "title": "Incoming messages",
+          "type": "time_series"
+        },
+        {
+          "colors": ["#673AB7", "#2196F3"],
+          "data_label": "messages",
+          "data_path": "message_stats",
+          "data_collection": "summary",
+          "doc_name": "summary",
+          "fields": {
+            "labels": ["Outgoing messages", "Incoming messages"],
+            "values": ["messages_out_count", "messages_in_count"]
+          },
+          "narrative": "",
+          "timestamp": {
+            "aggregate": "none",
+            "key": "date"
+          },
+          "title": "Incoming / outgoing messages",
+          "type": "time_series"
+        },
+        {
+          "colors": ["#4527A0", "#9575CD"],
+          "data_label": "messages",
+          "data_path": "message_stats",
+          "data_collection": "summary",
+          "doc_name": "summary",
+          "fields": {
+            "labels": ["Auto messages", "Non-auto messages"],
+            "values": ["auto_messages_out_count", "non_auto_messages_out_count"]
+          },
+          "narrative": "",
+          "timestamp": {
+            "aggregate": "none",
+            "key": "date"
+          },
+          "title": "Outgoing messages",
+          "type": "time_series"
+        }
+      ],
+      "filters": [
+        {
+          "data_path": "message_stats",
+          "key": "date",
+          "type": "datetime"
+        }
+      ],
+      "label": "Summary"
+    },
+    {
+      "charts": [
+        {
+          "colors": ["#673AB7", "#2196F3"],
+          "data_label": "turns",
+          "data_path": "message_stats",
+          "doc_name": "turns_summary",
+          "data_collection": "turns_summary",
+          "fields": {
+            "labels": ["Outgoing turns", "Incoming turns"],
+            "values": ["turns_out_count", "turns_in_count"]
+          },
+          "narrative": "",
+          "timestamp": {
+            "aggregate": "none",
+            "key": "date"
+          },
+          "title": "Incoming / outgoing turns",
+          "type": "time_series"
+        },
+        {
+          "colors": ["#673AB7", "#2196F3"],
+          "data_label": "coversations",
+          "data_path": "message_stats",
+          "doc_name": "turns_summary",
+          "data_collection": "turns_summary",
+          "fields": {
+            "labels": ["Conversation count"],
+            "values": ["conversations_count"]
+          },
+          "narrative": "",
+          "timestamp": {
+            "aggregate": "none",
+            "key": "date"
+          },
+          "title": "Conversation count",
+          "type": "time_series"
+        }
+      ],
+      "filters": [
+        {
+          "data_path": "message_stats",
+          "key": "date",
+          "type": "datetime"
+        }
+      ],
+      "label": "Turns summary"
+    },
+    {
+      "charts": [
+        {
+          "colors": ["#673AB7", "#2196F3"],
+          "data_label": "messages",
+          "data_path": "message_stats",
+          "doc_name": "messages_summary",
+          "data_collection": "messages_summary",
+          "fields": {
+            "labels": ["Incoming messages", "Outgoing messages"],
+            "values": ["messages_in_count", "messages_out_count"]
+          },
+          "narrative": "",
+          "timestamp": {
+            "aggregate": "none",
+            "key": "date"
+          },
+          "title": "Outgoing / incoming messages",
+          "type": "time_series"
+        },
+        {
+          "colors": ["#0D47A1", "#42A5F5"],
+          "data_label": "messages",
+          "data_path": "message_stats",
+          "doc_name": "messages_summary",
+          "data_collection": "messages_summary",
+          "fields": {
+            "labels": ["Maunal messages outgoing", "Auto messages outgoing"],
+            "values": ["non_auto_messages_out_count", "auto_messages_out_count"]
+          },
+          "narrative": "",
+          "timestamp": {
+            "aggregate": "none",
+            "key": "date"
+          },
+          "title": "Split of outgoing messages",
+          "type": "time_series"
+        },
+        {
+          "colors": ["#00796B"],
+          "data_label": "conversations",
+          "data_path": "message_stats",
+          "doc_name": "messages_summary",
+          "data_collection": "messages_summary",
+          "fields": {
+            "labels": ["Conversations"],
+            "values": ["conversations_count"]
+          },
+          "narrative": "",
+          "timestamp": {
+            "aggregate": "none",
+            "key": "date"
+          },
+          "title": "Conversations",
+          "type": "time_series"
+        }
+      ],
+      "filters": [
+        {
+          "data_path": "message_stats",
+          "key": "date",
+          "type": "datetime"
+        }
+      ],
+      "label": "Messages summary"
+    }
+  ]
+}

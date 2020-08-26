@@ -166,9 +166,6 @@ void _reactToDataChanges() {
   view.hideLoading();
 
   print('All data collections are fetched, reacting to new changes..');
-  for (var value in _dataCollections.values) {
-    print(value);
-  }
   _computeCharts();
   _updateCharts();
 }
