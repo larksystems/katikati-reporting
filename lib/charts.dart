@@ -20,6 +20,7 @@ class TimeSeriesLineChart extends Chart {
   List<String> seriesNames;
   List<String> colors;
   Map<DateTime, List<num>> buckets;
+  bool isNormalised = false;
 
   TimeSeriesLineChart(this.title, this.dataPath, this.dataDoc, this.seriesNames,
       this.colors, this.buckets) {
@@ -45,9 +46,22 @@ class TimeSeriesLineChart extends Chart {
     chartData =
         chartjs.ChartData(labels: ['a', 'b', 'c'], datasets: chartDatasets);
 
+
+    var tooltipLabelCallback = (chartjs.ChartTooltipItem tooltipItem, chartjs.ChartData data) {
+      print(tooltipItem.label);
+      print(data.labels);
+      var xLabel = data.datasets[tooltipItem.datasetIndex].label;
+      var yLabel = tooltipItem.yLabel;
+      var suffix = isNormalised ? '%' : '';
+      return '${xLabel}: ${yLabel}${suffix}';
+    };
+
     var chartOptions = chartjs.ChartOptions(
         responsive: true,
-        tooltips: chartjs.ChartTooltipOptions(mode: 'index'),
+        tooltips: chartjs.ChartTooltipOptions(
+          mode: 'index',
+          callbacks: chartjs.ChartTooltipCallback(
+              label: allowInterop(tooltipLabelCallback))),
         legend: chartjs.ChartLegendOptions(
             position: 'bottom',
             labels: chartjs.ChartLegendLabelOptions(boxWidth: 12)),
@@ -74,25 +88,13 @@ class TimeSeriesLineChart extends Chart {
   }
 
   void updateChart(bool isNormalised, bool isStacked) {
+    this.isNormalised = isNormalised;
     chart.data.labels = buckets.keys
         .map((date) => intl.DateFormat('dd MMM').format(date))
         .toList();
 
-    var tooltipLabelCallback =
-        (chartjs.ChartTooltipItem tooltipItem, chartjs.ChartData data) {
-      var xLabel = data.datasets[tooltipItem.datasetIndex].label;
-      var yLabel = tooltipItem.yLabel;
-      var suffix = isNormalised ? '%' : '';
-      return '${xLabel}: ${yLabel}${suffix}';
-    };
-
     var yScale = chart.options.scales.yAxes[0];
     yScale.stacked = isStacked;
-
-    chart.options.tooltips = chartjs.ChartTooltipOptions(
-        mode: 'index',
-        callbacks: chartjs.ChartTooltipCallback(
-            label: allowInterop(tooltipLabelCallback)));
 
     for (var i = 0; i < seriesNames.length; ++i) {
       chart.data.datasets[i].fill =
