@@ -392,6 +392,12 @@ void _initialiseCharts() {
   view.appendCharts(_chartsInView.map((e) => e.container).toList());
 }
 
+void _clearCharts() {
+  _chartsInView.forEach((chart) {
+    view.removeChart(chart.id);
+  });
+}
+
 void _computeCharts() {
   var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
 
@@ -503,7 +509,7 @@ void command(UIAction action, Data data) async {
       _computeFilterDropdownsAndRender(
           _config.tabs[_analyseOptions.selectedTabIndex].filters);
       _replaceURLHashWithParams();
-      // _computeChartDataAndRender();
+      _clearCharts();
       _initialiseCharts();
       _computeCharts();
       _updateCharts();

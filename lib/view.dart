@@ -670,6 +670,15 @@ void appendCharts(List<html.DivElement> containers) {
   }
 }
 
+void removeChart(String id) {
+  var chartToRemove = content.querySelector('#chart-${id}');
+  if (chartToRemove != null) {
+    chartToRemove.remove();
+  } else {
+    logger.error('Chart to remove ${id} not found');
+  }
+}
+
 html.DivElement _generateGeoMapPlaceholder(
     String id, String title, String narrative, bool comparisonEnabled) {
   var wrapper = html.DivElement()..classes = [CHART_WRAPPER_CLASSNAME];

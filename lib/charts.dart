@@ -4,8 +4,12 @@ import 'package:chartjs/chartjs.dart' as chartjs;
 import 'package:dashboard/chart_helpers.dart' as chart_helpers;
 import 'package:intl/intl.dart' as intl;
 import 'package:dashboard/model.dart' as model;
+import 'package:uuid/uuid.dart';
+
+var uuid = Uuid();
 
 class Chart {
+  String id;
   html.DivElement container;
 }
 
@@ -24,8 +28,9 @@ class TimeSeriesLineChart extends Chart {
 
   TimeSeriesLineChart(this.title, this.dataPath, this.dataDoc, this.seriesNames,
       this.colors, this.buckets) {
+    id = uuid.v4();
     colors = colors ?? chart_helpers.chartDefaultColors;
-    container = html.DivElement();
+    container = html.DivElement()..id = 'chart-${id}';
     canvas = html.CanvasElement();
 
     var card = html.DivElement()..classes = ['card'];
@@ -46,10 +51,8 @@ class TimeSeriesLineChart extends Chart {
     chartData =
         chartjs.ChartData(labels: ['a', 'b', 'c'], datasets: chartDatasets);
 
-
-    var tooltipLabelCallback = (chartjs.ChartTooltipItem tooltipItem, chartjs.ChartData data) {
-      print(tooltipItem.label);
-      print(data.labels);
+    var tooltipLabelCallback =
+        (chartjs.ChartTooltipItem tooltipItem, chartjs.ChartData data) {
       var xLabel = data.datasets[tooltipItem.datasetIndex].label;
       var yLabel = tooltipItem.yLabel;
       var suffix = isNormalised ? '%' : '';
@@ -59,9 +62,9 @@ class TimeSeriesLineChart extends Chart {
     var chartOptions = chartjs.ChartOptions(
         responsive: true,
         tooltips: chartjs.ChartTooltipOptions(
-          mode: 'index',
-          callbacks: chartjs.ChartTooltipCallback(
-              label: allowInterop(tooltipLabelCallback))),
+            mode: 'index',
+            callbacks: chartjs.ChartTooltipCallback(
+                label: allowInterop(tooltipLabelCallback))),
         legend: chartjs.ChartLegendOptions(
             position: 'bottom',
             labels: chartjs.ChartLegendLabelOptions(boxWidth: 12)),
@@ -95,6 +98,16 @@ class TimeSeriesLineChart extends Chart {
 
     var yScale = chart.options.scales.yAxes[0];
     yScale.stacked = isStacked;
+    if (isNormalised) {
+      yScale.ticks.max = 100;
+    } else {
+      var maxValue = 0;
+      for (var bucket in buckets.values) {
+        var sum = bucket.reduce((a, b) => a + b);
+        if (maxValue < sum) maxValue = sum;
+      }
+      yScale.ticks.max = maxValue + 1000;
+    }
 
     for (var i = 0; i < seriesNames.length; ++i) {
       chart.data.datasets[i].fill =
