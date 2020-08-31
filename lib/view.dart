@@ -143,17 +143,6 @@ void removeFiltersWrapper() {
   filtersWrapper.remove();
 }
 
-void removeAllChartWrappers() {
-  for (var wrapper in chartWrappers) {
-    if (wrapper == null) {
-      logger.error(
-          'Trying to remove non-existant selector .${CHART_WRAPPER_CLASSNAME}');
-      continue;
-    }
-    wrapper.remove();
-  }
-}
-
 html.DivElement generateGridRowElement({String id, List<String> classes}) {
   var rowElement = html.DivElement()..classes = ['row', ...(classes ?? [])];
   if (id != null) {
@@ -295,24 +284,24 @@ void renderNewFilterDropdowns(
 
   for (var filter in filters) {
     var filterRow = generateGridRowElement(
-        id: _generateFilterRowID(filter.dataPath.name + filter.key));
+        id: _generateFilterRowID(filter.dataCollection + filter.key));
     var checkboxCol = html.DivElement()..classes = ['col-4'];
     var filterCol = html.DivElement()..classes = ['col-3'];
     var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
 
     var checkboxWithLabel = _getCheckboxWithLabel(
-        _generateFilterCheckboxID(filter.dataPath.name + filter.key),
-        filter.dataPath.name + ' / ' + filter.key,
+        _generateFilterCheckboxID(filter.dataCollection + filter.key),
+        filter.dataCollection + ' / ' + filter.key,
         filter.isActive, (bool checked) {
       command(UIAction.toggleActiveFilter,
-          ToggleActiveFilterData(filter.dataPath.name, filter.key, checked));
+          ToggleActiveFilterData(filter.dataCollection, filter.key, checked));
     });
 
     switch (filter.type) {
       case model.DataType.datetime:
         var startDateChooser = html.InputElement()
           ..disabled = !filter.isActive
-          ..id = _generateFilterOptionID(filter.dataPath.name, filter.key)
+          ..id = _generateFilterOptionID(filter.dataCollection, filter.key)
           ..type = 'date'
           ..min = filter.options.first.split('T').first
           ..max = filter.options.last.split('T').first
@@ -320,12 +309,14 @@ void renderNewFilterDropdowns(
           ..onChange.listen((event) {
             var newValue =
                 '${(event.target as html.InputElement).value}_${filter.value.split('_').last}';
-            command(UIAction.setFilterValue,
-                SetFilterValueData(filter.dataPath.name, filter.key, newValue));
+            command(
+                UIAction.setFilterValue,
+                SetFilterValueData(
+                    filter.dataCollection, filter.key, newValue));
           });
         var endDateChooser = html.InputElement()
           ..disabled = !filter.isActive
-          ..id = _generateFilterOptionID(filter.dataPath.name, filter.key)
+          ..id = _generateFilterOptionID(filter.dataCollection, filter.key)
           ..type = 'date'
           ..min = filter.options.first.split('T').first
           ..max = filter.options.last.split('T').first
@@ -333,31 +324,33 @@ void renderNewFilterDropdowns(
           ..onChange.listen((event) {
             var newValue =
                 '${filter.value.split('_').first}_${(event.target as html.InputElement).value}';
-            command(UIAction.setFilterValue,
-                SetFilterValueData(filter.dataPath.name, filter.key, newValue));
+            command(
+                UIAction.setFilterValue,
+                SetFilterValueData(
+                    filter.dataCollection, filter.key, newValue));
           });
         filterCol.append(startDateChooser);
         filterCol.append(endDateChooser);
         break;
       case model.DataType.string:
         var filterDropdown = _getDropdown(
-            _generateFilterOptionID(filter.dataPath.name, filter.key),
+            _generateFilterOptionID(filter.dataCollection, filter.key),
             filter.options,
             filter.value,
             !filter.isActive, (String value) {
           command(UIAction.setFilterValue,
-              SetFilterValueData(filter.dataPath.name, filter.key, value));
+              SetFilterValueData(filter.dataCollection, filter.key, value));
         });
         filterCol.append(filterDropdown);
         if (!comparisonEnabled) break;
 
         var comparisonFilterDropdown = _getDropdown(
-            _generateFilterOptionID(filter.dataPath.name, filter.key),
+            _generateFilterOptionID(filter.dataCollection, filter.key),
             filter.options,
             filter.comparisonValue,
             !filter.isActive, (String value) {
           command(UIAction.setComparisonFilterValue,
-              SetFilterValueData(filter.dataPath.name, filter.key, value));
+              SetFilterValueData(filter.dataCollection, filter.key, value));
         });
         comparisonFilterCol.append(comparisonFilterDropdown);
         break;

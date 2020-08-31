@@ -3,7 +3,6 @@ import 'dart:html' as html;
 import 'package:chartjs/chartjs.dart' as chartjs;
 import 'package:dashboard/chart_helpers.dart' as chart_helpers;
 import 'package:intl/intl.dart' as intl;
-import 'package:dashboard/model.dart' as model;
 import 'package:uuid/uuid.dart';
 
 var uuid = Uuid();
@@ -19,14 +18,13 @@ class TimeSeriesLineChart extends Chart {
   html.CanvasElement canvas;
 
   String title;
-  model.DataPath dataPath;
-  String dataDoc; // todo: replace when data collections are generalised
+  String dataCollection;
   List<String> seriesNames;
   List<String> colors;
   Map<DateTime, List<num>> buckets;
   bool isNormalised = false;
 
-  TimeSeriesLineChart(this.title, this.dataPath, this.dataDoc, this.seriesNames,
+  TimeSeriesLineChart(this.title, this.dataCollection, this.seriesNames,
       this.colors, this.buckets) {
     id = uuid.v4();
     colors = colors ?? chart_helpers.chartDefaultColors;
@@ -90,7 +88,7 @@ class TimeSeriesLineChart extends Chart {
     chart = chartjs.Chart(canvas.getContext('2d'), chartConfig);
   }
 
-  void updateChart(bool isNormalised, bool isStacked) {
+  void updateChartinView(bool isNormalised, bool isStacked) {
     this.isNormalised = isNormalised;
     chart.data.labels = buckets.keys
         .map((date) => intl.DateFormat('dd MMM').format(date))

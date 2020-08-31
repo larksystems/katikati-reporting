@@ -5,7 +5,6 @@ import 'package:dashboard/model.g.dart';
 class Config {
   String docId;
   Map<String, String> data_collections;
-  Map<String, Map<String, String>> data_paths;
   List<Tab> tabs;
 
   static Config fromData(data, [Config modelObj]) {
@@ -16,17 +15,8 @@ class Config {
       data_collections[key] = path;
     });
 
-    var data_paths = <String, Map<String, String>>{};
-    data['data_paths'].forEach((key, mapValue) {
-      data_paths[key] = {};
-      mapValue.forEach((k, v) {
-        data_paths[key][k] = v.toString();
-      });
-    });
-
     return (modelObj ?? Config())
       ..data_collections = data_collections
-      ..data_paths = data_paths
       ..tabs = List_fromData<Tab>(data['tabs'], Tab.fromData);
   }
 }
@@ -69,7 +59,7 @@ class Link {
 }
 
 class FilterValue {
-  DataPath dataPath;
+  String dataCollection;
   String key;
   DataType type;
   List<String> options;
@@ -77,19 +67,19 @@ class FilterValue {
   String comparisonValue;
   bool isActive;
 
-  FilterValue(this.dataPath, this.key, this.type, this.options, this.value,
-      this.comparisonValue, this.isActive);
+  FilterValue(this.dataCollection, this.key, this.type, this.options,
+      this.value, this.comparisonValue, this.isActive);
 }
 
 abstract class ComputedChart {
-  DataPath dataPath;
+  String dataCollection;
   String title;
   String narrative;
   ChartType type;
   List<String> colors;
 
   ComputedChart(
-      this.dataPath, this.title, this.narrative, this.type, this.colors);
+      this.dataCollection, this.title, this.narrative, this.type, this.colors);
 }
 
 class ComputedBarChart extends ComputedChart {
@@ -100,7 +90,7 @@ class ComputedBarChart extends ComputedChart {
   List<String> seriesNames;
 
   ComputedBarChart(
-      DataPath dataPath,
+      String dataCollection,
       String title,
       String narrative,
       List<String> colors,
@@ -109,7 +99,7 @@ class ComputedBarChart extends ComputedChart {
       this.buckets,
       this.normaliseValues,
       this.seriesNames)
-      : super(dataPath, title, narrative, ChartType.bar, colors);
+      : super(dataCollection, title, narrative, ChartType.bar, colors);
 }
 
 class ComputedTimeSeriesChart extends ComputedChart {
@@ -119,7 +109,7 @@ class ComputedTimeSeriesChart extends ComputedChart {
   Map<DateTime, List<num>> buckets;
 
   ComputedTimeSeriesChart(
-      DataPath dataPath,
+      String dataCollection,
       this.docName,
       String title,
       String narrative,
@@ -127,7 +117,7 @@ class ComputedTimeSeriesChart extends ComputedChart {
       this.dataLabel,
       this.seriesLabels,
       this.buckets)
-      : super(dataPath, title, narrative, ChartType.time_series, colors);
+      : super(dataCollection, title, narrative, ChartType.time_series, colors);
 }
 
 class ComputedFunnelChart extends ComputedChart {
@@ -135,9 +125,9 @@ class ComputedFunnelChart extends ComputedChart {
   List<String> stages;
   List<num> values;
 
-  ComputedFunnelChart(DataPath dataPath, String title, String narrative,
+  ComputedFunnelChart(String dataCollection, String title, String narrative,
       List<String> colors, this.stages, this.values, this.isCoupled)
-      : super(dataPath, title, narrative, ChartType.funnel, colors);
+      : super(dataCollection, title, narrative, ChartType.funnel, colors);
 }
 
 class ComputedMapChart extends ComputedChart {
@@ -148,7 +138,7 @@ class ComputedMapChart extends ComputedChart {
   List<String> mapPath;
 
   ComputedMapChart(
-      DataPath dataPath,
+      String dataCollection,
       String title,
       String narrative,
       List<String> colors,
@@ -157,5 +147,5 @@ class ComputedMapChart extends ComputedChart {
       this.normaliseValues,
       this.seriesNames,
       this.mapPath)
-      : super(dataPath, title, narrative, ChartType.map, colors);
+      : super(dataCollection, title, narrative, ChartType.map, colors);
 }

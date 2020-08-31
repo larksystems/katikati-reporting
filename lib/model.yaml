@@ -4,9 +4,8 @@ Tab:
   charts: "array Chart"
 
 Chart:
-  data_path: DataPath
+  data_collection: "string"
   data_label: "string"
-  doc_name: "string"
   fields: Field
   narrative: "string"
   title: "string"
@@ -15,14 +14,6 @@ Chart:
   geography: "Geography"
   timestamp: Timestamp
   is_paired: "bool"
-
-DataPath:
-  dartType: "enum"
-  defaultValue: "interactions"
-  dartValues:
-    - interactions
-    - message_stats
-    - survey_status
 
 Timestamp:
   aggregate: "TimeAggregate"
@@ -37,7 +28,7 @@ Field:
 
 Filter:
   key: "string"
-  data_path: DataPath
+  data_collection: "string"
   type: DataType
 
 Geography:
