@@ -116,7 +116,7 @@ void onLoginCompleted() async {
   view.showLoading();
 
   // Read config, parse config
-  var _configRaw = await fb.fetchConfig();
+  _configRaw = await fb.fetchConfig();
   try {
     _config = model.Config.fromData(_configRaw);
   } catch (e) {

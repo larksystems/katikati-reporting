@@ -123,9 +123,6 @@ void listenToSurveyStatus(
 // Read data
 Future<Map<String, dynamic>> fetchConfig() async {
   logger.debug('Fetching config from firebase ..');
-  var str = await html.HttpRequest.getString('assets/config.json');
-  return convert.jsonDecode(str);
-
   var chartsConfigRef = firebase.firestore().doc(fb_constants.metadataPath);
   var configSnapshot = await chartsConfigRef.get();
   return configSnapshot.data();
