@@ -43,11 +43,10 @@ class TimeSeriesLineChart extends Chart {
     var chartDatasets = <chartjs.ChartDataSets>[];
     for (var i = 0; i < seriesNames.length; ++i) {
       chartDatasets.add(chart_helpers.generateTimeSeriesChartDataset(
-          seriesNames[i], [1, 2, 3], colors[i], false));
+          seriesNames[i], [], colors[i], false));
     }
 
-    chartData =
-        chartjs.ChartData(labels: ['a', 'b', 'c'], datasets: chartDatasets);
+    chartData = chartjs.ChartData(labels: [], datasets: chartDatasets);
 
     var tooltipLabelCallback =
         (chartjs.ChartTooltipItem tooltipItem, chartjs.ChartData data) {
