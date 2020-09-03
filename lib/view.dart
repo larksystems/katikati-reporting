@@ -278,8 +278,10 @@ void appendNavLink(String pathname, String label, bool selected) {
     ..classes = [NAV_ITEM_CSS_CLASSNAME, if (selected) ACTIVE_CSS_CLASSNAME]
     ..innerText = label
     ..id = pathname
-    ..onClick
-        .listen((_) => command(UIAction.changeNavTab, NavChangeData(pathname)));
+    ..onClick.listen((_) {
+      command(UIAction.changeNavTab, NavChangeData(pathname));
+      html.window.location.hash = pathname;
+    });
   navLinksWrapper.append(li);
 }
 

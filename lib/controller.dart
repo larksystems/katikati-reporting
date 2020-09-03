@@ -93,6 +93,17 @@ class CopyToClipboardChartConfigData extends Data {
 
 // Controller functions
 void init() async {
+  // get hash from url
+  var hash = html.window.location.hash;
+  if (hash.isNotEmpty) {
+    hash = hash.split('?')[0];
+  }
+  if (hash == '') {
+    _currentNavLink = _navLinks.keys.first;
+  } else {
+    _currentNavLink = hash.replaceAll('#', '');
+  }
+
   view.init();
   view.showLoginModal();
   _navLinks.forEach((_, n) {
@@ -129,6 +140,9 @@ void onLoginCompleted() async {
     });
   }
 
+  // Fill chart options and nav tab from url
+  _fillDefaultOptionsFromURL();
+
   // Listen to all data, store to _dataCollections
   for (var pathname in _config.data_collections.keys) {
     var path = _config.data_collections[pathname];
@@ -150,7 +164,68 @@ void onLoginCompleted() async {
     });
   }
 
-  handleNavToAnalysis();
+  _navLinks[_currentNavLink].render();
+}
+
+void _fillDefaultOptionsFromURL() {
+  var uri = Uri.dataFromString(html.window.location.href);
+  var query = uri.queryParameters;
+  if (query['analyseTab'] != null) {
+    _analyseOptions.selectedTabIndex = int.parse(query['analyseTab']);
+  }
+  if (query['compare'] != null) {
+    _analyseOptions.dataComparisonEnabled = query['compare'] == 'true';
+  }
+  if (query['normalise'] != null) {
+    _analyseOptions.normaliseDataEnabled = query['normalise'] == 'true';
+  }
+  if (query['stackTimeSeries'] != null) {
+    _analyseOptions.stackTimeseriesEnabled = query['stackTimeSeries'] == 'true';
+  }
+
+  if (query['filter.keys'] != null) {
+    var keys = query['filter.keys'].split(',');
+    var dataCollections = query['filter.collections'].split(',');
+    var values = query['filter.values'].split(',');
+    var comparisonValues = query['filter.comparisonValues'].split(',');
+
+    for (var i = 0; i < keys.length; ++i) {
+      var filters = _filtersMap[_analyseOptions.selectedTabIndex];
+      filters.forEach((filter) {
+        if (filter.key == keys[i] &&
+            filter.dataCollection == dataCollections[i]) {
+          filter.isActive = true;
+          filter.value = values[i];
+          filter.comparisonValue = comparisonValues[i];
+        }
+      });
+    }
+  }
+}
+
+void _pushOptionsToURL() {
+  var params = <String, String>{};
+
+  params['analyseTab'] = _analyseOptions.selectedTabIndex.toString();
+  params['compare'] = _analyseOptions.dataComparisonEnabled.toString();
+  params['normalise'] = _analyseOptions.normaliseDataEnabled.toString();
+  params['stackTimeSeries'] = _analyseOptions.stackTimeseriesEnabled.toString();
+
+  var filters = List<model.FilterValue>.from(
+      _filtersMap[_analyseOptions.selectedTabIndex]);
+  filters.removeWhere((element) => !element.isActive);
+  if (filters.isNotEmpty) {
+    params['filter.keys'] = filters.map((e) => e.key).toList().join(',');
+    params['filter.collections'] =
+        filters.map((e) => e.dataCollection).toList().join(',');
+    params['filter.values'] = filters.map((e) => e.value).toList().join(',');
+    params['filter.comparisonValues'] =
+        filters.map((e) => e.comparisonValue).toList().join(',');
+  }
+
+  var url = Uri(queryParameters: params);
+  html.window.history
+      .replaceState(null, '', '#${_currentNavLink}${url.toString()}');
 }
 
 void _reactToDataChanges() {
@@ -166,10 +241,12 @@ void _reactToDataChanges() {
   print('All data collections are fetched, reacting to new changes..');
 
   _computeFilterOptions();
-  _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
 
-  _computeCharts();
-  _updateCharts();
+  if (_currentNavLink == _navLinks.keys.first) {
+    _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
+    _computeCharts();
+    _updateCharts();
+  }
 }
 
 void onLogoutCompleted() async {
@@ -346,25 +423,6 @@ void handleNavToSettings() {
   view.renderSettingsConfigEditor(configString);
 }
 
-void _replaceURLHashWithParams() {
-  var params = <String, dynamic>{};
-  params['chartOptions'] = convert.jsonEncode(_analyseOptions.toObject());
-  _filtersMap[_analyseOptions.selectedTabIndex].forEach((filterVal) {
-    if (filterVal.isActive) {
-      params['filters'] = params['filters'] ?? [];
-      params['filters'].add(convert.jsonEncode({
-        'key': filterVal.key,
-        'dataPath': filterVal.dataCollection,
-        'value': filterVal.value,
-        'comparisonValue': filterVal.comparisonValue
-      }));
-    }
-  });
-
-  var url = Uri(queryParameters: params);
-  html.window.history.replaceState(null, '', url.toString());
-}
-
 // User actions
 void command(UIAction action, Data data) async {
   switch (action) {
@@ -384,7 +442,7 @@ void command(UIAction action, Data data) async {
       _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
 
       _initialiseCharts();
-      _replaceURLHashWithParams();
+      _pushOptionsToURL();
       _initialiseCharts();
       _computeCharts();
       _updateCharts();
@@ -395,7 +453,7 @@ void command(UIAction action, Data data) async {
       var d = data as ToggleOptionEnabledData;
       _analyseOptions.dataComparisonEnabled = d.enabled;
       view.removeFiltersWrapper();
-      _replaceURLHashWithParams();
+      _pushOptionsToURL();
       _computeCharts();
       _updateCharts();
       logger.debug(
@@ -406,7 +464,7 @@ void command(UIAction action, Data data) async {
       _analyseOptions.normaliseDataEnabled = d.enabled;
       logger.debug(
           'Data normalisation changed to ${_analyseOptions.normaliseDataEnabled}');
-      _replaceURLHashWithParams();
+      _pushOptionsToURL();
       _computeCharts();
       _updateCharts();
       break;
@@ -415,7 +473,7 @@ void command(UIAction action, Data data) async {
       _analyseOptions.stackTimeseriesEnabled = d.enabled;
       logger.debug(
           'Stack time series chart changed to ${_analyseOptions.stackTimeseriesEnabled}');
-      _replaceURLHashWithParams();
+      _pushOptionsToURL();
       _computeCharts();
       _updateCharts();
       break;
@@ -428,7 +486,7 @@ void command(UIAction action, Data data) async {
           ? view.enableFilterOptions(filter.dataCollection, filter.key)
           : view.disableFilterOptions(filter.dataCollection, filter.key);
 
-      _replaceURLHashWithParams();
+      _pushOptionsToURL();
       _computeCharts();
       _updateCharts();
       break;
@@ -436,7 +494,7 @@ void command(UIAction action, Data data) async {
       var d = data as SetFilterValueData;
       _filtersMap[_analyseOptions.selectedTabIndex][d.index].value = d.value;
 
-      _replaceURLHashWithParams();
+      _pushOptionsToURL();
       _computeCharts();
       _updateCharts();
       break;
@@ -445,7 +503,7 @@ void command(UIAction action, Data data) async {
       _filtersMap[_analyseOptions.selectedTabIndex][d.index].comparisonValue =
           d.value;
 
-      _replaceURLHashWithParams();
+      _pushOptionsToURL();
       _computeCharts();
       _updateCharts();
       break;
