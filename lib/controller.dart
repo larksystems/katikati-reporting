@@ -291,11 +291,6 @@ void handleNavToAnalysis() {
   _dataFilterView = view.DataFiltersView();
   _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
 
-  var uri = Uri.parse(html.window.location.href);
-  var queryParams = uri.queryParameters;
-  var chartOptions = convert.jsonDecode(queryParams['chartOptions'] ?? '{}');
-  _analyseOptions.updateFrom(chartOptions);
-
   _initialiseCharts();
   _computeCharts();
   _updateCharts();
