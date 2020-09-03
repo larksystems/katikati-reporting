@@ -184,10 +184,12 @@ void _fillDefaultOptionsFromURL() {
   }
 
   if (query['filter.keys'] != null) {
-    var keys = query['filter.keys'].split(',');
-    var dataCollections = query['filter.collections'].split(',');
-    var values = query['filter.values'].split(',');
-    var comparisonValues = query['filter.comparisonValues'].split(',');
+    var keys = Uri.decodeFull(query['filter.keys']).split(',');
+    var dataCollections =
+        Uri.decodeFull(query['filter.collections']).split(',');
+    var values = Uri.decodeFull(query['filter.values']).split(',');
+    var comparisonValues =
+        Uri.decodeFull(query['filter.comparisonValues']).split(',');
 
     for (var i = 0; i < keys.length; ++i) {
       var filters = _filtersMap[_analyseOptions.selectedTabIndex];
@@ -317,6 +319,29 @@ void _computeFilterOptions() {
                 '${dates.first.split("T")[0]}_${dates.last.split("T")[0]}';
           }
           break;
+        case model.DataType.string:
+          var collectionToIterate =
+              _dataCollections[currentFilter.data_collection].values;
+          var options = <String>{};
+          collectionToIterate.forEach((element) {
+            var data = element[currentFilter.key];
+            if (data is String) {
+              options.add(data.toString());
+            } else if (data is List) {
+              data.forEach((d) {
+                options.add(d.toString());
+              });
+            }
+          });
+          options.add(DEFAULT_FILTER_SELECT_VALUE);
+          _filtersMap[i][j].options = options.toList();
+          if (_filtersMap[i][j].value == '') {
+            _filtersMap[i][j].value = DEFAULT_FILTER_SELECT_VALUE;
+          }
+          if (_filtersMap[i][j].comparisonValue == '') {
+            _filtersMap[i][j].comparisonValue = DEFAULT_FILTER_SELECT_VALUE;
+          }
+          break;
         default:
       }
     }
@@ -341,6 +366,8 @@ void _initialiseCharts() {
         _chartsInView.add(newChart);
         break;
       default:
+        var newChart = chart_model.UnimplementedChart();
+        _chartsInView.add(newChart);
     }
   }
 
@@ -407,6 +434,8 @@ void _updateCharts() {
       (_chartsInView[i] as chart_model.TimeSeriesLineChart).updateChartinView(
           _analyseOptions.normaliseDataEnabled,
           _analyseOptions.stackTimeseriesEnabled);
+    } else if (_chartsInView[i] is chart_model.UnimplementedChart) {
+      (_chartsInView[i] as chart_model.UnimplementedChart).updateChartinView();
     }
   }
 }
@@ -436,7 +465,6 @@ void command(UIAction action, Data data) async {
 
       _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
 
-      _initialiseCharts();
       _pushOptionsToURL();
       _initialiseCharts();
       _computeCharts();

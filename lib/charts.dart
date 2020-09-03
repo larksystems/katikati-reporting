@@ -12,6 +12,18 @@ class Chart {
   html.DivElement container;
 }
 
+class UnimplementedChart extends Chart {
+  UnimplementedChart() {
+    id = uuid.v4();
+    container = html.DivElement()..id = 'chart-${id}';
+    container.innerText = 'Unimplemented chart';
+  }
+
+  void updateChartinView() {
+    container.innerText = 'Unimplemented chart updated';
+  }
+}
+
 class TimeSeriesLineChart extends Chart {
   chartjs.ChartData chartData;
   chartjs.Chart chart;

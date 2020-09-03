@@ -211,6 +211,25 @@ class DataFiltersView {
           filterCol.append(startDateChooser);
           filterCol.append(endDateChooser);
           break;
+        case model.DataType.string:
+          var filterDropdown = _getDropdown(
+              _generateFilterOptionID(filter.dataCollection, filter.key),
+              filter.options,
+              filter.value,
+              !filter.isActive, (String value) {
+            command(UIAction.setFilterValue, SetFilterValueData(i, value));
+          });
+          var comparisonFilterDropdown = _getDropdown(
+              _generateFilterOptionID(filter.dataCollection, filter.key),
+              filter.options,
+              filter.comparisonValue,
+              !filter.isActive, (String value) {
+            command(UIAction.setComparisonFilterValue,
+                SetFilterValueData(i, value));
+          });
+          filterCol.append(filterDropdown);
+          comparisonFilterCol.append(comparisonFilterDropdown);
+          break;
       }
 
       checkboxCol.append(checkboxWithLabel);
@@ -328,94 +347,6 @@ html.DivElement generateGridLabelColumnElement({List<String> classes}) {
 html.DivElement generateGridOptionsColumnElement() {
   return html.DivElement()
     ..classes = ['col-lg-10', 'col-md-9', 'col-sm-12', 'col-xs-12'];
-}
-
-void renderAnalysisTabs(List<String> labels, String selected) {
-  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
-  var labelCol =
-      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
-        ..innerText = 'Analyse';
-  var optionsCol = generateGridOptionsColumnElement();
-
-  for (var i = 0; i < labels.length; ++i) {
-    var radioWrapper = html.DivElement()
-      ..classes = ['form-check', 'form-check-inline'];
-    var radioOption = html.InputElement()
-      ..type = 'radio'
-      ..name = 'analyse-tab-options'
-      ..id = _generateAnalyseTabID(i.toString())
-      ..classes = ['form-check-input']
-      ..checked = labels[i] == selected
-      ..onChange.listen((e) {
-        if (!(e.target as html.RadioButtonInputElement).checked) return;
-        command(UIAction.changeAnalysisTab, AnalysisTabChangeData(i));
-      });
-    var radioLabel = html.LabelElement()
-      ..htmlFor = _generateAnalyseTabID(i.toString())
-      ..classes = ['form-check-label']
-      ..innerText = labels[i];
-
-    radioWrapper.append(radioOption);
-    radioWrapper.append(radioLabel);
-    optionsCol.append(radioWrapper);
-  }
-
-  wrapper.append(labelCol);
-  wrapper.append(optionsCol);
-  content.append(wrapper);
-}
-
-void renderChartOptions(bool comparisonEnabled, bool normalisationEnabled,
-    bool stackTimeseriesEnabled) {
-  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME]);
-  var labelCol =
-      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
-        ..innerText = 'Options';
-  var optionsCol = generateGridOptionsColumnElement();
-
-  var comparisonCheckbox = _getCheckboxWithLabel(
-      'comparison-option', 'Compare data', comparisonEnabled, (bool checked) {
-    command(UIAction.toggleDataComparison, ToggleOptionEnabledData(checked));
-  });
-  optionsCol.append(comparisonCheckbox);
-
-  var normalisationCheckbox = _getCheckboxWithLabel(
-      'normalisation-option', 'Normalise data', normalisationEnabled,
-      (bool checked) {
-    command(UIAction.toggleDataNormalisation, ToggleOptionEnabledData(checked));
-  });
-  optionsCol.append(normalisationCheckbox);
-
-  var stackTimeseriesCheckbox = _getCheckboxWithLabel(
-      'stack-timeseries',
-      'Stack time series',
-      stackTimeseriesEnabled,
-      (bool checked) => command(
-          UIAction.toggleStackTimeseries, ToggleOptionEnabledData(checked)));
-  optionsCol.append(stackTimeseriesCheckbox);
-
-  wrapper.append(labelCol);
-  wrapper.append(optionsCol);
-  content.append(wrapper);
-}
-
-html.DivElement _getFilterRow(String filterKey) {
-  var filterRowID = _generateFilterRowID(filterKey);
-  return html.querySelector('#${filterRowID}') as html.DivElement;
-}
-
-void showFilterRow(String filterKey) {
-  var filterRow = _getFilterRow(filterKey);
-  if (filterRow.hidden != false) {
-    filterRow.hidden = false;
-  }
-}
-
-void hideFilterRow(String filterKey) {
-  var filterRow = _getFilterRow(filterKey);
-  if (filterRow.hidden != true) {
-    filterRow.hidden = true;
-  }
 }
 
 void enableFilterOptions(String dataPath, String filterKey) {
