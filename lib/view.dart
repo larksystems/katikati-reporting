@@ -61,6 +61,167 @@ String _generateFilterOptionID(String dataPath, String key) =>
 String _generateFilterCheckboxID(String key) => 'filter-option-${key}';
 String _generateAnalyseTabID(String key) => 'analyse-tab-options-${key}';
 
+class AnalyseTabsViews {
+  html.DivElement _wrapper;
+  html.DivElement _content;
+
+  AnalyseTabsViews(List<String> tabLabels, int selected) {
+    _wrapper = html.DivElement()..classes = ['row', 'filter-row'];
+
+    var labelCol = html.DivElement()..classes = ['col-2'];
+    var label = html.LabelElement()..innerText = 'Analyse';
+    labelCol.append(label);
+
+    _content = html.DivElement()..classes = ['col-10'];
+    for (var i = 0; i < tabLabels.length; ++i) {
+      var radioWrapper = html.DivElement()
+        ..classes = ['form-check', 'form-check-inline'];
+      var radioOption = html.InputElement()
+        ..type = 'radio'
+        ..id = _generateAnalyseTabID(i.toString())
+        ..name = 'analyse-tab-options'
+        ..classes = ['form-check-input']
+        ..checked = i == selected
+        ..onChange.listen((e) {
+          if (!(e.target as html.RadioButtonInputElement).checked) return;
+          command(UIAction.changeAnalysisTab, AnalysisTabChangeData(i));
+        });
+      var radioLabel = html.LabelElement()
+        ..htmlFor = _generateAnalyseTabID(i.toString())
+        ..classes = ['form-check-label']
+        ..innerText = tabLabels[i];
+
+      radioWrapper.append(radioOption);
+      radioWrapper.append(radioLabel);
+      _content.append(radioWrapper);
+    }
+
+    _wrapper.append(labelCol);
+    _wrapper.append(_content);
+    content.append(_wrapper);
+  }
+}
+
+class ChartOptionsView {
+  html.DivElement _wrapper;
+  html.DivElement _content;
+
+  ChartOptionsView(bool compareData, bool normaliseData, bool stackTimeseries) {
+    _wrapper = html.DivElement()..classes = ['row', 'filter-row'];
+
+    var labelCol = html.DivElement()..classes = ['col-2'];
+    var label = html.LabelElement()..innerText = 'Options';
+    labelCol.append(label);
+
+    _content = html.DivElement()..classes = ['col-10'];
+    var comparisonCheckbox = _getCheckboxWithLabel(
+        'comparison-option', 'Compare data', compareData, (bool checked) {
+      command(UIAction.toggleDataComparison, ToggleOptionEnabledData(checked));
+    });
+    _content.append(comparisonCheckbox);
+
+    var normalisationCheckbox = _getCheckboxWithLabel(
+        'normalisation-option', 'Normalise data', normaliseData,
+        (bool checked) {
+      command(
+          UIAction.toggleDataNormalisation, ToggleOptionEnabledData(checked));
+    });
+    _content.append(normalisationCheckbox);
+
+    var stackTimeseriesCheckbox = _getCheckboxWithLabel(
+        'stack-timeseries',
+        'Stack time series',
+        stackTimeseries,
+        (bool checked) => command(
+            UIAction.toggleStackTimeseries, ToggleOptionEnabledData(checked)));
+    _content.append(stackTimeseriesCheckbox);
+
+    _wrapper.append(labelCol);
+    _wrapper.append(_content);
+    content.append(_wrapper);
+  }
+}
+
+class DataFiltersView {
+  html.DivElement _wrapper;
+  html.DivElement _content;
+
+  DataFiltersView() {
+    _wrapper = html.DivElement()..classes = ['row', 'filter-row'];
+
+    var labelCol = html.DivElement()..classes = ['col-2'];
+    var label = html.LabelElement()..innerText = 'Filters';
+    labelCol.append(label);
+
+    _content = html.DivElement()..classes = ['col-10'];
+
+    _wrapper.append(labelCol);
+    _wrapper.append(_content);
+    content.append(_wrapper);
+  }
+
+  void update(List<model.FilterValue> filters) {
+    _content.children.clear();
+
+    for (var i = 0; i < filters.length; ++i) {
+      var filter = filters[i];
+      var filterRow = generateGridRowElement(
+          id: _generateFilterRowID(filter.dataCollection + filter.key));
+      var checkboxCol = html.DivElement()..classes = ['col-4'];
+      var filterCol = html.DivElement()..classes = ['col-3'];
+      var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
+
+      var checkboxWithLabel = _getCheckboxWithLabel(
+          _generateFilterCheckboxID(filter.dataCollection + filter.key),
+          filter.dataCollection + ' / ' + filter.key,
+          filter.isActive, (bool checked) {
+        command(
+            UIAction.toggleActiveFilter, ToggleActiveFilterData(i, checked));
+      });
+
+      switch (filter.type) {
+        case model.DataType.datetime:
+          var options = filter.options.isEmpty
+              ? ['1970-01-01', DateTime.now().toIso8601String()]
+              : filter.options;
+          var startDateChooser = html.InputElement()
+            ..disabled = !filter.isActive
+            ..id = _generateFilterOptionID(filter.dataCollection, filter.key)
+            ..type = 'date'
+            ..min = options.first.split('T').first
+            ..max = options.last.split('T').first
+            ..value = filter.value.split('_').first
+            ..onChange.listen((event) {
+              var newValue =
+                  '${(event.target as html.InputElement).value}_${filter.value.split('_').last}';
+              command(UIAction.setFilterValue, SetFilterValueData(i, newValue));
+            });
+          var endDateChooser = html.InputElement()
+            ..disabled = !filter.isActive
+            ..id = _generateFilterOptionID(filter.dataCollection, filter.key)
+            ..type = 'date'
+            ..min = options.first.split('T').first
+            ..max = options.last.split('T').first
+            ..value = filter.value.split('_').last
+            ..onChange.listen((event) {
+              var newValue =
+                  '${filter.value.split('_').first}_${(event.target as html.InputElement).value}';
+              command(UIAction.setFilterValue, SetFilterValueData(i, newValue));
+            });
+          filterCol.append(startDateChooser);
+          filterCol.append(endDateChooser);
+          break;
+      }
+
+      checkboxCol.append(checkboxWithLabel);
+      filterRow.append(checkboxCol);
+      filterRow.append(filterCol);
+      filterRow.append(comparisonFilterCol);
+      _content.append(filterRow);
+    }
+  }
+}
+
 void init() {
   loginButton.onClick.listen((_) => command(UIAction.signinWithGoogle, null));
 }
@@ -271,102 +432,6 @@ void disableFilterOptions(String dataPath, String filterKey) {
     if (e is html.InputElement) e.disabled = true;
     if (e is html.SelectElement) e.disabled = true;
   });
-}
-
-void renderNewFilterDropdowns(
-    List<model.FilterValue> filters, bool comparisonEnabled) {
-  var wrapper = generateGridRowElement(classes: [FILTER_ROW_CLASSNAME])
-    ..id = FILTERS_WRAPPER_ID;
-  var labelCol =
-      generateGridLabelColumnElement(classes: [FILTER_ROW_LABEL_CLASSNAME])
-        ..innerText = 'Filters';
-  var optionsCol = generateGridOptionsColumnElement();
-
-  for (var filter in filters) {
-    var filterRow = generateGridRowElement(
-        id: _generateFilterRowID(filter.dataCollection + filter.key));
-    var checkboxCol = html.DivElement()..classes = ['col-4'];
-    var filterCol = html.DivElement()..classes = ['col-3'];
-    var comparisonFilterCol = html.DivElement()..classes = ['col-3'];
-
-    var checkboxWithLabel = _getCheckboxWithLabel(
-        _generateFilterCheckboxID(filter.dataCollection + filter.key),
-        filter.dataCollection + ' / ' + filter.key,
-        filter.isActive, (bool checked) {
-      command(UIAction.toggleActiveFilter,
-          ToggleActiveFilterData(filter.dataCollection, filter.key, checked));
-    });
-
-    switch (filter.type) {
-      case model.DataType.datetime:
-        var startDateChooser = html.InputElement()
-          ..disabled = !filter.isActive
-          ..id = _generateFilterOptionID(filter.dataCollection, filter.key)
-          ..type = 'date'
-          ..min = filter.options.first.split('T').first
-          ..max = filter.options.last.split('T').first
-          ..value = filter.value.split('_').first
-          ..onChange.listen((event) {
-            var newValue =
-                '${(event.target as html.InputElement).value}_${filter.value.split('_').last}';
-            command(
-                UIAction.setFilterValue,
-                SetFilterValueData(
-                    filter.dataCollection, filter.key, newValue));
-          });
-        var endDateChooser = html.InputElement()
-          ..disabled = !filter.isActive
-          ..id = _generateFilterOptionID(filter.dataCollection, filter.key)
-          ..type = 'date'
-          ..min = filter.options.first.split('T').first
-          ..max = filter.options.last.split('T').first
-          ..value = filter.value.split('_').last
-          ..onChange.listen((event) {
-            var newValue =
-                '${filter.value.split('_').first}_${(event.target as html.InputElement).value}';
-            command(
-                UIAction.setFilterValue,
-                SetFilterValueData(
-                    filter.dataCollection, filter.key, newValue));
-          });
-        filterCol.append(startDateChooser);
-        filterCol.append(endDateChooser);
-        break;
-      case model.DataType.string:
-        var filterDropdown = _getDropdown(
-            _generateFilterOptionID(filter.dataCollection, filter.key),
-            filter.options,
-            filter.value,
-            !filter.isActive, (String value) {
-          command(UIAction.setFilterValue,
-              SetFilterValueData(filter.dataCollection, filter.key, value));
-        });
-        filterCol.append(filterDropdown);
-        if (!comparisonEnabled) break;
-
-        var comparisonFilterDropdown = _getDropdown(
-            _generateFilterOptionID(filter.dataCollection, filter.key),
-            filter.options,
-            filter.comparisonValue,
-            !filter.isActive, (String value) {
-          command(UIAction.setComparisonFilterValue,
-              SetFilterValueData(filter.dataCollection, filter.key, value));
-        });
-        comparisonFilterCol.append(comparisonFilterDropdown);
-        break;
-      default:
-    }
-
-    checkboxCol.append(checkboxWithLabel);
-    filterRow.append(checkboxCol);
-    filterRow.append(filterCol);
-    filterRow.append(comparisonFilterCol);
-    optionsCol.append(filterRow);
-  }
-
-  wrapper.append(labelCol);
-  wrapper.append(optionsCol);
-  content.append(wrapper);
 }
 
 void renderChart(

@@ -13,35 +13,28 @@ import 'package:dashboard/logger.dart';
 Logger logger = Logger('controller.dart');
 
 Map<String, model.Link> _navLinks = {
-  'analyse': model.Link(
-      'analyse', 'Analyse', () => handleNavToAnalysis(maintainFilters: false)),
+  'analyse': model.Link('analyse', 'Analyse', () => handleNavToAnalysis()),
   'settings': model.Link('settings', 'Settings', handleNavToSettings)
 };
 
 const DEFAULT_FILTER_SELECT_VALUE = '__all';
-
 const UNABLE_TO_PARSE_CONFIG_ERROR_MSG =
     'Unable to parse "Config" to the required format';
-const UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG = 'Unable to fetch interactions';
-const UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG =
-    'Unable to fetch message status';
-const UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG = 'Unable to fetch survey status';
 
 var _currentNavLink = _navLinks['analyse'].pathname;
 
 // UI States
 var _analyseOptions = model.AnalyseOptions(0, true, false, true);
-List<model.FilterValue> _filters = [];
-
+Map<int, List<model.FilterValue>> _filtersMap = {};
 Map<String, Map<String, dynamic>> _mapsGeoJSON = {};
 
 // Data
 Map<String, Map<String, Map<String, dynamic>>> _dataCollections = {};
-
-Map<String, Map<String, Set>> _uniqueFieldValues;
-
 Map<String, dynamic> _configRaw;
 model.Config _config;
+
+// Views
+view.DataFiltersView _dataFilterView;
 List<chart_model.Chart> _chartsInView = [];
 
 // Actions
@@ -77,17 +70,15 @@ class ToggleOptionEnabledData extends Data {
 }
 
 class ToggleActiveFilterData extends Data {
-  String dataPath;
-  String key;
+  int index;
   bool enabled;
-  ToggleActiveFilterData(this.dataPath, this.key, this.enabled);
+  ToggleActiveFilterData(this.index, this.enabled);
 }
 
 class SetFilterValueData extends Data {
-  String dataPath;
-  String key;
+  int index;
   String value;
-  SetFilterValueData(this.dataPath, this.key, this.value);
+  SetFilterValueData(this.index, this.value);
 }
 
 class SaveConfigToFirebaseData extends Data {
@@ -128,7 +119,15 @@ void onLoginCompleted() async {
   // Read maps data
   await _loadGeoMapsData();
 
-  handleNavToAnalysis();
+  // Initialise and compute filters
+  for (var i = 0; i < _config.tabs.length; ++i) {
+    _filtersMap[i] = <model.FilterValue>[];
+    var currentTab = _config.tabs[i];
+    currentTab.filters.forEach((filter) {
+      _filtersMap[i].add(model.FilterValue(
+          filter.data_collection, filter.key, filter.type, [], '', '', false));
+    });
+  }
 
   // Listen to all data, store to _dataCollections
   for (var pathname in _config.data_collections.keys) {
@@ -150,6 +149,8 @@ void onLoginCompleted() async {
       logger.error(e.toString());
     });
   }
+
+  handleNavToAnalysis();
 }
 
 void _reactToDataChanges() {
@@ -164,8 +165,8 @@ void _reactToDataChanges() {
 
   print('All data collections are fetched, reacting to new changes..');
 
-  // _initialiseFilters();
-  // _updateFilters();
+  _computeFilterOptions();
+  _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
 
   _computeCharts();
   _updateCharts();
@@ -201,87 +202,61 @@ void _loadGeoMapsData() async {
 }
 
 // Render methods
-void handleNavToAnalysis({bool maintainFilters}) {
+void handleNavToAnalysis() {
   view.clearContentTab();
 
-  if (maintainFilters != true) {
-    _analyseOptions = model.AnalyseOptions(0, true, false, true);
-    _filters = [];
-  }
+  view.AnalyseTabsViews(_config.tabs.map((t) => t.label).toList(),
+      _analyseOptions.selectedTabIndex);
+  view.ChartOptionsView(
+      _analyseOptions.dataComparisonEnabled,
+      _analyseOptions.normaliseDataEnabled,
+      _analyseOptions.stackTimeseriesEnabled);
+  _dataFilterView = view.DataFiltersView();
+  _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
 
   var uri = Uri.parse(html.window.location.href);
   var queryParams = uri.queryParameters;
   var chartOptions = convert.jsonDecode(queryParams['chartOptions'] ?? '{}');
   _analyseOptions.updateFrom(chartOptions);
 
-  var queryTabLabel = _config.tabs[_analyseOptions.selectedTabIndex].label;
-
-  var tabLabels =
-      _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
-  view.renderAnalysisTabs(tabLabels, queryTabLabel);
-  view.renderChartOptions(
-      _analyseOptions.dataComparisonEnabled,
-      _analyseOptions.normaliseDataEnabled,
-      _analyseOptions.stackTimeseriesEnabled);
-
-  _initialiseFilters();
-  _updateFilters();
-
   _initialiseCharts();
   _computeCharts();
   _updateCharts();
 }
 
-// Filters
-void _clearFilters() {
-  _filters = [];
-  view.removeFiltersWrapper();
-}
-
-void _initialiseFilters() {
-  var filtersConfig =
-      _config.tabs[_analyseOptions.selectedTabIndex].filters ?? [];
-
-  filtersConfig.forEach((filterConfig) {
-    if (_dataCollections == null ||
-        _dataCollections[filterConfig.data_collection] == null) return;
-
-    var collectionToIterate =
-        _dataCollections[filterConfig.data_collection].values;
-    var defaultValue = '';
-    var options = <String>[];
-    if (filterConfig.type == model.DataType.datetime) {
-      var dates = collectionToIterate.map((e) => e[filterConfig.key]).toList()
-        ..sort();
-      options = [dates.first, dates.last];
-      defaultValue = '${dates.first.split("T")[0]}_${dates.last.split("T")[0]}';
+// Filter options
+void _computeFilterOptions() {
+  for (var i = 0; i < _config.tabs.length; ++i) {
+    var currentTab = _config.tabs[i];
+    for (var j = 0; j < currentTab.filters.length; ++j) {
+      var currentFilter = currentTab.filters[j];
+      if (_dataCollections[currentFilter.data_collection].isEmpty) continue;
+      switch (currentFilter.type) {
+        case model.DataType.datetime:
+          var collectionToIterate =
+              _dataCollections[currentFilter.data_collection].values;
+          var dates = collectionToIterate
+              .map((e) => e[currentFilter.key])
+              .toList()
+                ..sort();
+          _filtersMap[i][j].options = [dates.first, dates.last];
+          if (_filtersMap[i][j].value == '') {
+            _filtersMap[i][j].value =
+                '${dates.first.split("T")[0]}_${dates.last.split("T")[0]}';
+          }
+          break;
+        default:
+      }
     }
-    _filters.add(model.FilterValue(
-        filterConfig.data_collection,
-        filterConfig.key,
-        filterConfig.type,
-        options,
-        defaultValue,
-        defaultValue,
-        false));
-  });
-}
-
-void _updateFilters() {
-  view.removeFiltersWrapper();
-  view.renderNewFilterDropdowns(
-      _filters, _analyseOptions.dataComparisonEnabled);
+  }
 }
 
 // Charts
-void _clearCharts() {
+void _initialiseCharts() {
   _chartsInView.forEach((chart) {
     view.removeChart(chart.id);
   });
   _chartsInView = [];
-}
-
-void _initialiseCharts() {
   var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
   for (var chart in charts) {
     switch (chart.type) {
@@ -312,7 +287,7 @@ void _computeCharts() {
         var toRemove = [];
         messageStats.forEach((dateStr, _) {
           var date = DateTime.parse(dateStr);
-          for (var filter in _filters) {
+          for (var filter in _filtersMap[_analyseOptions.selectedTabIndex]) {
             if (filter.type == model.DataType.datetime) {
               var startDate = DateTime.parse(filter.value.split('_').first);
               var endDate = DateTime.parse(filter.value.split('_').last)
@@ -374,7 +349,7 @@ void handleNavToSettings() {
 void _replaceURLHashWithParams() {
   var params = <String, dynamic>{};
   params['chartOptions'] = convert.jsonEncode(_analyseOptions.toObject());
-  _filters.forEach((filterVal) {
+  _filtersMap[_analyseOptions.selectedTabIndex].forEach((filterVal) {
     if (filterVal.isActive) {
       params['filters'] = params['filters'] ?? [];
       params['filters'].add(convert.jsonEncode({
@@ -406,13 +381,10 @@ void command(UIAction action, Data data) async {
       var d = data as AnalysisTabChangeData;
       _analyseOptions.selectedTabIndex = d.tabIndex;
 
-      _clearFilters();
-      _initialiseFilters();
-      _updateFilters();
+      _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
 
       _initialiseCharts();
       _replaceURLHashWithParams();
-      _clearCharts();
       _initialiseCharts();
       _computeCharts();
       _updateCharts();
@@ -449,14 +421,12 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
-      for (var filter in _filters) {
-        if (filter.dataCollection == d.dataPath && filter.key == d.key) {
-          filter.isActive = !filter.isActive;
-        }
-      }
+      _filtersMap[_analyseOptions.selectedTabIndex][d.index].isActive =
+          d.enabled;
+      var filter = _filtersMap[_analyseOptions.selectedTabIndex][d.index];
       d.enabled
-          ? view.enableFilterOptions(d.dataPath, d.key)
-          : view.disableFilterOptions(d.dataPath, d.key);
+          ? view.enableFilterOptions(filter.dataCollection, filter.key)
+          : view.disableFilterOptions(filter.dataCollection, filter.key);
 
       _replaceURLHashWithParams();
       _computeCharts();
@@ -464,11 +434,7 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.setFilterValue:
       var d = data as SetFilterValueData;
-      for (var filter in _filters) {
-        if (filter.dataCollection == d.dataPath && filter.key == d.key) {
-          filter.value = d.value;
-        }
-      }
+      _filtersMap[_analyseOptions.selectedTabIndex][d.index].value = d.value;
 
       _replaceURLHashWithParams();
       _computeCharts();
@@ -476,11 +442,8 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.setComparisonFilterValue:
       var d = data as SetFilterValueData;
-      for (var filter in _filters) {
-        if (filter.dataCollection == d.dataPath && filter.key == d.key) {
-          filter.comparisonValue = d.value;
-        }
-      }
+      _filtersMap[_analyseOptions.selectedTabIndex][d.index].comparisonValue =
+          d.value;
 
       _replaceURLHashWithParams();
       _computeCharts();
