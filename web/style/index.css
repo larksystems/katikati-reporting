@@ -24,6 +24,11 @@ body {
   border-bottom: none;
 }
 
+.filter-row.last {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  margin-bottom: 24px;
+}
+
 .filter-row-label {
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -32,6 +37,10 @@ body {
 
 .chart {
   margin-top: 24px;
+}
+
+.card {
+  margin-bottom: 24px;
 }
 
 .mapbox-col {

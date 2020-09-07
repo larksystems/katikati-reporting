@@ -358,10 +358,16 @@ void _initialiseCharts() {
   var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
   for (var chart in charts) {
     switch (chart.type) {
+      case model.ChartType.summary:
+        var newChart = chart_model.SummaryChart(chart.title,
+            chart.fields.labels, chart.fields.labels.map((e) => 0).toList());
+        _chartsInView.add(newChart);
+        break;
       case model.ChartType.time_series:
         var newChart = chart_model.TimeSeriesLineChart(
             chart.title,
             chart.data_collection,
+            chart.data_label,
             chart.fields.labels,
             chart.colors, <DateTime, List<num>>{});
         _chartsInView.add(newChart);
@@ -380,26 +386,47 @@ void _computeCharts() {
 
   for (var i = 0; i < charts.length; ++i) {
     var chart = charts[i];
-    switch (chart.type) {
-      case model.ChartType.time_series:
-        if (_dataCollections[chart.data_collection] == null) continue;
-        var messageStats = Map.from(_dataCollections[chart.data_collection]);
-        var toRemove = [];
-        messageStats.forEach((dateStr, _) {
-          var date = DateTime.parse(dateStr);
-          for (var filter in _filtersMap[_analyseOptions.selectedTabIndex]) {
-            if (filter.type == model.DataType.datetime) {
-              var startDate = DateTime.parse(filter.value.split('_').first);
-              var endDate = DateTime.parse(filter.value.split('_').last)
-                  .add(Duration(days: 1));
-              if (date.isBefore(startDate) || date.isAfter(endDate)) {
-                toRemove.add(dateStr);
-              }
-            }
+    if (_dataCollections[chart.data_collection] == null) continue;
+    var dataCollection =
+        Map<String, dynamic>.from(_dataCollections[chart.data_collection]);
+    var toRemove = [];
+    dataCollection.forEach((dateStr, _) {
+      var date = DateTime.parse(dateStr);
+      for (var filter in _filtersMap[_analyseOptions.selectedTabIndex]) {
+        if (filter.type == model.DataType.datetime) {
+          var startDate = DateTime.parse(filter.value.split('_').first);
+          var endDate = DateTime.parse(filter.value.split('_').last)
+              .add(Duration(days: 1));
+          if (date.isBefore(startDate) || date.isAfter(endDate)) {
+            toRemove.add(dateStr);
           }
-        });
-        messageStats.removeWhere((key, value) => toRemove.contains(key));
-        var buckets = messageStats.map((_, valueObj) {
+        }
+      }
+    });
+    dataCollection.removeWhere((key, value) => toRemove.contains(key));
+    switch (chart.type) {
+      case model.ChartType.summary:
+        var computedValues = <num>[];
+        for (var i = 0; i < chart.fields.values.length; ++i) {
+          var values = chart.fields.values;
+          var aggregateMethods = chart.fields.aggregateMethod;
+          var aggregateValue = 0 as num;
+          dataCollection.forEach((_, valueObj) {
+            var value = valueObj[values[i]];
+            aggregateValue += value;
+          });
+          if (aggregateMethods[i] == 'average') {
+            aggregateValue = aggregateValue / dataCollection.keys.length;
+            aggregateValue = aggregateValue.roundToDecimal(1);
+          }
+          computedValues.add(aggregateValue);
+        }
+
+        var chartInView = (_chartsInView[i] as chart_model.SummaryChart);
+        chartInView.values = computedValues;
+        break;
+      case model.ChartType.time_series:
+        var buckets = dataCollection.map((_, valueObj) {
           var values =
               chart.fields.values.map((e) => valueObj[e] as num).toList();
           return MapEntry(
@@ -435,6 +462,8 @@ void _updateCharts() {
       (_chartsInView[i] as chart_model.TimeSeriesLineChart).updateChartinView(
           _analyseOptions.normaliseDataEnabled,
           _analyseOptions.stackTimeseriesEnabled);
+    } else if (_chartsInView[i] is chart_model.SummaryChart) {
+      (_chartsInView[i] as chart_model.SummaryChart).updateChartInView();
     } else if (_chartsInView[i] is chart_model.UnimplementedChart) {
       (_chartsInView[i] as chart_model.UnimplementedChart).updateChartinView();
     }
