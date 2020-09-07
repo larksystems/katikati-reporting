@@ -1,6 +1,7 @@
 import 'dart:js';
 import 'dart:html' as html;
 import 'package:chartjs/chartjs.dart' as chartjs;
+import 'package:dashboard/extensions.dart';
 import 'package:dashboard/chart_helpers.dart' as chart_helpers;
 import 'package:intl/intl.dart' as intl;
 import 'package:uuid/uuid.dart';
@@ -24,6 +25,43 @@ class UnimplementedChart extends Chart {
   }
 }
 
+class SummaryChart extends Chart {
+  String title;
+  List<String> labels;
+  List<num> values;
+  List<html.HeadingElement> displayValue;
+
+  SummaryChart(this.title, this.labels, this.values) {
+    id = uuid.v4();
+    container = html.DivElement()..id = 'chart-${id}';
+    displayValue = [];
+
+    var card = html.DivElement()..classes = ['card'];
+    var cardBody = html.DivElement()..classes = ['card-body'];
+
+    var row = html.DivElement()..classes = ['row'];
+    for (var i = 0; i < labels.length; ++i) {
+      var column = html.DivElement()..classes = ['col-3'];
+      var displayLabel = html.LabelElement()..innerText = labels[i];
+      column.append(displayLabel);
+      var formattedValue = formattedInt.format(values[i]);
+      displayValue.add(html.HeadingElement.h1()..innerText = formattedValue);
+      column.append(displayValue[i]);
+      row.append(column);
+    }
+
+    cardBody.append(row);
+    card.append(cardBody);
+    container.append(card);
+  }
+
+  void updateChartInView() {
+    for (var i = 0; i < displayValue.length; ++i) {
+      displayValue[i].innerText = values[i].formatWithCommas();
+    }
+  }
+}
+
 class TimeSeriesLineChart extends Chart {
   chartjs.ChartData chartData;
   chartjs.Chart chart;
@@ -31,13 +69,14 @@ class TimeSeriesLineChart extends Chart {
 
   String title;
   String dataCollection;
+  String dataLabel;
   List<String> seriesNames;
   List<String> colors;
   Map<DateTime, List<num>> buckets;
   bool isNormalised = false;
 
-  TimeSeriesLineChart(this.title, this.dataCollection, this.seriesNames,
-      this.colors, this.buckets) {
+  TimeSeriesLineChart(this.title, this.dataCollection, this.dataLabel,
+      this.seriesNames, this.colors, this.buckets) {
     id = uuid.v4();
     colors = colors ?? chart_helpers.chartDefaultColors;
     container = html.DivElement()..id = 'chart-${id}';
@@ -88,8 +127,8 @@ class TimeSeriesLineChart extends Chart {
         ], yAxes: [
           chartjs.ChartYAxe()
             ..stacked = false
-            ..scaleLabel = chartjs.ScaleTitleOptions(
-                labelString: 'Messages', display: true)
+            ..scaleLabel =
+                chartjs.ScaleTitleOptions(labelString: dataLabel, display: true)
             ..ticks = (chartjs.LinearTickOptions()..min = 0)
         ]),
         hover: chartjs.ChartHoverOptions()..animationDuration = 0);

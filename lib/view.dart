@@ -147,7 +147,7 @@ class DataFiltersView {
   html.DivElement _content;
 
   DataFiltersView() {
-    _wrapper = html.DivElement()..classes = ['row', 'filter-row'];
+    _wrapper = html.DivElement()..classes = ['row', 'filter-row', 'last'];
 
     var labelCol = html.DivElement()..classes = ['col-2'];
     var label = html.LabelElement()..innerText = 'Filters';
