@@ -365,6 +365,29 @@ void _initialiseCharts() {
             chart.colors, <DateTime, List<num>>{});
         _chartsInView.add(newChart);
         break;
+      case model.ChartType.bar:
+        var buckets = <String, List<num>>{};
+        var compareBuckets = <String, List<num>>{};
+        var labelMap = <String, String>{};
+
+        for (var i = 0; i < chart.fields.values.length; ++i) {
+          var value = chart.fields.values[i];
+          labelMap[value] = chart.fields.labels[i];
+          buckets[value] = [10, 20];
+          compareBuckets[value] = [0, 0];
+        }
+
+        var newChart = chart_model.BarChart(
+            chart.title,
+            chart.data_collection,
+            labelMap,
+            chart.data_label,
+            ['All interactions', 'All interactions'],
+            chart.colors,
+            buckets,
+            compareBuckets);
+        _chartsInView.add(newChart);
+        break;
       default:
         var newChart = chart_model.UnimplementedChart();
         _chartsInView.add(newChart);
