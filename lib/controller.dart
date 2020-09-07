@@ -5,7 +5,7 @@ import 'dart:html' as html;
 import 'package:dashboard/model.dart' as model;
 import 'package:dashboard/view.dart' as view;
 import 'package:dashboard/firebase.dart' as fb;
-import 'package:dashboard/chart_helpers.dart' as chart_helper;
+import 'package:dashboard/charts.dart' as chart_model;
 import 'package:firebase/firestore.dart';
 import 'package:dashboard/extensions.dart';
 import 'package:dashboard/logger.dart';
@@ -13,39 +13,29 @@ import 'package:dashboard/logger.dart';
 Logger logger = Logger('controller.dart');
 
 Map<String, model.Link> _navLinks = {
-  'analyse': model.Link(
-      'analyse', 'Analyse', () => handleNavToAnalysis(maintainFilters: false)),
+  'analyse': model.Link('analyse', 'Analyse', () => handleNavToAnalysis()),
   'settings': model.Link('settings', 'Settings', handleNavToSettings)
 };
 
 const DEFAULT_FILTER_SELECT_VALUE = '__all';
-
 const UNABLE_TO_PARSE_CONFIG_ERROR_MSG =
     'Unable to parse "Config" to the required format';
-const UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG = 'Unable to fetch interactions';
-const UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG =
-    'Unable to fetch message status';
-const UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG = 'Unable to fetch survey status';
 
 var _currentNavLink = _navLinks['analyse'].pathname;
 
 // UI States
 var _analyseOptions = model.AnalyseOptions(0, true, false, true);
-List<model.FilterValue> _filters = [];
-
+Map<int, List<model.FilterValue>> _filtersMap = {};
 Map<String, Map<String, dynamic>> _mapsGeoJSON = {};
 
 // Data
-Map<String, Map<String, dynamic>> _allInteractions;
-Map<String, Map<String, Map<String, dynamic>>> _messageStats;
-Map<String, Map<String, dynamic>> _surveyStatus;
-
-Map<model.DataPath, Map<String, Set>> _uniqueFieldValues;
-
+Map<String, Map<String, Map<String, dynamic>>> _dataCollections = {};
 Map<String, dynamic> _configRaw;
 model.Config _config;
 
-List<model.ComputedChart> _computedCharts;
+// Views
+view.DataFiltersView _dataFilterView;
+List<chart_model.Chart> _chartsInView = [];
 
 // Actions
 enum UIAction {
@@ -80,17 +70,15 @@ class ToggleOptionEnabledData extends Data {
 }
 
 class ToggleActiveFilterData extends Data {
-  String dataPath;
-  String key;
+  int index;
   bool enabled;
-  ToggleActiveFilterData(this.dataPath, this.key, this.enabled);
+  ToggleActiveFilterData(this.index, this.enabled);
 }
 
 class SetFilterValueData extends Data {
-  String dataPath;
-  String key;
+  int index;
   String value;
-  SetFilterValueData(this.dataPath, this.key, this.value);
+  SetFilterValueData(this.index, this.value);
 }
 
 class SaveConfigToFirebaseData extends Data {
@@ -105,6 +93,17 @@ class CopyToClipboardChartConfigData extends Data {
 
 // Controller functions
 void init() async {
+  // get hash from url
+  var hash = html.window.location.hash;
+  if (hash.isNotEmpty) {
+    hash = hash.split('?')[0];
+  }
+  if (hash == '') {
+    _currentNavLink = _navLinks.keys.first;
+  } else {
+    _currentNavLink = hash.replaceAll('#', '');
+  }
+
   view.init();
   view.showLoginModal();
   _navLinks.forEach((_, n) {
@@ -118,164 +117,145 @@ void init() async {
 void onLoginCompleted() async {
   view.showLoading();
 
-  fb.listenToConfig((DocumentSnapshot documentSnapshot) async {
-    _configRaw = documentSnapshot.data();
+  // Read config, parse config
+  _configRaw = await fb.fetchConfig();
+  try {
     _config = model.Config.fromData(_configRaw);
-
-    await loadGeoMapsData();
-    _handleInteractionsChanges();
-    _handleSurveyStatusChanges();
-    _handleMessageStatusChanges();
-  }, (error) {
+  } catch (e) {
     view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
-    logger.error(error.toString());
-  });
-}
+    logger.error(e.toString());
+    view.hideLoading();
+  }
 
-void _handleInteractionsChanges() {
-  if (_config.data_paths['interactions'] == null) return;
-  var interactionsPath = _config.data_paths['interactions']['data'];
-  if (interactionsPath != null) {
-    fb.listenToInteractions(interactionsPath, (QuerySnapshot querySnapshot) {
-      var interactionsMap = Map<String, Map<String, dynamic>>();
-      querySnapshot.forEach((doc) {
-        interactionsMap[doc.id] = doc.data();
-      });
-      _allInteractions = interactionsMap;
-      _handleDataChanges();
-    }, (error) {
-      view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
-      logger.error(error.toString());
+  // Read maps data
+  await _loadGeoMapsData();
+
+  // Initialise and compute filters
+  for (var i = 0; i < _config.tabs.length; ++i) {
+    _filtersMap[i] = <model.FilterValue>[];
+    var currentTab = _config.tabs[i];
+    currentTab.filters.forEach((filter) {
+      _filtersMap[i].add(model.FilterValue(
+          filter.dataCollection, filter.key, filter.type, [], '', '', false));
     });
   }
-}
 
-void _handleSurveyStatusChanges() {
-  if (_config.data_paths['survey_status'] == null) return;
-  var surveyStatusPath = _config.data_paths['survey_status']['data'];
-  if (surveyStatusPath != null) {
-    fb.listenToSurveyStatus(surveyStatusPath, (QuerySnapshot querySnapshot) {
-      var statusMap = Map<String, Map<String, dynamic>>();
-      querySnapshot.forEach((doc) {
-        statusMap[doc.id] = doc.data();
+  // Fill chart options and nav tab from url
+  _fillDefaultOptionsFromURL();
+
+  // Listen to all data, store to _dataCollections
+  for (var pathname in _config.data_collections.keys) {
+    var path = _config.data_collections[pathname];
+    fb.listenToCollections(path, (QuerySnapshot querySnapshot) {
+      var dataMap = _dataCollections[pathname] ?? {};
+      querySnapshot.docChanges().forEach((docChange) {
+        if (docChange.type == 'added' || docChange.type == 'modified') {
+          dataMap[docChange.doc.id] = docChange.doc.data();
+        }
+        if (docChange.type == 'removed') {
+          dataMap.remove(docChange.doc.id);
+        }
       });
-      _surveyStatus = statusMap;
-      _handleDataChanges();
-    }, (error) {
-      view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
-      logger.error(error.toString());
+      _dataCollections[pathname] = dataMap;
+      _reactToDataChanges();
+    }, (e) {
+      view.showAlert('Unable to fetch ${pathname} data');
+      logger.error(e.toString());
     });
   }
+
+  _navLinks[_currentNavLink].render();
 }
 
-void _handleMessageStatusChanges() {
-  var messageStatusPathMap = _config.data_paths['message_stats'];
-  _messageStats = {};
-  if (messageStatusPathMap != null) {
-    for (var pathKey in messageStatusPathMap.keys) {
-      fb.listenToMessageStats(messageStatusPathMap[pathKey],
-          (QuerySnapshot querySnapshot) {
-        var messageStatsMap = Map<String, Map<String, dynamic>>();
-        querySnapshot.forEach((doc) {
-          messageStatsMap[doc.id] = doc.data();
-        });
-        _messageStats[pathKey] = messageStatsMap;
-        var scrollTop = html.document.documentElement.scrollTop;
-        print(scrollTop);
-        _handleDataChanges();
-        html.document.documentElement.scrollTo(0, scrollTop);
-      }, (error) {
-        view.showAlert(UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG);
-        logger.error(error);
+void _fillDefaultOptionsFromURL() {
+  var uri = Uri.dataFromString(html.window.location.href);
+  var query = uri.queryParameters;
+  if (query['analyseTab'] != null) {
+    _analyseOptions.selectedTabIndex = int.parse(query['analyseTab']);
+  }
+  if (query['compare'] != null) {
+    _analyseOptions.dataComparisonEnabled = query['compare'] == 'true';
+  }
+  if (query['normalise'] != null) {
+    _analyseOptions.normaliseDataEnabled = query['normalise'] == 'true';
+  }
+  if (query['stackTimeSeries'] != null) {
+    _analyseOptions.stackTimeseriesEnabled = query['stackTimeSeries'] == 'true';
+  }
+
+  if (query['filter.keys'] != null) {
+    var keys = Uri.decodeFull(query['filter.keys']).split(',');
+    var dataCollections =
+        Uri.decodeFull(query['filter.collections']).split(',');
+    var values = Uri.decodeFull(query['filter.values']).split(',');
+    var comparisonValues =
+        Uri.decodeFull(query['filter.comparisonValues']).split(',');
+
+    for (var i = 0; i < keys.length; ++i) {
+      var filters = _filtersMap[_analyseOptions.selectedTabIndex];
+      filters.forEach((filter) {
+        if (filter.key == keys[i] &&
+            filter.dataCollection == dataCollections[i]) {
+          filter.isActive = true;
+          filter.value = values[i];
+          filter.comparisonValue = comparisonValues[i];
+        }
       });
     }
   }
 }
 
-void _handleDataChanges() {
-  if (_configRaw == null) return;
-  if (_config.data_paths['interactions'] != null && _allInteractions == null) {
-    return;
-  }
-  if (_config.data_paths['survey_status'] != null && _surveyStatus == null) {
-    return;
-  }
-  if (_config.data_paths['message_status'] != null &&
-      _messageStats.values.isEmpty) {
-    return;
+void _pushOptionsToURL() {
+  var params = <String, String>{};
+
+  params['analyseTab'] = _analyseOptions.selectedTabIndex.toString();
+  params['compare'] = _analyseOptions.dataComparisonEnabled.toString();
+  params['normalise'] = _analyseOptions.normaliseDataEnabled.toString();
+  params['stackTimeSeries'] = _analyseOptions.stackTimeseriesEnabled.toString();
+
+  var filters = List<model.FilterValue>.from(
+      _filtersMap[_analyseOptions.selectedTabIndex]);
+  filters.removeWhere((element) => !element.isActive);
+  if (filters.isNotEmpty) {
+    params['filter.keys'] = filters.map((e) => e.key).toList().join(',');
+    params['filter.collections'] =
+        filters.map((e) => e.dataCollection).toList().join(',');
+    params['filter.values'] = filters.map((e) => e.value).toList().join(',');
+    params['filter.comparisonValues'] =
+        filters.map((e) => e.comparisonValue).toList().join(',');
   }
 
-  _uniqueFieldValues = computeUniqueFieldValues(
-      _config.tabs.map((t) => t.filters ?? []).expand((e) => e).toList());
+  var url = Uri(queryParameters: params);
+  html.window.history
+      .replaceState(null, '', '#${_currentNavLink}${url.toString()}');
+}
 
-  view.setNavlinkSelected(_currentNavLink);
-  if (_navLinks[_currentNavLink].pathname == 'settings') {
-    handleNavToSettings();
-  } else if (_navLinks[_currentNavLink].pathname == 'analyse') {
-    handleNavToAnalysis(maintainFilters: true);
+void _reactToDataChanges() {
+  // check if all the data is filled
+  for (var key in _config.data_collections.keys) {
+    if (_dataCollections[key] == null) {
+      return;
+    }
   }
 
   view.hideLoading();
+
+  print('All data collections are fetched, reacting to new changes..');
+
+  _computeFilterOptions();
+
+  if (_currentNavLink == _navLinks.keys.first) {
+    _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
+    _computeCharts();
+    _updateCharts();
+  }
 }
 
 void onLogoutCompleted() async {
   logger.debug('Delete all local data');
 }
 
-void loadFirebaseData() async {
-  try {
-    _configRaw = await fb.fetchConfig();
-    _config = model.Config.fromData(_configRaw);
-  } catch (e) {
-    view.showAlert(UNABLE_TO_PARSE_CONFIG_ERROR_MSG);
-    view.hideLoading();
-    logger.error(e);
-    rethrow;
-  }
-
-  if (_config.data_paths == null) {
-    return;
-  }
-
-  if (_config.data_paths['interactions'] != null) {
-    var interactionsPath = _config.data_paths['interactions']['data'];
-    try {
-      _allInteractions = await fb.fetchInteractions(interactionsPath);
-    } catch (e) {
-      view.showAlert(UNABLE_TO_FETCH_INTERACTIONS_ERROR_MSG);
-      logger.error(e);
-      rethrow;
-    }
-  }
-
-  var messageStatusPathMap = _config.data_paths['message_stats'];
-  _messageStats = {};
-  if (messageStatusPathMap != null) {
-    for (var pathKey in messageStatusPathMap.keys) {
-      try {
-        _messageStats[pathKey] =
-            await fb.fetchMessageStats(messageStatusPathMap[pathKey]);
-      } catch (e) {
-        view.showAlert(UNABLE_TO_FETCH_MESSAGE_STATUS_ERROR_MSG);
-        logger.error(e);
-        rethrow;
-      }
-    }
-  }
-
-  if (_config.data_paths['survey_status'] != null) {
-    var surveyStatusPath = _config.data_paths['survey_status']['data'];
-    try {
-      _surveyStatus = await fb.fetchSurveyStats(surveyStatusPath);
-    } catch (e) {
-      view.showAlert(UNABLE_TO_FETCH_SURVEY_STATUS_ERROR_MSG);
-      logger.error(e);
-      rethrow;
-    }
-  }
-}
-
-void loadGeoMapsData() async {
+void _loadGeoMapsData() async {
   for (var tab in _config.tabs) {
     for (var chart in tab.charts) {
       if (chart.type == model.ChartType.map) {
@@ -300,463 +280,163 @@ void loadGeoMapsData() async {
   }
 }
 
-// Compute data methods
-Map<model.DataPath, Map<String, Set>> computeUniqueFieldValues(
-    List<model.Filter> filters) {
-  var uniqueFieldValues = <model.DataPath, Map<String, Set>>{};
-  filters.forEach((filter) {
-    var dataPath = filter.data_path;
-    uniqueFieldValues[dataPath] = uniqueFieldValues[dataPath] ?? {};
-    uniqueFieldValues[dataPath][filter.key] = <dynamic>{};
-  });
-
-  uniqueFieldValues.forEach((dataPath, keysObj) {
-    switch (dataPath) {
-      case model.DataPath.interactions:
-        _allInteractions.forEach((_, interaction) {
-          keysObj.keys.forEach((key) {
-            var interactionValue = interaction[key];
-            if (interactionValue is List) {
-              interactionValue.forEach((interactionVal) {
-                uniqueFieldValues[dataPath][key].add(interactionVal);
-              });
-            } else {
-              uniqueFieldValues[dataPath][key].add(interactionValue);
-            }
-          });
-        });
-        break;
-      case model.DataPath.message_stats:
-        logger.debug('message_stats uniqueFieldValues need not be computed');
-        break;
-      default:
-        throw UnimplementedError(
-            'computeUniqueFieldValues ${dataPath} not handled');
-    }
-  });
-
-  return uniqueFieldValues;
-}
-
-bool _interactionMatchesFilterValues(Map<String, dynamic> interaction,
-    List<model.FilterValue> filterValues, bool comparison) {
-  for (var filter in filterValues) {
-    if (!filter.isActive) continue;
-    if (filter.value == DEFAULT_FILTER_SELECT_VALUE) continue;
-    if (comparison && filter.comparisonValue == DEFAULT_FILTER_SELECT_VALUE) {
-      continue;
-    }
-
-    var interactionMatch;
-    var interactionValue = interaction[filter.key];
-
-    var value = comparison ? filter.comparisonValue : filter.value;
-
-    if (interactionValue is List) {
-      interactionMatch = interactionValue.contains(value);
-    } else if (interactionValue is DateTime) {
-      var startDate = DateTime.parse(value.split('_').first);
-      var endDate =
-          DateTime.parse(value.split('_').last).add(Duration(days: 1));
-      interactionMatch = interactionValue.isAfter(startDate) &&
-          interactionValue.isBefore(endDate);
-    } else if (interactionValue is String) {
-      interactionMatch = interactionValue == value;
-    }
-    if (!interactionMatch) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool _interactionMatchesOperation(
-    Map<String, dynamic> interaction, String key, String value) {
-  if (value == DEFAULT_FILTER_SELECT_VALUE) return true;
-  if (interaction[key] is List && interaction[key].contains(value)) return true;
-
-  if (interaction[key] == value) return true;
-
-  return false;
-}
-
 // Render methods
-void handleNavToAnalysis({bool maintainFilters}) {
+void handleNavToAnalysis() {
   view.clearContentTab();
 
-  if (maintainFilters != true) {
-    _analyseOptions = model.AnalyseOptions(0, true, false, true);
-    _filters = [];
-  }
-
-  var uri = Uri.parse(html.window.location.href);
-  var queryParams = uri.queryParameters;
-  var chartOptions = convert.jsonDecode(queryParams['chartOptions'] ?? '{}');
-  _analyseOptions.updateFrom(chartOptions);
-
-  var queryTabLabel = _config.tabs[_analyseOptions.selectedTabIndex].label;
-
-  var tabLabels =
-      _config.tabs.asMap().map((i, t) => MapEntry(i, t.label)).values.toList();
-  view.renderAnalysisTabs(tabLabels, queryTabLabel);
-  view.renderChartOptions(
+  view.AnalyseTabsViews(_config.tabs.map((t) => t.label).toList(),
+      _analyseOptions.selectedTabIndex);
+  view.ChartOptionsView(
       _analyseOptions.dataComparisonEnabled,
       _analyseOptions.normaliseDataEnabled,
       _analyseOptions.stackTimeseriesEnabled);
+  _dataFilterView = view.DataFiltersView();
+  _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
 
-  _computeFilterDropdownsAndRender(
-      _config.tabs[_analyseOptions.selectedTabIndex].filters);
-  _computeChartDataAndRender();
+  _initialiseCharts();
+  _computeCharts();
+  _updateCharts();
 }
 
-void _computeFilterDropdownsAndRender(List<model.Filter> filters) {
-  filters = filters ?? [];
-
-  _filters = [];
-  filters.forEach((f) {
-    var filterOptions = <String>[];
-    var defaultValue = DEFAULT_FILTER_SELECT_VALUE;
-    if (f.type == model.DataType.string) {
-      filterOptions = _uniqueFieldValues[f.data_path][f.key]
-          .map((e) => e.toString())
-          .toList()
-            ..add(DEFAULT_FILTER_SELECT_VALUE);
-    } else if (f.type == model.DataType.datetime) {
-      filterOptions = [];
-      switch (f.data_path) {
-        case model.DataPath.message_stats:
-          // todo: check across all _messageStats, not just the first
-          var dates = _messageStats.values.first.keys.toList()..sort();
-          filterOptions = [dates.first, dates.last];
-          var splitCharacter = 'T';
-          if (!dates.first.toString().contains(splitCharacter)) {
-            splitCharacter = ' ';
+// Filter options
+void _computeFilterOptions() {
+  for (var i = 0; i < _config.tabs.length; ++i) {
+    var currentTab = _config.tabs[i];
+    for (var j = 0; j < currentTab.filters.length; ++j) {
+      var currentFilter = currentTab.filters[j];
+      if (_dataCollections[currentFilter.dataCollection].isEmpty) continue;
+      switch (currentFilter.type) {
+        case model.DataType.datetime:
+          var collectionToIterate =
+              _dataCollections[currentFilter.dataCollection].values;
+          var dates = collectionToIterate
+              .map((e) => e[currentFilter.key])
+              .toList()
+                ..sort();
+          _filtersMap[i][j].options = [dates.first, dates.last];
+          // todo: refactor to a function
+          if (_filtersMap[i][j].value == '') {
+            _filtersMap[i][j].value =
+                '${dates.first.split("T")[0]}_${dates.last.split("T")[0]}';
           }
-          // the default chosen value is the whole date range to start with
-          defaultValue = dates.first.toString().split(splitCharacter).first +
-              '_' +
-              dates.last.toString().split(splitCharacter).first;
+          break;
+        case model.DataType.string:
+          var collectionToIterate =
+              _dataCollections[currentFilter.dataCollection].values;
+          var options = <String>{};
+          collectionToIterate.forEach((element) {
+            var data = element[currentFilter.key];
+            if (data is String) {
+              options.add(data.toString());
+            } else if (data is List) {
+              data.forEach((d) {
+                options.add(d.toString());
+              });
+            }
+          });
+          options.add(DEFAULT_FILTER_SELECT_VALUE);
+          _filtersMap[i][j].options = options.toList();
+          if (_filtersMap[i][j].value == '') {
+            _filtersMap[i][j].value = DEFAULT_FILTER_SELECT_VALUE;
+          }
+          if (_filtersMap[i][j].comparisonValue == '') {
+            _filtersMap[i][j].comparisonValue = DEFAULT_FILTER_SELECT_VALUE;
+          }
           break;
         default:
       }
     }
-
-    _filters.add(model.FilterValue(f.data_path, f.key, f.type, filterOptions,
-        defaultValue, defaultValue, false));
-  });
-
-  // Fill filter params from url to filterVals
-  var uri = Uri.parse(html.window.location.href);
-  var queryParams = uri.queryParametersAll;
-  var urlFilters = queryParams['filters'] ?? [];
-  urlFilters.forEach((filter) {
-    var filterObj = convert.jsonDecode(filter);
-    _filters.forEach((filterVal) {
-      if (filterVal.key == filterObj['key'] &&
-          filterVal.dataPath.name == filterObj['dataPath']) {
-        filterVal.value = filterObj['value'];
-        filterVal.comparisonValue =
-            filterObj['comparisonValue'] ?? DEFAULT_FILTER_SELECT_VALUE;
-        filterVal.isActive = true;
-      }
-    });
-  });
-
-  view.renderNewFilterDropdowns(
-      _filters, _analyseOptions.dataComparisonEnabled);
+  }
 }
 
-void _computeChartDataAndRender() {
+// Charts
+void _initialiseCharts() {
+  _chartsInView.forEach((chart) {
+    view.removeChart(chart.id);
+  });
+  _chartsInView = [];
   var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
-  _computedCharts = [];
-
-  // Initial data fields
   for (var chart in charts) {
     switch (chart.type) {
-      case model.ChartType.bar:
-        var computedChart = model.ComputedBarChart(
-            chart.data_path,
-            chart.title,
-            chart.narrative,
-            chart.colors,
-            chart.data_label,
-            chart.fields.labels,
-            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
-            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
-            ['', '']);
-        _computedCharts.add(computedChart);
-        break;
-      case model.ChartType.map:
-        var colors = chart.colors ?? chart_helper.chartDefaultColors;
-        var computedChart = model.ComputedMapChart(
-            chart.data_path,
-            chart.title,
-            chart.narrative,
-            colors,
-            chart.fields.values,
-            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
-            chart.fields.values.map((_) => [0.0, 0.0]).toList(),
-            ['', ''],
-            [chart.geography.country, chart.geography.regionLevel.name]);
-        _computedCharts.add(computedChart);
-        break;
       case model.ChartType.time_series:
-        var buckets = <DateTime, List<num>>{};
-        var computedChart = model.ComputedTimeSeriesChart(
-            chart.data_path,
-            chart.doc_name,
+        var newChart = chart_model.TimeSeriesLineChart(
             chart.title,
-            chart.narrative,
-            chart.colors,
-            chart.data_label,
+            chart.data_collection,
             chart.fields.labels,
-            buckets);
-        _computedCharts.add(computedChart);
-        break;
-      case model.ChartType.funnel:
-        var computedChart = model.ComputedFunnelChart(
-            chart.data_path,
-            chart.title,
-            chart.narrative,
-            chart.colors ?? chart_helper.chartDefaultColors,
-            [],
-            [],
-            chart.is_paired);
-        _computedCharts.add(computedChart);
+            chart.colors, <DateTime, List<num>>{});
+        _chartsInView.add(newChart);
         break;
       default:
-        _computedCharts.add(null);
-        logger.error(
-            '_computeChartDataAndRender Chart type ${chart.type} not computed');
+        var newChart = chart_model.UnimplementedChart();
+        _chartsInView.add(newChart);
     }
   }
 
-  // compute data
+  view.appendCharts(_chartsInView.map((e) => e.container).toList());
+}
+
+void _computeCharts() {
+  var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
+
   for (var i = 0; i < charts.length; ++i) {
     var chart = charts[i];
-    var computedChart = _computedCharts[i];
-    // funnel chart
-    if (computedChart is model.ComputedFunnelChart) {
-      switch (chart.data_path) {
-        case model.DataPath.survey_status:
-          var data = _surveyStatus[chart.doc_name][chart.fields.key] as List;
-          data.forEach((e) {
-            computedChart.stages.add(e[chart.fields.labels.first]);
-            computedChart.values.add(e[chart.fields.values.first]);
-          });
-          break;
-        default:
-          logger
-              .error('computed funnel chart doesnt support ${chart.data_path}');
-      }
-    }
-    // time series chart
-    else if (computedChart is model.ComputedTimeSeriesChart) {
-      switch (chart.data_path) {
-        case model.DataPath.message_stats:
-          var messageStats = Map.from(_messageStats[chart.doc_name]);
-          var toRemove = [];
-          messageStats.forEach((dateStr, _) {
-            var date = DateTime.parse(dateStr);
-            for (var filter in _filters) {
-              if (filter.type == model.DataType.datetime) {
-                var startDate = DateTime.parse(filter.value.split('_').first);
-                var endDate = DateTime.parse(filter.value.split('_').last)
-                    .add(Duration(days: 1));
-                if (date.isBefore(startDate) || date.isAfter(endDate)) {
-                  toRemove.add(dateStr);
-                }
+    switch (chart.type) {
+      case model.ChartType.time_series:
+        if (_dataCollections[chart.data_collection] == null) continue;
+        var messageStats = Map.from(_dataCollections[chart.data_collection]);
+        var toRemove = [];
+        messageStats.forEach((dateStr, _) {
+          var date = DateTime.parse(dateStr);
+          for (var filter in _filtersMap[_analyseOptions.selectedTabIndex]) {
+            if (filter.type == model.DataType.datetime) {
+              var startDate = DateTime.parse(filter.value.split('_').first);
+              var endDate = DateTime.parse(filter.value.split('_').last)
+                  .add(Duration(days: 1));
+              if (date.isBefore(startDate) || date.isAfter(endDate)) {
+                toRemove.add(dateStr);
               }
-            }
-          });
-          messageStats.removeWhere((key, value) => toRemove.contains(key));
-          var buckets = messageStats.map((_, valueObj) {
-            var values =
-                chart.fields.values.map((e) => valueObj[e] as num).toList();
-            return MapEntry(
-                DateTime.parse(valueObj[chart.timestamp.key]), values);
-          });
-          computedChart.buckets = buckets;
-
-          if (_analyseOptions.normaliseDataEnabled) {
-            for (var date in computedChart.buckets.keys) {
-              var bucket = computedChart.buckets[date];
-              var normaliseValue =
-                  bucket.reduce((value, element) => value + element);
-              if (normaliseValue == 0) {
-                normaliseValue = 1;
-              }
-              computedChart.buckets[date] =
-                  computedChart.buckets[date].map((value) {
-                return (value / normaliseValue * 100).roundToDecimal(2);
-              }).toList();
             }
           }
+        });
+        messageStats.removeWhere((key, value) => toRemove.contains(key));
+        var buckets = messageStats.map((_, valueObj) {
+          var values =
+              chart.fields.values.map((e) => valueObj[e] as num).toList();
+          return MapEntry(
+              DateTime.parse(valueObj[chart.timestamp.key]), values);
+        });
+        var chartInView = (_chartsInView[i] as chart_model.TimeSeriesLineChart);
+        chartInView.buckets = buckets;
 
-          break;
-        default:
-          logger.error(
-              'computed time series chart doesnt support ${chart.data_path}');
-      }
-    }
-    // bar chart todo: combine with map chart
-    else if (computedChart is model.ComputedBarChart) {
-      switch (chart.data_path) {
-        case model.DataPath.interactions:
-          _allInteractions.forEach((_, interaction) {
-            var addToPrimaryBucket =
-                _interactionMatchesFilterValues(interaction, _filters, false);
-            var addToComparisonBucket =
-                _interactionMatchesFilterValues(interaction, _filters, true);
-
-            for (var i = 0; i < chart.fields.values.length; ++i) {
-              if (addToPrimaryBucket) {
-                ++computedChart.normaliseValues[i][0];
-              }
-              if (addToComparisonBucket) {
-                ++computedChart.normaliseValues[i][1];
-              }
-
-              if (!_interactionMatchesOperation(
-                  interaction, chart.fields.key, chart.fields.values[i])) {
-                continue;
-              }
-              if (addToPrimaryBucket) {
-                ++computedChart.buckets[i][0];
-              }
-              if (addToComparisonBucket) {
-                ++computedChart.buckets[i][1];
-              }
+        if (_analyseOptions.normaliseDataEnabled) {
+          for (var date in chartInView.buckets.keys) {
+            var bucket = chartInView.buckets[date];
+            var normaliseValue =
+                bucket.reduce((value, element) => value + element);
+            if (normaliseValue == 0) {
+              normaliseValue = 1;
             }
-          });
-          break;
-        default:
-      }
-    }
-    // map chart
-    else if (computedChart is model.ComputedMapChart) {
-      switch (chart.data_path) {
-        case model.DataPath.interactions:
-          _allInteractions.forEach((_, interaction) {
-            var addToPrimaryBucket =
-                _interactionMatchesFilterValues(interaction, _filters, false);
-            var addToComparisonBucket =
-                _interactionMatchesFilterValues(interaction, _filters, true);
-
-            for (var i = 0; i < chart.fields.values.length; ++i) {
-              if (addToPrimaryBucket) {
-                ++computedChart.normaliseValues[i][0];
-              }
-              if (addToComparisonBucket) {
-                ++computedChart.normaliseValues[i][1];
-              }
-
-              if (!_interactionMatchesOperation(
-                  interaction, chart.fields.key, chart.fields.values[i])) {
-                continue;
-              }
-              if (addToPrimaryBucket) {
-                ++computedChart.buckets[i][0];
-              }
-              if (addToComparisonBucket) {
-                ++computedChart.buckets[i][1];
-              }
-            }
-          });
-          break;
-        default:
-      }
-    } else {
-      logger.error('computed chart not supported');
+            chartInView.buckets[date] = chartInView.buckets[date].map((value) {
+              return (value / normaliseValue * 100).roundToDecimal(2);
+            }).toList();
+          }
+        }
+        break;
+      default:
     }
   }
+}
 
-  // Render charts
-  for (var computedChart in _computedCharts) {
-    if (computedChart is model.ComputedBarChart) {
-      var seriesLabels = [];
-      var seriesComparisonLabels = [];
-      _filters.forEach((filter) {
-        if (filter.isActive) {
-          seriesLabels.add('${filter.key}: ${filter.value}');
-          seriesComparisonLabels
-              .add('${filter.key}: ${filter.comparisonValue}');
-        }
-      });
-      var seriesLabelString =
-          seriesLabels.isEmpty ? 'All' : seriesLabels.join(', ');
-      var seriesComparisonLabelString = seriesComparisonLabels.isEmpty
-          ? 'All'
-          : seriesComparisonLabels.join(', ');
+void _updateCharts() {
+  var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
 
-      if (_analyseOptions.normaliseDataEnabled) {
-        for (var i = 0; i < computedChart.buckets.length; ++i) {
-          var bucket = computedChart.buckets[i];
-          for (var j = 0; j < bucket.length; ++j) {
-            computedChart.buckets[i][j] = ((computedChart.buckets[i][j] * 100) /
-                    computedChart.normaliseValues[i][j])
-                .roundToDecimal(2);
-          }
-        }
-      }
-
-      var chartConfig = chart_helper.generateBarChartConfig(
-          computedChart,
-          _analyseOptions.dataComparisonEnabled,
-          _analyseOptions.normaliseDataEnabled,
-          seriesLabelString,
-          seriesComparisonLabelString);
-      view.renderChart(
-          computedChart.title, computedChart.narrative, chartConfig);
-    } else if (computedChart is model.ComputedTimeSeriesChart) {
-      var chartConfig = chart_helper.generateTimeSeriesChartConfig(
-          computedChart,
+  for (var i = 0; i < charts.length; ++i) {
+    if (_chartsInView[i] is chart_model.TimeSeriesLineChart) {
+      (_chartsInView[i] as chart_model.TimeSeriesLineChart).updateChartinView(
           _analyseOptions.normaliseDataEnabled,
           _analyseOptions.stackTimeseriesEnabled);
-      view.renderChart(
-          computedChart.title, computedChart.narrative, chartConfig);
-    } else if (computedChart is model.ComputedFunnelChart) {
-      view.renderFunnelChart(
-          computedChart.title,
-          computedChart.narrative,
-          computedChart.colors ?? chart_helper.chartDefaultColors,
-          computedChart.stages,
-          computedChart.values,
-          computedChart.isCoupled);
-    } else if (computedChart is model.ComputedMapChart) {
-      var mapFilterValues = <String, List<num>>{};
-      var mapComparisonFilterValues = <String, List<num>>{};
-
-      for (var i = 0; i < computedChart.labels.length; ++i) {
-        mapFilterValues[computedChart.labels[i]] = [
-          _analyseOptions.normaliseDataEnabled
-              ? ((computedChart.buckets[i][0] * 100) /
-                      computedChart.normaliseValues[i][0])
-                  .roundToDecimal(2)
-              : computedChart.buckets[i][0],
-          computedChart.buckets[i][0] / computedChart.normaliseValues[i][0]
-        ];
-        mapComparisonFilterValues[computedChart.labels[i]] = [
-          _analyseOptions.normaliseDataEnabled
-              ? ((computedChart.buckets[i][1] * 100) /
-                      computedChart.normaliseValues[i][1])
-                  .roundToDecimal(2)
-              : computedChart.buckets[i][1],
-          computedChart.buckets[i][1] / computedChart.normaliseValues[i][1]
-        ];
-      }
-
-      view.renderGeoMap(
-          computedChart.title,
-          computedChart.narrative,
-          _mapsGeoJSON[computedChart.mapPath[0]][computedChart.mapPath[1]],
-          mapFilterValues,
-          mapComparisonFilterValues,
-          _analyseOptions.dataComparisonEnabled,
-          _analyseOptions.normaliseDataEnabled,
-          computedChart.colors);
-    } else {
-      logger.error('No chart type to render');
+    } else if (_chartsInView[i] is chart_model.UnimplementedChart) {
+      (_chartsInView[i] as chart_model.UnimplementedChart).updateChartinView();
     }
   }
 }
@@ -766,25 +446,6 @@ void handleNavToSettings() {
   var encoder = convert.JsonEncoder.withIndent('  ');
   var configString = encoder.convert(_configRaw);
   view.renderSettingsConfigEditor(configString);
-}
-
-void _replaceURLHashWithParams() {
-  var params = <String, dynamic>{};
-  params['chartOptions'] = convert.jsonEncode(_analyseOptions.toObject());
-  _filters.forEach((filterVal) {
-    if (filterVal.isActive) {
-      params['filters'] = params['filters'] ?? [];
-      params['filters'].add(convert.jsonEncode({
-        'key': filterVal.key,
-        'dataPath': filterVal.dataPath.name,
-        'value': filterVal.value,
-        'comparisonValue': filterVal.comparisonValue
-      }));
-    }
-  });
-
-  var url = Uri(queryParameters: params);
-  html.window.history.replaceState(null, '', url.toString());
 }
 
 // User actions
@@ -802,13 +463,13 @@ void command(UIAction action, Data data) async {
     case UIAction.changeAnalysisTab:
       var d = data as AnalysisTabChangeData;
       _analyseOptions.selectedTabIndex = d.tabIndex;
-      _filters = [];
-      view.removeFiltersWrapper();
-      view.removeAllChartWrappers();
-      _computeFilterDropdownsAndRender(
-          _config.tabs[_analyseOptions.selectedTabIndex].filters);
-      _replaceURLHashWithParams();
-      _computeChartDataAndRender();
+
+      _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
+
+      _pushOptionsToURL();
+      _initialiseCharts();
+      _computeCharts();
+      _updateCharts();
       logger
           .debug('Changed to analysis tab ${_analyseOptions.selectedTabIndex}');
       break;
@@ -816,11 +477,9 @@ void command(UIAction action, Data data) async {
       var d = data as ToggleOptionEnabledData;
       _analyseOptions.dataComparisonEnabled = d.enabled;
       view.removeFiltersWrapper();
-      view.removeAllChartWrappers();
-      _computeFilterDropdownsAndRender(
-          _config.tabs[_analyseOptions.selectedTabIndex].filters);
-      _replaceURLHashWithParams();
-      _computeChartDataAndRender();
+      _pushOptionsToURL();
+      _computeCharts();
+      _updateCharts();
       logger.debug(
           'Data comparison changed to ${_analyseOptions.dataComparisonEnabled}');
       break;
@@ -829,57 +488,48 @@ void command(UIAction action, Data data) async {
       _analyseOptions.normaliseDataEnabled = d.enabled;
       logger.debug(
           'Data normalisation changed to ${_analyseOptions.normaliseDataEnabled}');
-      view.removeAllChartWrappers();
-      _replaceURLHashWithParams();
-      _computeChartDataAndRender();
+      _pushOptionsToURL();
+      _computeCharts();
+      _updateCharts();
       break;
     case UIAction.toggleStackTimeseries:
       var d = data as ToggleOptionEnabledData;
       _analyseOptions.stackTimeseriesEnabled = d.enabled;
       logger.debug(
           'Stack time series chart changed to ${_analyseOptions.stackTimeseriesEnabled}');
-      view.removeAllChartWrappers();
-      _replaceURLHashWithParams();
-      _computeChartDataAndRender();
+      _pushOptionsToURL();
+      _computeCharts();
+      _updateCharts();
       break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
-      for (var filter in _filters) {
-        if (filter.dataPath.name == d.dataPath && filter.key == d.key) {
-          filter.isActive = !filter.isActive;
-        }
-      }
+      _filtersMap[_analyseOptions.selectedTabIndex][d.index].isActive =
+          d.enabled;
+      var filter = _filtersMap[_analyseOptions.selectedTabIndex][d.index];
       d.enabled
-          ? view.enableFilterOptions(d.dataPath, d.key)
-          : view.disableFilterOptions(d.dataPath, d.key);
+          ? view.enableFilterOptions(filter.dataCollection, filter.key)
+          : view.disableFilterOptions(filter.dataCollection, filter.key);
 
-      _replaceURLHashWithParams();
-      view.removeAllChartWrappers();
-      _computeChartDataAndRender();
+      _pushOptionsToURL();
+      _computeCharts();
+      _updateCharts();
       break;
     case UIAction.setFilterValue:
       var d = data as SetFilterValueData;
-      for (var filter in _filters) {
-        if (filter.dataPath.name == d.dataPath && filter.key == d.key) {
-          filter.value = d.value;
-        }
-      }
+      _filtersMap[_analyseOptions.selectedTabIndex][d.index].value = d.value;
 
-      _replaceURLHashWithParams();
-      view.removeAllChartWrappers();
-      _computeChartDataAndRender();
+      _pushOptionsToURL();
+      _computeCharts();
+      _updateCharts();
       break;
     case UIAction.setComparisonFilterValue:
       var d = data as SetFilterValueData;
-      for (var filter in _filters) {
-        if (filter.dataPath.name == d.dataPath && filter.key == d.key) {
-          filter.comparisonValue = d.value;
-        }
-      }
+      _filtersMap[_analyseOptions.selectedTabIndex][d.index].comparisonValue =
+          d.value;
 
-      _replaceURLHashWithParams();
-      view.removeAllChartWrappers();
-      _computeChartDataAndRender();
+      _pushOptionsToURL();
+      _computeCharts();
+      _updateCharts();
       break;
     case UIAction.saveConfigToFirebase:
       var d = data as SaveConfigToFirebaseData;
@@ -918,18 +568,14 @@ void command(UIAction action, Data data) async {
 }
 
 void validateConfig(model.Config config) {
-  if (config.data_paths == null) {
-    throw StateError('data_paths cannot be empty');
-  }
-
   if (config.tabs == null) {
     throw StateError('tabs cannot be empty');
   }
 
   for (var tab in config.tabs) {
     for (var chart in tab.charts) {
-      if (chart.data_path == null) {
-        throw StateError('Chart data_path cannot be empty');
+      if (chart.data_collection == null) {
+        throw StateError('Chart data_collection cannot be empty');
       }
       var chartTypes = model.ChartType.values;
       if (!chartTypes.contains(chart.type)) {

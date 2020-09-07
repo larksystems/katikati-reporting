@@ -45,9 +45,8 @@ typedef void TabCollectionListener(
 
 class Chart {
   String docId;
-  DataPath data_path;
+  String data_collection;
   String data_label;
-  String doc_name;
   Field fields;
   String narrative;
   String title;
@@ -63,9 +62,8 @@ class Chart {
   static Chart fromData(data, [Chart modelObj]) {
     if (data == null) return null;
     return (modelObj ?? Chart())
-      ..data_path = DataPath.fromString(data['data_path'] as String)
+      ..data_collection = String_fromData(data['data_collection'])
       ..data_label = String_fromData(data['data_label'])
-      ..doc_name = String_fromData(data['doc_name'])
       ..fields = Field.fromData(data['fields'])
       ..narrative = String_fromData(data['narrative'])
       ..title = String_fromData(data['title'])
@@ -81,9 +79,8 @@ class Chart {
 
   Map<String, dynamic> toData() {
     return {
-      if (data_path != null) 'data_path': data_path.toString(),
+      if (data_collection != null) 'data_collection': data_collection,
       if (data_label != null) 'data_label': data_label,
-      if (doc_name != null) 'doc_name': doc_name,
       if (fields != null) 'fields': fields.toData(),
       if (narrative != null) 'narrative': narrative,
       if (title != null) 'title': title,
@@ -102,39 +99,6 @@ typedef void ChartCollectionListener(
   List<Chart> modified,
   List<Chart> removed,
 );
-
-class DataPath {
-  static const interactions = DataPath('interactions');
-  static const message_stats = DataPath('message_stats');
-  static const survey_status = DataPath('survey_status');
-
-  static const values = <DataPath>[
-    interactions,
-    message_stats,
-    survey_status,
-  ];
-
-  static DataPath fromString(String text, [DataPath defaultValue = DataPath.interactions]) {
-    if (DataPath_fromStringOverride != null) {
-      var value = DataPath_fromStringOverride(text);
-      if (value != null) return value;
-    }
-    if (text != null) {
-      const prefix = 'DataPath.';
-      String valueName = text.startsWith(prefix) ? text.substring(prefix.length) : text;
-      for (var value in values) {
-        if (value.name == valueName) return value;
-      }
-    }
-    log.warning('unknown DataPath $text');
-    return defaultValue;
-  }
-
-  final String name;
-  const DataPath(this.name);
-  String toString() => 'DataPath.$name';
-}
-DataPath Function(String text) DataPath_fromStringOverride;
 
 class Timestamp {
   String docId;
@@ -214,7 +178,7 @@ typedef void FieldCollectionListener(
 class Filter {
   String docId;
   String key;
-  DataPath data_path;
+  String dataCollection;
   DataType type;
 
   static Filter fromSnapshot(DocSnapshot doc, [Filter modelObj]) =>
@@ -224,7 +188,7 @@ class Filter {
     if (data == null) return null;
     return (modelObj ?? Filter())
       ..key = String_fromData(data['key'])
-      ..data_path = DataPath.fromString(data['data_path'] as String)
+      ..dataCollection = String_fromData(data['data_collection'])
       ..type = DataType.fromString(data['type'] as String);
   }
 
@@ -234,7 +198,7 @@ class Filter {
   Map<String, dynamic> toData() {
     return {
       if (key != null) 'key': key,
-      if (data_path != null) 'data_path': data_path.toString(),
+      if (dataCollection != null) 'data_collection': dataCollection,
       if (type != null) 'type': type.toString(),
     };
   }
