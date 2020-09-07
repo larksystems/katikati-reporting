@@ -1,7 +1,7 @@
 import 'dart:js';
 import 'dart:html' as html;
-import 'package:dashboard/extensions.dart';
 import 'package:chartjs/chartjs.dart' as chartjs;
+import 'package:dashboard/extensions.dart';
 import 'package:dashboard/chart_helpers.dart' as chart_helpers;
 import 'package:intl/intl.dart' as intl;
 import 'package:uuid/uuid.dart';
