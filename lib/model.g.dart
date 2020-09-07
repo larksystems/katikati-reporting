@@ -178,7 +178,7 @@ typedef void FieldCollectionListener(
 class Filter {
   String docId;
   String key;
-  String data_collection;
+  String dataCollection;
   DataType type;
 
   static Filter fromSnapshot(DocSnapshot doc, [Filter modelObj]) =>
@@ -188,7 +188,7 @@ class Filter {
     if (data == null) return null;
     return (modelObj ?? Filter())
       ..key = String_fromData(data['key'])
-      ..data_collection = String_fromData(data['data_collection'])
+      ..dataCollection = String_fromData(data['data_collection'])
       ..type = DataType.fromString(data['type'] as String);
   }
 
@@ -198,7 +198,7 @@ class Filter {
   Map<String, dynamic> toData() {
     return {
       if (key != null) 'key': key,
-      if (data_collection != null) 'data_collection': data_collection,
+      if (dataCollection != null) 'data_collection': dataCollection,
       if (type != null) 'type': type.toString(),
     };
   }

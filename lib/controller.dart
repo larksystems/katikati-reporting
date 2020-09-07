@@ -136,7 +136,7 @@ void onLoginCompleted() async {
     var currentTab = _config.tabs[i];
     currentTab.filters.forEach((filter) {
       _filtersMap[i].add(model.FilterValue(
-          filter.data_collection, filter.key, filter.type, [], '', '', false));
+          filter.dataCollection, filter.key, filter.type, [], '', '', false));
     });
   }
 
@@ -304,16 +304,17 @@ void _computeFilterOptions() {
     var currentTab = _config.tabs[i];
     for (var j = 0; j < currentTab.filters.length; ++j) {
       var currentFilter = currentTab.filters[j];
-      if (_dataCollections[currentFilter.data_collection].isEmpty) continue;
+      if (_dataCollections[currentFilter.dataCollection].isEmpty) continue;
       switch (currentFilter.type) {
         case model.DataType.datetime:
           var collectionToIterate =
-              _dataCollections[currentFilter.data_collection].values;
+              _dataCollections[currentFilter.dataCollection].values;
           var dates = collectionToIterate
               .map((e) => e[currentFilter.key])
               .toList()
                 ..sort();
           _filtersMap[i][j].options = [dates.first, dates.last];
+          // todo: refactor to a function
           if (_filtersMap[i][j].value == '') {
             _filtersMap[i][j].value =
                 '${dates.first.split("T")[0]}_${dates.last.split("T")[0]}';
@@ -321,7 +322,7 @@ void _computeFilterOptions() {
           break;
         case model.DataType.string:
           var collectionToIterate =
-              _dataCollections[currentFilter.data_collection].values;
+              _dataCollections[currentFilter.dataCollection].values;
           var options = <String>{};
           collectionToIterate.forEach((element) {
             var data = element[currentFilter.key];

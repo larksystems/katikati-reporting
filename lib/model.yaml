@@ -28,7 +28,7 @@ Field:
 
 Filter:
   key: "string"
-  data_collection: "string"
+  data_collection: "string dataCollection"
   type: DataType
 
 Geography:
