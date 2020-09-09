@@ -38,7 +38,7 @@ const chartDefaultColors = [
 ];
 const allInteractionsLabel = 'All interactions';
 
-ChartDataSets _generateBarChartDataset(
+ChartDataSets generateBarChartDataset(
     String label, List<num> data, String barColor) {
   return ChartDataSets(
       label: label,
@@ -100,9 +100,9 @@ ChartConfiguration generateBarChartConfig(
   var colors = chart.colors ?? chartDefaultColors;
 
   var datasets = [
-    _generateBarChartDataset(seriesLabel, filterData, colors[0]),
+    generateBarChartDataset(seriesLabel, filterData, colors[0]),
     if (dataComparisonEnabled)
-      _generateBarChartDataset(
+      generateBarChartDataset(
           comparisonSeriesLabel, comparisonFilterData, colors[1])
   ];
 

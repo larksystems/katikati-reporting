@@ -206,3 +206,122 @@ class TimeSeriesLineChart extends Chart {
     });
   }
 }
+
+class BarChart extends Chart {
+  chartjs.ChartData chartData;
+  chartjs.Chart chart;
+  html.CanvasElement canvas;
+
+  String title;
+  String dataLabel;
+  String dataCollection;
+  List<String> seriesNames;
+  List<String> colors;
+  Map<String, String> labelMap;
+  Map<String, List<num>> buckets;
+  Map<String, List<num>> normaliseBuckets;
+  bool compareEnabled = false;
+  bool normaliseEnabled = false;
+
+  BarChart(this.title, this.dataCollection, this.labelMap, this.dataLabel,
+      this.seriesNames, this.colors, this.buckets, this.normaliseBuckets) {
+    id = uuid.v4();
+    colors = colors ?? chart_helpers.chartDefaultColors;
+    container = html.DivElement()..id = 'chart-${id}';
+    canvas = html.CanvasElement();
+
+    var card = html.DivElement()..classes = ['card'];
+    var cardBody = html.DivElement()..classes = ['card-body'];
+
+    var heading = html.HeadingElement.h5()..innerText = title;
+    container.append(heading);
+    card.append(cardBody);
+    cardBody.append(canvas);
+    container.append(card);
+
+    var chartDatasets = <chartjs.ChartDataSets>[];
+    for (var i = 0; i < seriesNames.length; ++i) {
+      chartDatasets.add(chart_helpers.generateBarChartDataset(
+          seriesNames[i], buckets.values.map((e) => e[i]).toList(), colors[i]));
+    }
+
+    chartData = chartjs.ChartData(
+        labels: buckets.keys.map((label) => labelMap[label]).toList(),
+        datasets: chartDatasets);
+
+    var tooltipLabelCallback =
+        (chartjs.ChartTooltipItem tooltipItem, chartjs.ChartData data) {
+      var xLabel = data.datasets[tooltipItem.datasetIndex].label;
+      var yLabel = tooltipItem.yLabel;
+      var suffix = normaliseEnabled ? '%' : '';
+      return '${xLabel}: ${yLabel}${suffix}';
+    };
+
+    var labelPrepend = normaliseEnabled ? 'Percentage' : 'Number';
+    var labelString = '${labelPrepend} of ${dataLabel}';
+
+    var chartOptions = chartjs.ChartOptions(
+        responsive: true,
+        tooltips: chartjs.ChartTooltipOptions(
+            mode: 'index',
+            callbacks: chartjs.ChartTooltipCallback(
+                label: allowInterop(tooltipLabelCallback))),
+        legend: chartjs.ChartLegendOptions(
+            position: 'bottom',
+            labels: chartjs.ChartLegendLabelOptions(boxWidth: 12)),
+        scales: chartjs.LinearScale(xAxes: [
+          chartjs.ChartXAxe()
+            ..stacked = false
+            ..ticks = (chartjs.LinearTickOptions()
+              ..autoSkip = false
+              ..minRotation = 0
+              ..maxRotation = 90)
+        ], yAxes: [
+          chartjs.ChartYAxe()
+            ..stacked = false
+            ..scaleLabel = chartjs.ScaleTitleOptions(
+                labelString: labelString, display: true)
+            ..ticks = (chartjs.LinearTickOptions()..min = 0)
+        ]),
+        hover: chartjs.ChartHoverOptions()..animationDuration = 0);
+
+    var chartConfig = chartjs.ChartConfiguration(
+        type: 'bar', data: chartData, options: chartOptions);
+    chart = chartjs.Chart(canvas.getContext('2d'), chartConfig);
+  }
+
+  void updateChartInView(bool normaliseEnabled, bool compareEnabled) {
+    this.normaliseEnabled = normaliseEnabled;
+    this.compareEnabled = compareEnabled;
+
+    var labelPrepend = normaliseEnabled ? 'Percentage' : 'Number';
+    var labelString = '${labelPrepend} of ${dataLabel}';
+    var yScale = chart.options.scales.yAxes[0];
+    yScale.scaleLabel =
+        chartjs.ScaleTitleOptions(labelString: labelString, display: true);
+
+    var chartDatasets = <chartjs.ChartDataSets>[];
+    var series = compareEnabled ? seriesNames : seriesNames.sublist(0, 1);
+    for (var i = 0; i < series.length; ++i) {
+      var _buckets = buckets.values.map((e) => e[i]).toList();
+      var _normaliseBuckets = normaliseBuckets.values.map((e) => e[i]).toList();
+      if (normaliseEnabled) {
+        for (var i = 0; i < _buckets.length; ++i) {
+          _buckets[i] = ((_buckets[i] * 100) /
+                  (_normaliseBuckets[i] == 0 ? 1 : _normaliseBuckets[i]))
+              .roundToDecimal(2);
+        }
+      }
+
+      chartDatasets.add(chart_helpers.generateBarChartDataset(
+          seriesNames[i], _buckets, colors[i]));
+    }
+
+    chartData = chartjs.ChartData(
+        labels: buckets.keys.map((label) => labelMap[label]).toList(),
+        datasets: chartDatasets);
+    chart.data = chartData;
+
+    chart.update(chartjs.ChartUpdateProps(duration: 0));
+  }
+}
