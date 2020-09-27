@@ -160,7 +160,7 @@ class DataFiltersView {
     content.append(_wrapper);
   }
 
-  void update(List<model.FilterValue> filters) {
+  void update(List<model.FilterValue> filters, bool comparisonEnabled) {
     _content.children.clear();
 
     for (var i = 0; i < filters.length; ++i) {
@@ -228,7 +228,9 @@ class DataFiltersView {
                 SetFilterValueData(i, value));
           });
           filterCol.append(filterDropdown);
-          comparisonFilterCol.append(comparisonFilterDropdown);
+          if (comparisonEnabled) {
+            comparisonFilterCol.append(comparisonFilterDropdown);
+          }
           break;
       }
 
