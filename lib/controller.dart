@@ -245,7 +245,8 @@ void _reactToDataChanges() {
   _computeFilterOptions();
 
   if (_currentNavLink == _navLinks.keys.first) {
-    _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
+    _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex],
+        _analyseOptions.dataComparisonEnabled);
     _computeCharts();
     _updateCharts();
   }
@@ -291,7 +292,8 @@ void handleNavToAnalysis() {
       _analyseOptions.normaliseDataEnabled,
       _analyseOptions.stackTimeseriesEnabled);
   _dataFilterView = view.DataFiltersView();
-  _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
+  _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex],
+      _analyseOptions.dataComparisonEnabled);
 
   _initialiseCharts();
   _computeCharts();
@@ -372,6 +374,29 @@ void _initialiseCharts() {
             chart.colors, <DateTime, List<num>>{});
         _chartsInView.add(newChart);
         break;
+      case model.ChartType.bar:
+        var buckets = <String, List<num>>{};
+        var normaliseBuckets = <String, List<num>>{};
+        var labelMap = <String, String>{};
+
+        for (var i = 0; i < chart.fields.values.length; ++i) {
+          var value = chart.fields.values[i];
+          labelMap[value] = chart.fields.labels[i];
+          buckets[value] = [0, 0];
+          normaliseBuckets[value] = [0, 0];
+        }
+
+        var newChart = chart_model.BarChart(
+            chart.title,
+            chart.data_collection,
+            labelMap,
+            chart.data_label,
+            ['All ${chart.data_label}', 'All ${chart.data_label}'],
+            chart.colors,
+            buckets,
+            normaliseBuckets);
+        _chartsInView.add(newChart);
+        break;
       default:
         var newChart = chart_model.UnimplementedChart();
         _chartsInView.add(newChart);
@@ -387,36 +412,59 @@ void _computeCharts() {
   for (var i = 0; i < charts.length; ++i) {
     var chart = charts[i];
     if (_dataCollections[chart.data_collection] == null) continue;
-    var dataCollection =
-        Map<String, dynamic>.from(_dataCollections[chart.data_collection]);
-    var toRemove = [];
-    dataCollection.forEach((dateStr, _) {
-      var date = DateTime.parse(dateStr);
+    var filteredCollection = <String, dynamic>{};
+    var filteredComparisonCollection = <String, dynamic>{};
+    _dataCollections[chart.data_collection].forEach((key, dataValue) {
+      var toAddFiltered = true;
+      var toAddFilteredComparison = true;
       for (var filter in _filtersMap[_analyseOptions.selectedTabIndex]) {
         if (filter.type == model.DataType.datetime) {
+          var date = DateTime.parse(key);
           var startDate = DateTime.parse(filter.value.split('_').first);
           var endDate = DateTime.parse(filter.value.split('_').last)
               .add(Duration(days: 1));
           if (date.isBefore(startDate) || date.isAfter(endDate)) {
-            toRemove.add(dateStr);
+            toAddFiltered = false;
+          }
+        } else if (filter.type == model.DataType.string) {
+          var value = dataValue[filter.key];
+          if (filter.value != DEFAULT_FILTER_SELECT_VALUE) {
+            if (value is String && filter.value != value) {
+              toAddFiltered = false;
+            } else if (value is List && !value.contains(filter.value)) {
+              toAddFiltered = false;
+            }
+          }
+          if (filter.comparisonValue != DEFAULT_FILTER_SELECT_VALUE) {
+            if (value is String && filter.comparisonValue != value) {
+              toAddFilteredComparison = false;
+            } else if (value is List &&
+                !value.contains(filter.comparisonValue)) {
+              toAddFilteredComparison = false;
+            }
           }
         }
       }
+      if (toAddFiltered) {
+        filteredCollection[key] = dataValue;
+      }
+      if (toAddFilteredComparison) {
+        filteredComparisonCollection[key] = dataValue;
+      }
     });
-    dataCollection.removeWhere((key, value) => toRemove.contains(key));
     switch (chart.type) {
       case model.ChartType.summary:
         var computedValues = <num>[];
-        for (var i = 0; i < chart.fields.values.length; ++i) {
+        for (var j = 0; j < chart.fields.values.length; ++j) {
           var values = chart.fields.values;
           var aggregateMethods = chart.fields.aggregateMethod;
           var aggregateValue = 0 as num;
-          dataCollection.forEach((_, valueObj) {
+          filteredCollection.forEach((_, valueObj) {
             var value = valueObj[values[i]];
             aggregateValue += value;
           });
-          if (aggregateMethods[i] == 'average') {
-            aggregateValue = aggregateValue / dataCollection.keys.length;
+          if (aggregateMethods[j] == 'average') {
+            aggregateValue = aggregateValue / filteredCollection.keys.length;
             aggregateValue = aggregateValue.roundToDecimal(1);
           }
           computedValues.add(aggregateValue);
@@ -426,7 +474,7 @@ void _computeCharts() {
         chartInView.values = computedValues;
         break;
       case model.ChartType.time_series:
-        var buckets = dataCollection.map((_, valueObj) {
+        var buckets = filteredCollection.map((_, valueObj) {
           var values =
               chart.fields.values.map((e) => valueObj[e] as num).toList();
           return MapEntry(
@@ -449,6 +497,61 @@ void _computeCharts() {
           }
         }
         break;
+      case model.ChartType.bar:
+        var chartInView = _chartsInView[i] as chart_model.BarChart;
+        chartInView.buckets.forEach((key, value) {
+          chartInView.buckets[key] = [0, 0];
+          chartInView.normaliseBuckets[key] = [
+            filteredCollection.length,
+            filteredComparisonCollection.length
+          ];
+        });
+
+        filteredCollection.forEach((key, document) {
+          for (var j = 0; j < chart.fields.values.length; ++j) {
+            var value = document[chart.fields.key];
+            if (value is String && value == chart.fields.values[j]) {
+              ++chartInView.buckets[chart.fields.values[j]][0];
+            } else if (value is List &&
+                value.contains(chart.fields.values[j])) {
+              ++chartInView.buckets[chart.fields.values[j]][0];
+            }
+          }
+        });
+
+        filteredComparisonCollection.forEach((key, document) {
+          for (var j = 0; j < chart.fields.values.length; ++j) {
+            var value = document[chart.fields.key];
+            if (value is String && value == chart.fields.values[j]) {
+              ++chartInView.buckets[chart.fields.values[j]][1];
+            } else if (value is List &&
+                value.contains(chart.fields.values[j])) {
+              ++chartInView.buckets[chart.fields.values[j]][1];
+            }
+          }
+        });
+
+        var primaryLabels = _filtersMap[_analyseOptions.selectedTabIndex]
+            .map((e) => e.isActive ? '${e.key}: ${e.value}' : null)
+            .toList();
+        primaryLabels.removeWhere((e) => e == null);
+        if (primaryLabels.isEmpty) {
+          primaryLabels.add('All ${chart.data_label}');
+        }
+
+        var comparisonLabels = _filtersMap[_analyseOptions.selectedTabIndex]
+            .map((e) => e.isActive ? '${e.key}: ${e.comparisonValue}' : null)
+            .toList();
+        comparisonLabels.removeWhere((e) => e == null);
+        if (comparisonLabels.isEmpty) {
+          comparisonLabels.add('All ${chart.data_label}');
+        }
+
+        chartInView.seriesNames = [
+          primaryLabels.join(', '),
+          comparisonLabels.join(', ')
+        ];
+        break;
       default:
     }
   }
@@ -464,6 +567,10 @@ void _updateCharts() {
           _analyseOptions.stackTimeseriesEnabled);
     } else if (_chartsInView[i] is chart_model.SummaryChart) {
       (_chartsInView[i] as chart_model.SummaryChart).updateChartInView();
+    } else if (_chartsInView[i] is chart_model.BarChart) {
+      (_chartsInView[i] as chart_model.BarChart).updateChartInView(
+          _analyseOptions.normaliseDataEnabled,
+          _analyseOptions.dataComparisonEnabled);
     } else if (_chartsInView[i] is chart_model.UnimplementedChart) {
       (_chartsInView[i] as chart_model.UnimplementedChart).updateChartinView();
     }
@@ -493,7 +600,8 @@ void command(UIAction action, Data data) async {
       var d = data as AnalysisTabChangeData;
       _analyseOptions.selectedTabIndex = d.tabIndex;
 
-      _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex]);
+      _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex],
+          _analyseOptions.dataComparisonEnabled);
 
       _pushOptionsToURL();
       _initialiseCharts();
@@ -505,9 +613,10 @@ void command(UIAction action, Data data) async {
     case UIAction.toggleDataComparison:
       var d = data as ToggleOptionEnabledData;
       _analyseOptions.dataComparisonEnabled = d.enabled;
-      view.removeFiltersWrapper();
+      // view.removeFiltersWrapper();
+      _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex],
+          _analyseOptions.dataComparisonEnabled);
       _pushOptionsToURL();
-      _computeCharts();
       _updateCharts();
       logger.debug(
           'Data comparison changed to ${_analyseOptions.dataComparisonEnabled}');
