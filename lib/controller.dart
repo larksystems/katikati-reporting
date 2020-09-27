@@ -9,19 +9,21 @@ import 'package:dashboard/charts.dart' as chart_model;
 import 'package:firebase/firestore.dart';
 import 'package:dashboard/extensions.dart';
 import 'package:dashboard/logger.dart';
+import 'package:dashboard/url_handler.dart' as url_handler;
 
 Logger logger = Logger('controller.dart');
 
-Map<String, model.Link> _navLinks = {
-  'analyse': model.Link('analyse', 'Analyse', () => handleNavToAnalysis()),
-  'settings': model.Link('settings', 'Settings', handleNavToSettings)
+final analysisTab = model.Link('analysis', 'Analyse', handleNavToAnalysis);
+final settingsTab = model.Link('settings', 'Settings', handleNavToSettings);
+final DEFAULT_PAGE = analysisTab;
+final _navLinks = <String, model.Link>{
+  analysisTab.pathname: analysisTab,
+  settingsTab.pathname: settingsTab,
 };
 
 const DEFAULT_FILTER_SELECT_VALUE = '__all';
 const UNABLE_TO_PARSE_CONFIG_ERROR_MSG =
     'Unable to parse "Config" to the required format';
-
-var _currentNavLink = _navLinks['analyse'].pathname;
 
 // UI States
 var _analyseOptions = model.AnalyseOptions(0, true, false, true);
@@ -93,21 +95,12 @@ class CopyToClipboardChartConfigData extends Data {
 
 // Controller functions
 void init() async {
-  // get hash from url
-  var hash = html.window.location.hash;
-  if (hash.isNotEmpty) {
-    hash = hash.split('?')[0];
-  }
-  if (hash == '') {
-    _currentNavLink = _navLinks.keys.first;
-  } else {
-    _currentNavLink = hash.replaceAll('#', '');
-  }
+  url_handler.page ??= DEFAULT_PAGE.pathname;
 
   view.init();
   view.showLoginModal();
   _navLinks.forEach((_, n) {
-    view.appendNavLink(n.pathname, n.label, _currentNavLink == n.pathname);
+    view.appendNavLink(n.pathname, n.label, url_handler.page == n.pathname);
   });
 
   await fb.init('assets/constants.json', onLoginCompleted, onLogoutCompleted);
@@ -164,32 +157,29 @@ void onLoginCompleted() async {
     });
   }
 
-  _navLinks[_currentNavLink].render();
+  _navLinks[url_handler.page].render();
+  _pushOptionsToURL();
 }
 
 void _fillDefaultOptionsFromURL() {
-  var uri = Uri.dataFromString(html.window.location.href);
-  var query = uri.queryParameters;
-  if (query['analyseTab'] != null) {
-    _analyseOptions.selectedTabIndex = int.parse(query['analyseTab']);
+  if (url_handler.analysisTab != null) {
+    _analyseOptions.selectedTabIndex = int.parse(url_handler.analysisTab);
   }
-  if (query['compare'] != null) {
-    _analyseOptions.dataComparisonEnabled = query['compare'] == 'true';
+  if (url_handler.compare != null) {
+    _analyseOptions.dataComparisonEnabled = url_handler.compare;
   }
-  if (query['normalise'] != null) {
-    _analyseOptions.normaliseDataEnabled = query['normalise'] == 'true';
+  if (url_handler.normalise != null) {
+    _analyseOptions.normaliseDataEnabled = url_handler.normalise;
   }
-  if (query['stackTimeSeries'] != null) {
-    _analyseOptions.stackTimeseriesEnabled = query['stackTimeSeries'] == 'true';
+  if (url_handler.stack != null) {
+    _analyseOptions.stackTimeseriesEnabled = url_handler.stack;
   }
 
-  if (query['filter.keys'] != null) {
-    var keys = Uri.decodeFull(query['filter.keys']).split(',');
-    var dataCollections =
-        Uri.decodeFull(query['filter.collections']).split(',');
-    var values = Uri.decodeFull(query['filter.values']).split(',');
-    var comparisonValues =
-        Uri.decodeFull(query['filter.comparisonValues']).split(',');
+  if (url_handler.filterKeys != null) {
+    var keys = url_handler.filterKeys;
+    var dataCollections = url_handler.filterCollections;
+    var values = url_handler.filterValues;
+    var comparisonValues = url_handler.filterComparisonValues;
 
     for (var i = 0; i < keys.length; ++i) {
       var filters = _filtersMap[_analyseOptions.selectedTabIndex];
@@ -206,28 +196,19 @@ void _fillDefaultOptionsFromURL() {
 }
 
 void _pushOptionsToURL() {
-  var params = <String, String>{};
+  url_handler.analysisTab = _analyseOptions.selectedTabIndex.toString();
+  url_handler.compare = _analyseOptions.dataComparisonEnabled;
+  url_handler.normalise = _analyseOptions.normaliseDataEnabled;
+  url_handler.stack = _analyseOptions.stackTimeseriesEnabled;
 
-  params['analyseTab'] = _analyseOptions.selectedTabIndex.toString();
-  params['compare'] = _analyseOptions.dataComparisonEnabled.toString();
-  params['normalise'] = _analyseOptions.normaliseDataEnabled.toString();
-  params['stackTimeSeries'] = _analyseOptions.stackTimeseriesEnabled.toString();
-
-  var filters = List<model.FilterValue>.from(
-      _filtersMap[_analyseOptions.selectedTabIndex]);
+  var filters = List<model.FilterValue>.from(_filtersMap[_analyseOptions.selectedTabIndex]);
   filters.removeWhere((element) => !element.isActive);
   if (filters.isNotEmpty) {
-    params['filter.keys'] = filters.map((e) => e.key).toList().join(',');
-    params['filter.collections'] =
-        filters.map((e) => e.dataCollection).toList().join(',');
-    params['filter.values'] = filters.map((e) => e.value).toList().join(',');
-    params['filter.comparisonValues'] =
-        filters.map((e) => e.comparisonValue).toList().join(',');
+    url_handler.filterKeys = filters.map((e) => e.key).toList();
+    url_handler.filterCollections = filters.map((e) => e.dataCollection).toList();
+    url_handler.filterValues = filters.map((e) => e.value).toList();
+    url_handler.filterComparisonValues = filters.map((e) => e.comparisonValue).toList();
   }
-
-  var url = Uri(queryParameters: params);
-  html.window.history
-      .replaceState(null, '', '#${_currentNavLink}${url.toString()}');
 }
 
 void _reactToDataChanges() {
@@ -244,9 +225,8 @@ void _reactToDataChanges() {
 
   _computeFilterOptions();
 
-  if (_currentNavLink == _navLinks.keys.first) {
-    _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex],
-        _analyseOptions.dataComparisonEnabled);
+  if (url_handler.page == _navLinks.keys.first) {
+    _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex], _analyseOptions.dataComparisonEnabled);
     _computeCharts();
     _updateCharts();
   }
@@ -592,9 +572,9 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.changeNavTab:
       var d = data as NavChangeData;
-      _currentNavLink = d.pathname;
-      view.setNavlinkSelected(_currentNavLink);
-      _navLinks[_currentNavLink].render();
+      url_handler.page = d.pathname;
+      view.setNavlinkSelected(d.pathname);
+      _navLinks[d.pathname].render();
       break;
     case UIAction.changeAnalysisTab:
       var d = data as AnalysisTabChangeData;
