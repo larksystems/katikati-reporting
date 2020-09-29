@@ -13,12 +13,12 @@ import 'package:dashboard/url_handler.dart' as url_handler;
 
 Logger logger = Logger('controller.dart');
 
-final analysisTab = model.Link('analysis', 'Analyse', handleNavToAnalysis);
-final settingsTab = model.Link('settings', 'Settings', handleNavToSettings);
-final DEFAULT_PAGE = analysisTab;
+final analysisPage = model.Link('analysis', 'Analyse', handleNavToAnalysis);
+final settingsPage = model.Link('settings', 'Settings', handleNavToSettings);
+final DEFAULT_PAGE = analysisPage;
 final _navLinks = <String, model.Link>{
-  analysisTab.pathname: analysisTab,
-  settingsTab.pathname: settingsTab,
+  analysisPage.pathname: analysisPage,
+  settingsPage.pathname: settingsPage,
 };
 
 const DEFAULT_FILTER_SELECT_VALUE = '__all';
@@ -26,8 +26,9 @@ const UNABLE_TO_PARSE_CONFIG_ERROR_MSG =
     'Unable to parse "Config" to the required format';
 
 // UI States
-var _analyseOptions = model.AnalyseOptions(0, true, false, true);
-Map<int, List<model.FilterValue>> _filtersMap = {};
+int selectedTab;
+final model.AnalysisOptions analysisOptions = model.AnalysisOptions();
+Map<int, List<model.FilterValue>> filtersByTab = {};
 Map<String, Map<String, dynamic>> _mapsGeoJSON = {};
 
 // Data
@@ -125,10 +126,10 @@ void onLoginCompleted() async {
 
   // Initialise and compute filters
   for (var i = 0; i < _config.tabs.length; ++i) {
-    _filtersMap[i] = <model.FilterValue>[];
+    filtersByTab[i] = <model.FilterValue>[];
     var currentTab = _config.tabs[i];
     currentTab.filters.forEach((filter) {
-      _filtersMap[i].add(model.FilterValue(
+      filtersByTab[i].add(model.FilterValue(
           filter.dataCollection, filter.key, filter.type, [], '', '', false));
     });
   }
@@ -163,16 +164,16 @@ void onLoginCompleted() async {
 
 void _fillDefaultOptionsFromURL() {
   if (url_handler.analysisTab != null) {
-    _analyseOptions.selectedTabIndex = int.parse(url_handler.analysisTab);
+    selectedTab = int.parse(url_handler.analysisTab);
   }
   if (url_handler.compare != null) {
-    _analyseOptions.dataComparisonEnabled = url_handler.compare;
+    analysisOptions.dataComparisonEnabled = url_handler.compare;
   }
   if (url_handler.normalise != null) {
-    _analyseOptions.normaliseDataEnabled = url_handler.normalise;
+    analysisOptions.normaliseDataEnabled = url_handler.normalise;
   }
   if (url_handler.stack != null) {
-    _analyseOptions.stackTimeseriesEnabled = url_handler.stack;
+    analysisOptions.stackTimeseriesEnabled = url_handler.stack;
   }
 
   if (url_handler.filterKeys != null) {
@@ -182,7 +183,7 @@ void _fillDefaultOptionsFromURL() {
     var comparisonValues = url_handler.filterComparisonValues;
 
     for (var i = 0; i < keys.length; ++i) {
-      var filters = _filtersMap[_analyseOptions.selectedTabIndex];
+      var filters = filtersByTab[selectedTab];
       filters.forEach((filter) {
         if (filter.key == keys[i] &&
             filter.dataCollection == dataCollections[i]) {
@@ -196,12 +197,12 @@ void _fillDefaultOptionsFromURL() {
 }
 
 void _pushOptionsToURL() {
-  url_handler.analysisTab = _analyseOptions.selectedTabIndex.toString();
-  url_handler.compare = _analyseOptions.dataComparisonEnabled;
-  url_handler.normalise = _analyseOptions.normaliseDataEnabled;
-  url_handler.stack = _analyseOptions.stackTimeseriesEnabled;
+  url_handler.analysisTab = selectedTab.toString();
+  url_handler.compare = analysisOptions.dataComparisonEnabled;
+  url_handler.normalise = analysisOptions.normaliseDataEnabled;
+  url_handler.stack = analysisOptions.stackTimeseriesEnabled;
 
-  var filters = List<model.FilterValue>.from(_filtersMap[_analyseOptions.selectedTabIndex]);
+  var filters = List<model.FilterValue>.from(filtersByTab[selectedTab]);
   filters.removeWhere((element) => !element.isActive);
   if (filters.isNotEmpty) {
     url_handler.filterKeys = filters.map((e) => e.key).toList();
@@ -226,7 +227,7 @@ void _reactToDataChanges() {
   _computeFilterOptions();
 
   if (url_handler.page == _navLinks.keys.first) {
-    _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex], _analyseOptions.dataComparisonEnabled);
+    _dataFilterView.update(filtersByTab[selectedTab], analysisOptions.dataComparisonEnabled);
     _computeCharts();
     _updateCharts();
   }
@@ -266,14 +267,14 @@ void handleNavToAnalysis() {
   view.clearContentTab();
 
   view.AnalyseTabsViews(_config.tabs.map((t) => t.label).toList(),
-      _analyseOptions.selectedTabIndex);
+      selectedTab);
   view.ChartOptionsView(
-      _analyseOptions.dataComparisonEnabled,
-      _analyseOptions.normaliseDataEnabled,
-      _analyseOptions.stackTimeseriesEnabled);
+      analysisOptions.dataComparisonEnabled,
+      analysisOptions.normaliseDataEnabled,
+      analysisOptions.stackTimeseriesEnabled);
   _dataFilterView = view.DataFiltersView();
-  _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex],
-      _analyseOptions.dataComparisonEnabled);
+  _dataFilterView.update(filtersByTab[selectedTab],
+      analysisOptions.dataComparisonEnabled);
 
   _initialiseCharts();
   _computeCharts();
@@ -295,10 +296,10 @@ void _computeFilterOptions() {
               .map((e) => e[currentFilter.key])
               .toList()
                 ..sort();
-          _filtersMap[i][j].options = [dates.first, dates.last];
+          filtersByTab[i][j].options = [dates.first, dates.last];
           // todo: refactor to a function
-          if (_filtersMap[i][j].value == '') {
-            _filtersMap[i][j].value =
+          if (filtersByTab[i][j].value == '') {
+            filtersByTab[i][j].value =
                 '${dates.first.split("T")[0]}_${dates.last.split("T")[0]}';
           }
           break;
@@ -317,12 +318,12 @@ void _computeFilterOptions() {
             }
           });
           options.add(DEFAULT_FILTER_SELECT_VALUE);
-          _filtersMap[i][j].options = options.toList();
-          if (_filtersMap[i][j].value == '') {
-            _filtersMap[i][j].value = DEFAULT_FILTER_SELECT_VALUE;
+          filtersByTab[i][j].options = options.toList();
+          if (filtersByTab[i][j].value == '') {
+            filtersByTab[i][j].value = DEFAULT_FILTER_SELECT_VALUE;
           }
-          if (_filtersMap[i][j].comparisonValue == '') {
-            _filtersMap[i][j].comparisonValue = DEFAULT_FILTER_SELECT_VALUE;
+          if (filtersByTab[i][j].comparisonValue == '') {
+            filtersByTab[i][j].comparisonValue = DEFAULT_FILTER_SELECT_VALUE;
           }
           break;
         default:
@@ -337,7 +338,7 @@ void _initialiseCharts() {
     view.removeChart(chart.id);
   });
   _chartsInView = [];
-  var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
+  var charts = _config.tabs[selectedTab].charts;
   for (var chart in charts) {
     switch (chart.type) {
       case model.ChartType.summary:
@@ -387,7 +388,7 @@ void _initialiseCharts() {
 }
 
 void _computeCharts() {
-  var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
+  var charts = _config.tabs[selectedTab].charts;
 
   for (var i = 0; i < charts.length; ++i) {
     var chart = charts[i];
@@ -397,7 +398,7 @@ void _computeCharts() {
     _dataCollections[chart.data_collection].forEach((key, dataValue) {
       var toAddFiltered = true;
       var toAddFilteredComparison = true;
-      for (var filter in _filtersMap[_analyseOptions.selectedTabIndex]) {
+      for (var filter in filtersByTab[selectedTab]) {
         if (filter.type == model.DataType.datetime) {
           var date = DateTime.parse(key);
           var startDate = DateTime.parse(filter.value.split('_').first);
@@ -463,7 +464,7 @@ void _computeCharts() {
         var chartInView = (_chartsInView[i] as chart_model.TimeSeriesLineChart);
         chartInView.buckets = buckets;
 
-        if (_analyseOptions.normaliseDataEnabled) {
+        if (analysisOptions.normaliseDataEnabled) {
           for (var date in chartInView.buckets.keys) {
             var bucket = chartInView.buckets[date];
             var normaliseValue =
@@ -511,7 +512,7 @@ void _computeCharts() {
           }
         });
 
-        var primaryLabels = _filtersMap[_analyseOptions.selectedTabIndex]
+        var primaryLabels = filtersByTab[selectedTab]
             .map((e) => e.isActive ? '${e.key}: ${e.value}' : null)
             .toList();
         primaryLabels.removeWhere((e) => e == null);
@@ -519,7 +520,7 @@ void _computeCharts() {
           primaryLabels.add('All ${chart.data_label}');
         }
 
-        var comparisonLabels = _filtersMap[_analyseOptions.selectedTabIndex]
+        var comparisonLabels = filtersByTab[selectedTab]
             .map((e) => e.isActive ? '${e.key}: ${e.comparisonValue}' : null)
             .toList();
         comparisonLabels.removeWhere((e) => e == null);
@@ -538,19 +539,19 @@ void _computeCharts() {
 }
 
 void _updateCharts() {
-  var charts = _config.tabs[_analyseOptions.selectedTabIndex].charts;
+  var charts = _config.tabs[selectedTab].charts;
 
   for (var i = 0; i < charts.length; ++i) {
     if (_chartsInView[i] is chart_model.TimeSeriesLineChart) {
       (_chartsInView[i] as chart_model.TimeSeriesLineChart).updateChartinView(
-          _analyseOptions.normaliseDataEnabled,
-          _analyseOptions.stackTimeseriesEnabled);
+          analysisOptions.normaliseDataEnabled,
+          analysisOptions.stackTimeseriesEnabled);
     } else if (_chartsInView[i] is chart_model.SummaryChart) {
       (_chartsInView[i] as chart_model.SummaryChart).updateChartInView();
     } else if (_chartsInView[i] is chart_model.BarChart) {
       (_chartsInView[i] as chart_model.BarChart).updateChartInView(
-          _analyseOptions.normaliseDataEnabled,
-          _analyseOptions.dataComparisonEnabled);
+          analysisOptions.normaliseDataEnabled,
+          analysisOptions.dataComparisonEnabled);
     } else if (_chartsInView[i] is chart_model.UnimplementedChart) {
       (_chartsInView[i] as chart_model.UnimplementedChart).updateChartinView();
     }
@@ -578,52 +579,52 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.changeAnalysisTab:
       var d = data as AnalysisTabChangeData;
-      _analyseOptions.selectedTabIndex = d.tabIndex;
+      selectedTab = d.tabIndex;
 
-      _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex],
-          _analyseOptions.dataComparisonEnabled);
+      _dataFilterView.update(filtersByTab[selectedTab],
+          analysisOptions.dataComparisonEnabled);
 
       _pushOptionsToURL();
       _initialiseCharts();
       _computeCharts();
       _updateCharts();
       logger
-          .debug('Changed to analysis tab ${_analyseOptions.selectedTabIndex}');
+          .debug('Changed to analysis tab ${selectedTab}');
       break;
     case UIAction.toggleDataComparison:
       var d = data as ToggleOptionEnabledData;
-      _analyseOptions.dataComparisonEnabled = d.enabled;
+      analysisOptions.dataComparisonEnabled = d.enabled;
       // view.removeFiltersWrapper();
-      _dataFilterView.update(_filtersMap[_analyseOptions.selectedTabIndex],
-          _analyseOptions.dataComparisonEnabled);
+      _dataFilterView.update(filtersByTab[selectedTab],
+          analysisOptions.dataComparisonEnabled);
       _pushOptionsToURL();
       _updateCharts();
       logger.debug(
-          'Data comparison changed to ${_analyseOptions.dataComparisonEnabled}');
+          'Data comparison changed to ${analysisOptions.dataComparisonEnabled}');
       break;
     case UIAction.toggleDataNormalisation:
       var d = data as ToggleOptionEnabledData;
-      _analyseOptions.normaliseDataEnabled = d.enabled;
+      analysisOptions.normaliseDataEnabled = d.enabled;
       logger.debug(
-          'Data normalisation changed to ${_analyseOptions.normaliseDataEnabled}');
+          'Data normalisation changed to ${analysisOptions.normaliseDataEnabled}');
       _pushOptionsToURL();
       _computeCharts();
       _updateCharts();
       break;
     case UIAction.toggleStackTimeseries:
       var d = data as ToggleOptionEnabledData;
-      _analyseOptions.stackTimeseriesEnabled = d.enabled;
+      analysisOptions.stackTimeseriesEnabled = d.enabled;
       logger.debug(
-          'Stack time series chart changed to ${_analyseOptions.stackTimeseriesEnabled}');
+          'Stack time series chart changed to ${analysisOptions.stackTimeseriesEnabled}');
       _pushOptionsToURL();
       _computeCharts();
       _updateCharts();
       break;
     case UIAction.toggleActiveFilter:
       var d = data as ToggleActiveFilterData;
-      _filtersMap[_analyseOptions.selectedTabIndex][d.index].isActive =
+      filtersByTab[selectedTab][d.index].isActive =
           d.enabled;
-      var filter = _filtersMap[_analyseOptions.selectedTabIndex][d.index];
+      var filter = filtersByTab[selectedTab][d.index];
       d.enabled
           ? view.enableFilterOptions(filter.dataCollection, filter.key)
           : view.disableFilterOptions(filter.dataCollection, filter.key);
@@ -634,7 +635,7 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.setFilterValue:
       var d = data as SetFilterValueData;
-      _filtersMap[_analyseOptions.selectedTabIndex][d.index].value = d.value;
+      filtersByTab[selectedTab][d.index].value = d.value;
 
       _pushOptionsToURL();
       _computeCharts();
@@ -642,7 +643,7 @@ void command(UIAction action, Data data) async {
       break;
     case UIAction.setComparisonFilterValue:
       var d = data as SetFilterValueData;
-      _filtersMap[_analyseOptions.selectedTabIndex][d.index].comparisonValue =
+      filtersByTab[selectedTab][d.index].comparisonValue =
           d.value;
 
       _pushOptionsToURL();

@@ -21,33 +21,12 @@ class Config {
   }
 }
 
-class AnalyseOptions {
-  int selectedTabIndex;
-  bool dataComparisonEnabled;
-  bool normaliseDataEnabled;
-  bool stackTimeseriesEnabled;
+class AnalysisOptions {
+  bool dataComparisonEnabled = false;
+  bool normaliseDataEnabled = false;
+  bool stackTimeseriesEnabled = false;
 
-  AnalyseOptions(this.selectedTabIndex, this.dataComparisonEnabled,
-      this.normaliseDataEnabled, this.stackTimeseriesEnabled);
-
-  void updateFrom(Map<String, dynamic> object) {
-    selectedTabIndex = object['selectedTabIndex'] ?? selectedTabIndex;
-    dataComparisonEnabled =
-        object['dataComparisonEnabled'] ?? dataComparisonEnabled;
-    normaliseDataEnabled =
-        object['normaliseDataEnabled'] ?? normaliseDataEnabled;
-    stackTimeseriesEnabled =
-        object['stackTimeseriesEnabled'] ?? stackTimeseriesEnabled;
-  }
-
-  Map<String, dynamic> toObject() {
-    return {
-      'selectedTabIndex': selectedTabIndex,
-      'dataComparisonEnabled': dataComparisonEnabled,
-      'normaliseDataEnabled': normaliseDataEnabled,
-      'stackTimeseriesEnabled': stackTimeseriesEnabled
-    };
-  }
+  AnalysisOptions();
 }
 
 class Link {
